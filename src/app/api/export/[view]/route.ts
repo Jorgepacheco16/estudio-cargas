@@ -1,6 +1,10 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { loadAnalysis, parseMode } from "@/data/source";
-import { tablesFor, isView } from "@/lib/tables";
+import { tablesFor, isView, type ProposalRow } from "@/lib/tables";
+import { getDb } from "@/db/server";
+import { getUser } from "@/lib/supabase/server";
+import { activeStudyId } from "@/data/source";
+import { listProposals } from "@/server/agent";
 import { toCsv, toXlsx } from "@/lib/export";
 import { toPdf } from "@/lib/pdf";
 import { rateLimit } from "@/lib/ratelimit";
@@ -15,7 +19,12 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ view: strin
   const fmtParam = sp.get("format");
   const format = fmtParam === "csv" ? "csv" : fmtParam === "pdf" ? "pdf" : "xlsx";
   const { analysis, dashboard, label } = await loadAnalysis(parseMode(sp.get("modo") ?? undefined));
-  const { title, tables } = tablesFor(view, analysis, dashboard);
+  let proposals: ProposalRow[] = [];
+  if (view === "agente") {
+    const user = await getUser(); const study = user ? await activeStudyId(user.id) : null;
+    if (user && study) proposals = (await listProposals(getDb(), user.id, study.id)).map((p) => ({ id: p.id, kind: p.kind, summary: p.summary, status: p.status, reviewedBy: p.reviewedBy ? "persona autorizada" : null, at: p.createdAt.toISOString().slice(0, 10) }));
+  }
+  const { title, tables } = tablesFor(view, analysis, dashboard, proposals);
   const stamp = new Date().toISOString().slice(0, 10);
   const base = `estudio-cargas_${view}_${stamp}`;
 

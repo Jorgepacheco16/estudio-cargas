@@ -1,0 +1,3 @@
+﻿
+
+Nota: ejecucion previa (antes del reintento y de ajustar el caso 'estudio sano') dio 6 OK y 2 fallidos; la salida del modelo no es determinista. Resumenes sinteticos, sin datos reales.

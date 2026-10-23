@@ -82,20 +82,21 @@ export function dashboardTables(d: Dashboard): Table[] {
   return [kpi, areas, dist, top, cov, opp, concl];
 }
 /** Propuestas del agente: sin ejecuciones aún (requiere ANTHROPIC_API_KEY, Fase 9). */
-export function agenteTable(): Table {
+export interface ProposalRow { id: string; kind: string; summary: string; status: string; reviewedBy: string | null; at: string }
+export function agenteTable(rows: ProposalRow[] = []): Table {
   return {
     name: "Propuestas",
     columns: [{ key: "id", header: "ID" }, { key: "tipo", header: "Tipo" }, { key: "resumen", header: "Resumen", width: 60 }, { key: "estado", header: "Estado" }, { key: "decidio", header: "Decidida por" }, { key: "fecha", header: "Fecha" }],
-    rows: [],
+    rows: rows.map((r) => ({ id: r.id, tipo: r.kind, resumen: r.summary, estado: r.status, decidio: r.reviewedBy, fecha: r.at })),
   };
 }
 
-export function tablesFor(view: View, a: Analysis, d: Dashboard): { title: string; tables: Table[] } {
+export function tablesFor(view: View, a: Analysis, d: Dashboard, proposals: ProposalRow[] = []): { title: string; tables: Table[] } {
   switch (view) {
     case "tablero": return { title: "Tablero ejecutivo", tables: [...dashboardTables(d).slice(0, 1), cargosTable(a), ...dashboardTables(d).slice(1)] };
     case "cargos": return { title: "Cargos y dotación", tables: [cargosTable(a)] };
     case "actividades": return { title: "Inventario de actividades", tables: [actividadesTable(a)] };
     case "areas": return { title: "Áreas", tables: [areasTable(a)] };
-    case "agente": return { title: "Agente de IA", tables: [agenteTable()] };
+    case "agente": return { title: "Agente de IA", tables: [agenteTable(proposals)] };
   }
 }

@@ -19,3 +19,8 @@
 - **D-31** Límite de tasa en memoria por instancia (no global). Un límite global requiere un almacén compartido (p. ej. Redis); pendiente de decisión.
 - **D-32** Prueba de restauración de respaldo y escaneo ZAP: pendientes. Requieren pg_dump y un objetivo desplegado en un entorno de prueba.
 - **D-33** CSP con 'unsafe-inline' en script/style por los scripts en línea de Next.js; endurecer con nonces queda para después.
+
+## F9
+- **D-34** El modelo claude-sonnet-5-5 rechaza `tool_choice` forzado (400). Se usa `auto`, el sistema exige responder solo con `submit_proposals`, la salida se valida con zod y se reintenta una vez si no cumple el contrato. Sin herramienta = lista vacía. Las reglas de validación (`validation_rule`) se pueden aprobar pero no aplicar: el motor de reglas aún no existe.
+- **D-35** La evaluación tiene 8 casos (el brief pide 20 o más) y la salida del modelo no es determinista (una ejecución previa falló 2 de 8). Falta ampliar a 20 casos y repetir cada uno varias veces antes de fijar el modelo (D-09). No corre en CI (cuesta tokens y requiere clave).
+- **D-36** Términos de retención del proveedor (D-16): revisar antes de que el agente reciba datos del cliente real. El resumen ya excluye nombres, sedes, cargos y textos libres.
