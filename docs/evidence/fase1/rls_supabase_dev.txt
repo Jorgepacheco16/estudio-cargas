@@ -1,0 +1,21 @@
+Pruebas de seguridad y consistencia (PostgreSQL real + Drizzle):
+  PASS  El rol de la app NO puede leer tablas directamente (m?nimo privilegio)
+  PASS  Un owner solo ve sus estudios (A, no B)
+  PASS  Un usuario sin membres?a no ve actividades de ning?n estudio
+  PASS  Un viewer puede leer actividades de su estudio
+  PASS  Un viewer NO puede insertar actividades (42501)
+  PASS  Un viewer NO puede actualizar (0 filas afectadas)
+  PASS  Un owner de A NO puede escribir en el estudio B (42501)
+  PASS  Un owner crea un estudio y su membres?a (INSERT ? RETURNING) y otro usuario no lo ve
+  PASS  No se puede autoasignar como owner de un estudio ajeno (42501)
+  PASS  Sin fuga: tras la transacci?n la misma conexi?n vuelve a app_user sin claims
+  PASS  Si la consulta falla, la transacci?n se revierte y el rol tambi?n (sin fuga)
+  PASS  Contraste: la conexi?n admin (postgres) S? salta RLS y ve todos los estudios
+  PASS  Concurrencia optimista: UPDATE con version correcta incrementa; con version vieja afecta 0 filas
+  PASS  FK compuesta: una actividad no puede apuntar a un cargo de OTRO estudio (23503)
+  PASS  C?digo de actividad ?nico por estudio (23505)
+  PASS  CHECK de rango: % de reproceso 1.5 es rechazado (23514)
+  PASS  Auditor?a solo se agrega: un writer inserta y NO puede borrar
+Resultado: 17 pruebas OK, 0 fallidas
+
+Proyecto: estudio-cargas-dev (sa-east-1), PostgreSQL 17, app_user via pooler 6543. Fecha: 2026-10-23
