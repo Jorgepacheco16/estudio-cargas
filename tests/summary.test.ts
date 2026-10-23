@@ -4,6 +4,7 @@ import { analyze, readPosition } from "../src/domain/summary";
 import { buildDashboard } from "../src/domain/dashboard";
 import { toCsv, toXlsx } from "../src/lib/export";
 import { tablesFor, VIEWS } from "../src/lib/tables";
+import { rateLimit } from "../src/lib/ratelimit";
 import type { ActivityInput, Params, StaffingInput } from "../src/domain/engine";
 import { check, summary } from "./helpers";
 
@@ -41,6 +42,14 @@ async function main() {
   await check("El modo REAL no cuenta filas DEMO", () => {
     const r = analyze(fx.positions, fx.activities, fx.params, TH, "real");
     if (r.kpis.activities !== 0 || r.positions.length !== 0) throw new Error("hay filas demo en modo real");
+  });
+
+  await check("Límite de tasa: permite hasta el máximo, responde 429 al exceder y se reinicia al terminar la ventana", () => {
+    const k = `t${Math.random()}`;
+    for (let i = 0; i < 3; i++) if (!rateLimit(k, 3, 1000, 0).ok) throw new Error("bloqueó antes del máximo");
+    const r = rateLimit(k, 3, 1000, 10);
+    if (r.ok || r.retryAfter < 1) throw new Error("no bloqueó");
+    if (!rateLimit(k, 3, 1000, 1001).ok) throw new Error("no se reinició");
   });
 
   await check("CSV: usa ';', coma decimal y neutraliza fórmulas inyectadas", () => {

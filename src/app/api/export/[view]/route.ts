@@ -2,8 +2,12 @@ import { NextResponse, type NextRequest } from "next/server";
 import { loadAnalysis, parseMode } from "@/data/source";
 import { tablesFor, isView } from "@/lib/tables";
 import { toCsv, toXlsx } from "@/lib/export";
+import { rateLimit } from "@/lib/ratelimit";
 
 export async function GET(req: NextRequest, ctx: { params: Promise<{ view: string }> }) {
+  const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "local";
+  const rl = rateLimit(`export:${ip}`, 30, 60_000);
+  if (!rl.ok) return NextResponse.json({ error: { code: "RATE_LIMITED", message: "Demasiadas descargas seguidas. Espere un momento." } }, { status: 429, headers: { "Retry-After": String(rl.retryAfter) } });
   const { view } = await ctx.params;
   if (!isView(view)) return NextResponse.json({ error: { code: "UNKNOWN_VIEW", message: "Vista desconocida" } }, { status: 404 });
   const sp = req.nextUrl.searchParams;
