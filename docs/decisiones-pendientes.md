@@ -1,4 +1,4 @@
-﻿# Decisiones pendientes y estado
+# Decisiones pendientes y estado
 
 - D-01/D-02: codigo en GitHub (Jorgepacheco16/estudio-cargas), npm, Next.js App Router. Hecho.
 - D-04: proyecto Supabase de desarrollo creado: estudio-cargas-dev (sa-east-1). Proyecto de produccion: pendiente.
