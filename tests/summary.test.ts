@@ -5,6 +5,8 @@ import { buildDashboard } from "../src/domain/dashboard";
 import { toCsv, toXlsx } from "../src/lib/export";
 import { tablesFor, VIEWS } from "../src/lib/tables";
 import { rateLimit } from "../src/lib/ratelimit";
+import { toPdf } from "../src/lib/pdf";
+import { PDFDocument } from "pdf-lib";
 import type { ActivityInput, Params, StaffingInput } from "../src/domain/engine";
 import { check, summary } from "./helpers";
 
@@ -87,6 +89,17 @@ async function main() {
     if (Math.abs(r.areas[0].hours - 1) > 1e-9) throw new Error(`área ${r.areas[0].hours}`);
     const q = r.positions.find((p) => p.position === "Q");
     if (!q || Math.abs(q.hours - 0.5) > 1e-9 || q.reading !== "Falta registrar cantidad y jornada (hoja 2)") throw new Error(`cargo secundario: ${JSON.stringify(q)}`);
+  });
+
+  await check("PDF: todas las vistas generan un PDF válido con acentos, símbolos fuera de WinAnsi y muchas filas (paginación)", async () => {
+    for (const v of VIEWS) {
+      const { title, tables } = tablesFor(v, a, dash);
+      const pdf = await toPdf(tables, title, "Prueba · Ñandú ≠ ñoño");
+      if (Buffer.from(pdf.slice(0, 5)).toString() !== "%PDF-") throw new Error(`${v}: no es PDF`);
+    }
+    const many = { name: "Muchas", columns: [{ key: "a", header: "Texto", width: 30 }, { key: "n", header: "N", fmt: "0.0%" }], rows: Array.from({ length: 200 }, (_, i) => ({ a: `Fila ${i} ≠ ñ`.repeat(8), n: i / 100 })) };
+    const doc = await PDFDocument.load(await toPdf([many], "Largo", "x"));
+    if (doc.getPageCount() < 5) throw new Error(`páginas ${doc.getPageCount()}`);
   });
 
   await check("Todas las vistas exportan: encabezados presentes y filas = pantalla", async () => {

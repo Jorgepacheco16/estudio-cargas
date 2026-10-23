@@ -14,3 +14,8 @@
 - D-29 (F4): el banner del modo TODOS del Excel esta truncado en el brief; se uso: 'se muestran datos REAL y DEMO juntos. Cambie a REAL...'. Confirmar el texto.
 - D-30 (F5): el oraculo de las hojas 5-10 con LibreOffice sobre libros de casos limite sigue pendiente (no hay LibreOffice local). Hoy: tablas de verdad desde las formulas literales + tablero real contra la hoja 11 (192 valores).
 - D-22 (F2): el usuario decidio cargar el Excel con datos reales a Supabase dev el 2026-10-23, antes de la validacion juridica (Ley 1581 de 2012). Pendiente: validacion juridica y politica de retencion.
+
+## F6/F7
+- **D-31** Límite de tasa en memoria por instancia (no global). Un límite global requiere un almacén compartido (p. ej. Redis); pendiente de decisión.
+- **D-32** Prueba de restauración de respaldo y escaneo ZAP: pendientes. Requieren pg_dump y un objetivo desplegado en un entorno de prueba.
+- **D-33** CSP con 'unsafe-inline' en script/style por los scripts en línea de Next.js; endurecer con nonces queda para después.
