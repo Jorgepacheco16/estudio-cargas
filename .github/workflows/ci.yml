@@ -1,4 +1,4 @@
-name: ci
+﻿name: ci
 on: { pull_request: {}, push: { branches: [main] } }
 permissions: { contents: read }
 jobs:
@@ -27,6 +27,7 @@ jobs:
           psql "$DATABASE_URL_ADMIN" -v ON_ERROR_STOP=1 -f drizzle/0001_weeks_per_month_precision.sql
       - run: npm run test:rls
       - run: npm run test:f3
+      - run: npm run test:capture
       - run: npm run test:import
       - run: npm run test:domain
       - run: npm run test:labels

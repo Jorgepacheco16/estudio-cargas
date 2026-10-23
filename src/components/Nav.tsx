@@ -7,6 +7,7 @@ const ITEMS = [
   { href: "/cargos", label: "Cargos y dotación" },
   { href: "/actividades", label: "Actividades" },
   { href: "/estudio", label: "Estudio (captura)" },
+  { href: "/captura", label: "Hojas 5–10 y parámetros" },
   { href: "/agente", label: "Agente de IA" },
 ];
 

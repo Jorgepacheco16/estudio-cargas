@@ -111,3 +111,8 @@ tbody tr:hover { background: var(--blue-soft); }
 .empty { padding: 24px; text-align: center; color: var(--muted); }
 .note { font-size: .8125rem; color: var(--muted); margin: 12px 0 0; }
 .banner { background: var(--amber-soft); color: var(--amber); border-radius: 8px; padding: 10px 14px; font-size: .875rem; margin-bottom: 16px; }
+
+.tabs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 16px; }
+.tabs a { padding: 10px 14px; border: 1px solid var(--line); border-radius: 8px; background: var(--card); font-size: .875rem; min-height: 44px; display: inline-flex; align-items: center; }
+.tabs a.on { background: var(--blue); color: #fff; border-color: var(--blue); font-weight: 700; }
+textarea { border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; font: inherit; background: var(--card); color: var(--ink); resize: vertical; }
