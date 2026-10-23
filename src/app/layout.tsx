@@ -1,16 +1,7 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import Image from "next/image";
 import "./globals.css";
-
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
+import { Nav } from "@/components/Nav";
 
 export const metadata: Metadata = {
   title: "Estudio de Actividades y Cargas Laborales",
@@ -19,8 +10,17 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="es" className={`${geistSans.variable} ${geistMono.variable}`}>
-      <body>{children}</body>
+    <html lang="es">
+      <body>
+        <header className="topbar">
+          <div className="topbar-in">
+            <Image className="logo" src="/logo-megatiendas.png" alt="Megatiendas" width={170} height={62} priority />
+            <div className="tag">Estudio de Actividades y Cargas Laborales</div>
+          </div>
+        </header>
+        <Nav />
+        <div className="wrap">{children}</div>
+      </body>
     </html>
   );
 }

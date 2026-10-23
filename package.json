@@ -1,41 +1,42 @@
 {
-    "name": "estudio-cargas",
-    "version": "0.1.0",
-    "private": true,
-    "scripts": {
-        "dev": "next dev",
-        "build": "next build",
-        "start": "next start",
-        "lint": "eslint",
-        "typecheck": "tsc --noEmit -p .",
-        "test:rls": "tsx tests/rls.test.ts",
-        "test:domain": "tsx tests/domain.test.ts",
-        "test:golden": "tsx tests/golden.test.ts",
-        "audit:deps": "npm audit --omit=dev --audit-level=high",
-        "verify": "npm run typecheck && npm run test:domain && npm run test:examples && npm run test:labels && npm run test:rls && npm run test:golden && npm run audit:deps",
-        "test:labels": "tsx tests/labels.test.ts",
-        "test:examples": "tsx tests/examples.test.ts"
-    },
-    "dependencies": {
-        "@anthropic-ai/sdk": "^1.1.0",
-        "@googleapis/sheets": "^18.1.1",
-        "drizzle-orm": "^0.45.4",
-        "exceljs": "^4.4.0",
-        "google-auth-library": "^11.3.1",
-        "next": "16.4.2",
-        "postgres": "^3.4.9",
-        "react": "19.3.0",
-        "react-dom": "19.3.0",
-        "zod": "^4.6.7"
-    },
-    "devDependencies": {
-        "@types/node": "^26.6.5",
-        "@types/react": "^19",
-        "@types/react-dom": "^19",
-        "drizzle-kit": "^0.31.11",
-        "eslint": "^9",
-        "eslint-config-next": "16.4.2",
-        "tsx": "^4.23.15",
-        "typescript": "^5"
-    }
+    "name":  "estudio-cargas",
+    "version":  "0.1.0",
+    "private":  true,
+    "scripts":  {
+                    "dev":  "next dev",
+                    "build":  "next build",
+                    "start":  "next start",
+                    "lint":  "eslint",
+                    "typecheck":  "tsc --noEmit -p .",
+                    "test:rls":  "tsx tests/rls.test.ts",
+                    "test:domain":  "tsx tests/domain.test.ts",
+                    "test:golden":  "tsx tests/golden.test.ts",
+                    "audit:deps":  "npm audit --omit=dev --audit-level=high",
+                    "verify":  "npm run typecheck \u0026\u0026 npm run test:domain \u0026\u0026 npm run test:examples \u0026\u0026 npm run test:labels \u0026\u0026 npm run test:summary \u0026\u0026 npm run test:rls \u0026\u0026 npm run test:golden \u0026\u0026 npm run audit:deps",
+                    "test:labels":  "tsx tests/labels.test.ts",
+                    "test:examples":  "tsx tests/examples.test.ts",
+                    "test:summary":  "tsx tests/summary.test.ts"
+                },
+    "dependencies":  {
+                         "@anthropic-ai/sdk":  "^1.1.0",
+                         "@googleapis/sheets":  "^18.1.1",
+                         "drizzle-orm":  "^0.45.4",
+                         "exceljs":  "^4.4.0",
+                         "google-auth-library":  "^11.3.1",
+                         "next":  "16.4.2",
+                         "postgres":  "^3.4.9",
+                         "react":  "19.3.0",
+                         "react-dom":  "19.3.0",
+                         "zod":  "^4.6.7"
+                     },
+    "devDependencies":  {
+                            "@types/node":  "^26.6.5",
+                            "@types/react":  "^19",
+                            "@types/react-dom":  "^19",
+                            "drizzle-kit":  "^0.31.11",
+                            "eslint":  "^9",
+                            "eslint-config-next":  "16.4.2",
+                            "tsx":  "^4.23.15",
+                            "typescript":  "^5"
+                        }
 }
