@@ -12,14 +12,17 @@
                     "test:domain":  "tsx tests/domain.test.ts",
                     "test:golden":  "tsx tests/golden.test.ts",
                     "audit:deps":  "npm audit --omit=dev --audit-level=high",
-                    "verify":  "npm run typecheck \u0026\u0026 npm run test:domain \u0026\u0026 npm run test:examples \u0026\u0026 npm run test:labels \u0026\u0026 npm run test:summary \u0026\u0026 npm run test:rls \u0026\u0026 npm run test:golden \u0026\u0026 npm run audit:deps",
+                    "verify":  "npm run typecheck \u0026\u0026 npm run test:domain \u0026\u0026 npm run test:examples \u0026\u0026 npm run test:labels \u0026\u0026 npm run test:summary \u0026\u0026 npm run test:rls \u0026\u0026 npm run test:f3 \u0026\u0026 npm run test:golden \u0026\u0026 npm run audit:deps",
                     "test:labels":  "tsx tests/labels.test.ts",
                     "test:examples":  "tsx tests/examples.test.ts",
-                    "test:summary":  "tsx tests/summary.test.ts"
+                    "test:summary":  "tsx tests/summary.test.ts",
+                    "test:f3":  "tsx tests/f3.test.ts"
                 },
     "dependencies":  {
                          "@anthropic-ai/sdk":  "^1.1.0",
                          "@googleapis/sheets":  "^18.1.1",
+                         "@supabase/ssr":  "^0.12.7",
+                         "@supabase/supabase-js":  "^2.118.0",
                          "drizzle-orm":  "^0.45.4",
                          "exceljs":  "^4.4.0",
                          "google-auth-library":  "^11.3.1",

@@ -8,7 +8,7 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ view: strin
   if (!isView(view)) return NextResponse.json({ error: { code: "UNKNOWN_VIEW", message: "Vista desconocida" } }, { status: 404 });
   const sp = req.nextUrl.searchParams;
   const format = sp.get("format") === "csv" ? "csv" : "xlsx";
-  const { analysis } = loadAnalysis(parseMode(sp.get("modo") ?? undefined));
+  const { analysis } = await loadAnalysis(parseMode(sp.get("modo") ?? undefined));
   const { title, tables } = tablesFor(view, analysis);
   const stamp = new Date().toISOString().slice(0, 10);
   const base = `estudio-cargas_${view}_${stamp}`;

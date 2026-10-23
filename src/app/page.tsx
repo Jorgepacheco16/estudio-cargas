@@ -1,10 +1,9 @@
-import { loadAnalysis, parseMode, SOURCE_LABEL, THRESHOLDS } from "@/data/source";
+import { loadAnalysis, parseMode } from "@/data/source";
 import { CargosTable } from "@/components/CargosTable";
 import { ExportButtons, ModeForm, fmt, fmtPct } from "@/components/Tools";
 
 export default async function Tablero({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
-  const mode = parseMode((await searchParams).modo);
-  const { analysis: a, params } = loadAnalysis(mode);
+  const { analysis: a, params, thresholds, mode, label } = await loadAnalysis(parseMode((await searchParams).modo));
   const k = a.kpis;
   const maxHours = Math.max(1, ...a.areas.map((x) => x.hours));
   return (
@@ -12,7 +11,7 @@ export default async function Tablero({ searchParams }: { searchParams: Promise<
       <div className="head">
         <div>
           <h1>Tablero ejecutivo</h1>
-          <div className="sub">{SOURCE_LABEL} · escenario {params.scenario} · reserva {fmtPct(params.reservePct)}</div>
+          <div className="sub">{label} · escenario {params.scenario} · reserva {fmtPct(params.reservePct)}</div>
         </div>
         <div className="tools"><ModeForm mode={mode} /><ExportButtons view="tablero" mode={mode} /></div>
       </div>
@@ -26,7 +25,7 @@ export default async function Tablero({ searchParams }: { searchParams: Promise<
 
       <section className="card" aria-label="Carga por cargo">
         <h2>Carga frente a capacidad por cargo</h2>
-        <div className="note">Umbrales del estudio: sobrecarga sobre {fmtPct(THRESHOLDS.high)} · carga baja bajo {fmtPct(THRESHOLDS.low)}</div>
+        <div className="note">Umbrales del estudio: sobrecarga sobre {fmtPct(thresholds.high)} · carga baja bajo {fmtPct(thresholds.low)}</div>
         <CargosTable rows={a.positions} />
       </section>
 

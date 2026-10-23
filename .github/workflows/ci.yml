@@ -25,6 +25,7 @@ jobs:
           psql "$DATABASE_URL_ADMIN" -v ON_ERROR_STOP=1 -f drizzle/0000_init.sql
           psql "$DATABASE_URL_ADMIN" -v ON_ERROR_STOP=1 -f sql/0001_rls.sql
       - run: npm run test:rls
+      - run: npm run test:f3
       - run: npm run test:domain
       - run: npm run test:labels
       - run: npm run test:summary
