@@ -162,8 +162,9 @@ async function run(tx: Tx, sub: string, studyId: string, p: Parsed): Promise<Imp
       if (!id) { c(sheet).rejected++; issue(sheet, r.row, "code", "ORPHAN_REFERENCE", "error", `La actividad '${code.slice(0, 30)}' no existe en la hoja 3; la fila no se importó`); continue; }
       if (seenCodes.has(k)) { c(sheet).rejected++; issue(sheet, r.row, "code", "DUPLICATE_ASSESSMENT", "error", "Más de una evaluación para la misma actividad; se conserva la primera (D-10)"); continue; }
       seenCodes.add(k);
-      if (!hasAnyInput(r, fields)) { c(sheet).skipped++; issue(sheet, r.row, "code", "EMPTY_ASSESSMENT", "info", "Solo trae el código, sin criterios evaluados; no se creó una evaluación vacía"); continue; }
       if (have.has(id)) { c(sheet).skipped++; continue; }
+      // Fila válida = código presente (§10.1). Si no trae criterios se importa vacía y el tablero la cuenta como «Evaluación incompleta», igual que el Excel.
+      if (!hasAnyInput(r, fields)) issue(sheet, r.row, "code", "EMPTY_ASSESSMENT", "info", "Solo trae el código, sin criterios evaluados; se importó vacía (evaluación incompleta)");
       out.push(build(r, id)); c(sheet).inserted++;
     }
     for (const part of chunk(out, 100)) await tx.insert(table).values(part as never);

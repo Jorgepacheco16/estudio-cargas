@@ -18,7 +18,7 @@ const key = (k: string, a: string, s: string, p: string) => [k, norm(a), norm(s)
 /** Texto idéntico al de la fórmula de la hoja 4b (columna "Lectura"). */
 export function readPosition(p: { activities: number; complete: number; hours: number; capacity: number; pct: number | null }, th: Thresholds): { reading: string; level: AlertLevel } {
   let base: string; let level: AlertLevel;
-  if (p.activities === 0) { base = "Sin información registrada"; level = "nodata"; }
+  if (p.activities === 0 && p.hours === 0) { base = "Sin información registrada"; level = "nodata"; } // un cargo que solo recibe horas como «cargo que asume el resto» sí tiene información
   else if (p.capacity === 0) { base = "Falta registrar cantidad y jornada (hoja 2)"; level = "nodata"; }
   else if (p.hours === 0) { base = "Hay actividades pero ninguna con datos completos"; level = "nodata"; }
   else if ((p.pct ?? 0) > th.high) { base = "ALERTA: carga superior a la capacidad. Revise datos, solapamientos, horas extra y distribución"; level = "overload"; }

@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import ExcelJS from "exceljs";
 import { analyze, readPosition } from "../src/domain/summary";
+import { buildDashboard } from "../src/domain/dashboard";
 import { toCsv, toXlsx } from "../src/lib/export";
 import { tablesFor, VIEWS } from "../src/lib/tables";
 import type { ActivityInput, Params, StaffingInput } from "../src/domain/engine";
@@ -62,9 +63,26 @@ async function main() {
     if (ws.rowCount !== 3) throw new Error(`filas ${ws.rowCount}`);
   });
 
+  const dash = buildDashboard({ mode: "demo", analysis: a, params: fx.params, thresholds: TH, areaNames: ["Cajas", "Carnes - Operaciones", "Domicilios"], assumptionsValidated: false, hourlyCost: null, meta: [], meas: [], suit: [], risks: [], opps: [], plans: [] });
+
+  await check("Tablero: 12 indicadores, una línea por área del estudio y conclusiones con los textos del Excel", () => {
+    if (dash.areas.length !== 3 || dash.areas.find((r) => r.area === "Domicilios")!.reading !== "Sin información registrada") throw new Error("áreas");
+    if (!dash.conclusions[0].startsWith("COBERTURA: ") || !dash.conclusions.some((c) => c.startsWith("SUPUESTOS: ")) || !dash.conclusions.some((c) => c.startsWith("MODO: se están mostrando datos DEMO"))) throw new Error(dash.conclusions.join(" | "));
+    if (tablesFor("tablero", a, dash).tables[0].rows.length !== 12) throw new Error("indicadores ≠ 12");
+  });
+
+  await check("Área = Σ horas totales de sus actividades (incluye la parte del cargo secundario no registrado, como el Excel)", () => {
+    const staff: StaffingInput[] = [{ dataKind: "real", area: "A", site: "S", position: "P", headcount: 1, weeklyHours: 40 }];
+    const act: ActivityInput = { code: "X", dataKind: "real", area: "A", site: "S", position: "P", employeeCode: null, calcMode: "per_event", scope: "position_total", executions: 1, period: "week", unitsPerExecution: null, timeAvgMin: 60, timeMinMin: null, timeMaxMin: null, seasonHigh: null, seasonLow: null, simultaneous: null, loadShare: 0.5, secondaryPosition: "Q", planning: "planned", waitMin: null, waitOccupies: null, travelMin: null, reworkPct: null, reworkMin: null };
+    const r = analyze(staff, [act], { workDaysPerWeek: 6, weeksPerMonth: 52 / 12, weeksPerYear: 52, reservePct: 0, scenario: "base" }, TH, "real");
+    if (Math.abs(r.areas[0].hours - 1) > 1e-9) throw new Error(`área ${r.areas[0].hours}`);
+    const q = r.positions.find((p) => p.position === "Q");
+    if (!q || Math.abs(q.hours - 0.5) > 1e-9 || q.reading !== "Falta registrar cantidad y jornada (hoja 2)") throw new Error(`cargo secundario: ${JSON.stringify(q)}`);
+  });
+
   await check("Todas las vistas exportan: encabezados presentes y filas = pantalla", async () => {
     for (const v of VIEWS) {
-      const { title, tables } = tablesFor(v, a);
+      const { title, tables } = tablesFor(v, a, dash);
       const buf = await toXlsx(tables, title);
       const wb = new ExcelJS.Workbook(); await wb.xlsx.load(buf as unknown as ArrayBuffer);
       for (const t of tables) {
@@ -73,7 +91,7 @@ async function main() {
         if (ws.rowCount !== t.rows.length + 1) throw new Error(`${v}/${t.name}: ${ws.rowCount - 1} filas ≠ ${t.rows.length}`);
       }
     }
-    const act = tablesFor("actividades", a).tables[0].rows.length, cargos = tablesFor("cargos", a).tables[0].rows.length;
+    const act = tablesFor("actividades", a, dash).tables[0].rows.length, cargos = tablesFor("cargos", a, dash).tables[0].rows.length;
     if (act !== a.activities.length || cargos !== a.positions.length) throw new Error("exportable ≠ pantalla");
   });
 }

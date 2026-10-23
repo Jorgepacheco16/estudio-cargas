@@ -1,0 +1,8 @@
+Fase 2 - importacion del Excel de referencia (fecha 2026-10-23)
+Archivo sha256: 3f5f4b7299ae21f775e8949eb961e5fe8fd45eb3ed5b1f9978d2ab7b81aa2630  (el libro contiene datos del estudio y NO se versiona)
+Hojas: 2_Caracterizacion 2 filas (1 insertada, 1 rechazada por falta de cargo) | 3_Actividades 27 (27 insertadas) | 5_Medibilidad 1 (1 insertada vacia) | 6,7,8,9,10: 0
+Conteo por hoja cuadra: si
+Recalculo del motor vs hojas 4a y 4b (area y cargo): 226 valores comparados, 0 diferencias (tolerancia 1e-9)
+Reimportacion del mismo libro: todo se omite (27 actividades omitidas, 0 insertadas)
+Hallazgos informados: 1 error (fila sin cargo), 1 advertencia (cargo no registrado en hoja 2, D-08), 1 informativo (evaluacion vacia)
+Hallazgo de la verificacion: weeks_per_month con 6 decimales producia diferencias de 1e-7 en horas/mes; corregido con la migracion drizzle/0001_weeks_per_month_precision.sql

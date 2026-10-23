@@ -31,6 +31,7 @@ jobs:
       - run: npm run test:domain
       - run: npm run test:labels
       - run: npm run test:summary
+      - run: npm run test:calculators
       - name: Prueba dorada contra el Excel (LibreOffice real)
         run: sudo apt-get update && sudo apt-get install -y libreoffice-calc && npm run test:golden
       - run: npm audit --omit=dev --audit-level=high

@@ -1,0 +1,4 @@
+Fase 4 - tablero (hoja 11) vs oraculo del libro (fecha 2026-10-23)
+npm run verify:dashboard -> Tablero vs hoja 11: 192 valores comparados, 0 diferencias
+Incluye: 12 indicadores, carga por area (14 areas), distribucion por valor/tipo/potencial, top 10 de actividades, cobertura, oportunidades y los textos de las conclusiones.
+El libro con datos reales no se versiona; el verificador se ejecuta localmente con el archivo y el estudio importado.
