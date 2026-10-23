@@ -1,0 +1,18 @@
+Contratos JSON (zod) — los mismos ejemplos que aparecen en el brief:
+  PASS  activityUpsert acepta el ejemplo válido
+  PASS  activityUpsert rechaza % de reproceso > 1 y campos desconocidos
+  PASS  sheetChangeEvent acepta el ejemplo y rechaza fechas inválidas
+  PASS  agentOutput exige evidencia en cada propuesta
+  PASS  validationIssue acepta un hallazgo de celda vacía
+Autocorrector:
+  PASS  Coma decimal: '6,5' → 6.5 y '1.234,5' → 1234.5; texto basura → null
+  PASS  Porcentaje: '12 %' → 0.12
+  PASS  Lista: 'dia' → 'Día' se corrige solo; 'Semanna' solo se SUGIERE; 'xyz' no empareja
+  PASS  Duplicados: 'SUP-001' y ' sup-001 ' se detectan como la misma clave
+  PASS  Vacíos obligatorios: se reportan, jamás se rellenan
+Firma del webhook (HMAC-SHA256):
+  PASS  Firma válida se acepta
+  PASS  Cuerpo alterado se rechaza
+  PASS  Evento repetido fuera de ventana (anti-replay) se rechaza
+  PASS  Secreto incorrecto se rechaza
+Resultado: 14 pruebas OK, 0 fallidas

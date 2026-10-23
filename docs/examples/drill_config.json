@@ -1,0 +1,10 @@
+{
+  "id": "carga-por-area",
+  "levels": [
+    { "key": "study",    "groupBy": "area",     "metrics": ["hours", "capacity", "pct"],        "next": "area" },
+    { "key": "area",     "groupBy": "position", "metrics": ["hours", "pct", "incomplete"],      "next": "position" },
+    { "key": "position", "groupBy": "activity", "metrics": ["hours", "unplanned", "rework"],    "next": "activity" },
+    { "key": "activity", "groupBy": null,       "metrics": ["hours", "seasonVariation"],        "next": null }
+  ],
+  "filters": { "kind": "real", "alertOnly": "overload" }
+}

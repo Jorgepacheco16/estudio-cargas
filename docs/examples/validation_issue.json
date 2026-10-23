@@ -1,0 +1,9 @@
+{
+  "ruleCode": "NOT_IN_LIST",
+  "severity": "warning",
+  "entity": "activities",
+  "entityId": "5b1f3c1e-9a7d-4b8e-8f10-2f6a1c0d9e11",
+  "field": "period",
+  "autoFixable": true,
+  "suggestedValue": { "from": "dia", "to": "day", "rule": "LIST_CASE_ACCENT", "confidence": 1 }
+}

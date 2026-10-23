@@ -1,0 +1,11 @@
+{
+  "file": "Herramienta_Estudio_Actividades_Cargas_Laborales.xlsx",
+  "sha256": "3f7a9c1d5b2e4f60a8c3d1e9b7f20486c5a1d3e7f9b0c2a48d6e1f3a5c7b9d02",
+  "counts": {
+    "2_Caracterizacion": { "read": 5, "inserted": 5, "skipped": 0, "errors": 0 },
+    "3_Actividades": { "read": 15, "inserted": 15, "skipped": 0, "errors": 0 }
+  },
+  "issues": [
+    { "ruleCode": "EMPTY_REQUIRED", "severity": "warning", "entity": "activities", "entityId": null, "field": "timeAvgMin", "autoFixable": false, "sheet": "3_Actividades", "row": 21 }
+  ]
+}

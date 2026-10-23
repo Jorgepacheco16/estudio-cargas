@@ -1,0 +1,26 @@
+Fecha: 2026-10-23T01:50Z
+Node v22.22.2 | psql (PostgreSQL) 16.15 (Ubuntu 16.15-0ubuntu0.24.04.1)
+estudio-cargas-referencia@1.0.0 /home/claude/brief/appcheck
++-- @anthropic-ai/sdk@1.1.0
++-- @googleapis/sheets@18.1.1
++-- @types/node@26.6.5
++-- drizzle-kit@0.31.11
++-- drizzle-orm@0.45.4
++-- google-auth-library@11.3.1
++-- postgres@3.4.9
++-- tsx@4.23.15
++-- typescript@7.0.2
+`-- zod@4.6.7
+
+--- npm run verify
+EXIT_VERIFY=0
+Resultado: 14 pruebas OK, 0 fallidas
+Resultado: 8 pruebas OK, 0 fallidas
+Resultado: 33 pruebas OK, 0 fallidas
+Resultado: 17 pruebas OK, 0 fallidas
+Variante v1_base.json → escenario=base, días/sem=6, reserva=0.1
+Variante v2_alta.json → escenario=high_season, días/sem=7, reserva=0.15
+Variante v3_max.json → escenario=max_time, días/sem=5, reserva=0
+Valores comparados contra el Excel recalculado por LibreOffice: 870
+Resultado: 9 pruebas OK, 0 fallidas
+found 0 vulnerabilities

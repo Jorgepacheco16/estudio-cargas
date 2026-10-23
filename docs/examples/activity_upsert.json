@@ -1,0 +1,14 @@
+{
+  "dataKind": "demo",
+  "code": "DEMO-001",
+  "positionId": "5b1f3c1e-9a7d-4b8e-8f10-2f6a1c0d9e11",
+  "name": "[DEMO] Actividad por evento (diaria, por colaborador)",
+  "calcMode": "per_event",
+  "executionsPerPeriod": 40,
+  "period": "day",
+  "scope": "per_employee",
+  "timeAvgMin": 4,
+  "simultaneousPeople": 1,
+  "reworkPct": 0.02,
+  "expectedVersion": 3
+}

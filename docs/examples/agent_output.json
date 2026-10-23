@@ -1,0 +1,10 @@
+{
+  "proposals": [
+    {
+      "kind": "validation_rule",
+      "summary": "Exigir tiempo promedio cuando la modalidad de cálculo es por unidad",
+      "payload": { "entity": "activities", "field": "timeAvgMin", "when": { "calcMode": "per_unit" }, "severity": "error" },
+      "evidence": [ { "entity": "activities", "id": "5b1f3c1e-9a7d-4b8e-8f10-2f6a1c0d9e11" } ]
+    }
+  ]
+}

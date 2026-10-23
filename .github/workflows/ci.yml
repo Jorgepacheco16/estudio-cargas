@@ -1,0 +1,43 @@
+name: ci
+on: { pull_request: {}, push: { branches: [main] } }
+permissions: { contents: read }
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env: { POSTGRES_PASSWORD: pg_admin, POSTGRES_DB: studydb }
+        ports: ["5432:5432"]
+        options: --health-cmd "pg_isready -U postgres" --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      DATABASE_URL_ADMIN: postgres://postgres:pg_admin@localhost:5432/studydb
+      DATABASE_URL: postgres://app_user:app_pw@localhost:5432/studydb
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - run: npm run typecheck
+      - name: Migraciones reales sobre PostgreSQL real
+        run: |
+          psql "$DATABASE_URL_ADMIN" -v ON_ERROR_STOP=1 -f sql/local_bootstrap.sql
+          psql "$DATABASE_URL_ADMIN" -v ON_ERROR_STOP=1 -f drizzle/0000_init.sql
+          psql "$DATABASE_URL_ADMIN" -v ON_ERROR_STOP=1 -f sql/0001_rls.sql
+      - run: npm run test:rls
+      - run: npm run test:domain
+      - run: npm run test:labels
+      - name: Prueba dorada contra el Excel (LibreOffice real)
+        run: sudo apt-get update && sudo apt-get install -y libreoffice-calc && npm run test:golden
+      - run: npm audit --omit=dev --audit-level=high
+  secrets-and-sast:
+    runs-on: ubuntu-latest
+    permissions: { contents: read, security-events: write }
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: gitleaks/gitleaks-action@v2
+        env: { GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}" }
+      - uses: github/codeql-action/init@v3
+        with: { languages: javascript-typescript }
+      - uses: github/codeql-action/analyze@v3

@@ -1,0 +1,35 @@
+Fidelidad Excel ↔ enums de PostgreSQL:
+  PASS  L_Frecuencia → frequency: etiquetas idénticas al Excel y códigos existentes en el enum
+  PASS  L_Periodo → period_unit: etiquetas idénticas al Excel y códigos existentes en el enum
+  PASS  L_Modalidad → calc_mode: etiquetas idénticas al Excel y códigos existentes en el enum
+  PASS  L_Alcance → exec_scope: etiquetas idénticas al Excel y códigos existentes en el enum
+  PASS  L_SiParcialNo → tri_state: etiquetas idénticas al Excel y códigos existentes en el enum
+  PASS  L_Documentada → tri_state: etiquetas idénticas al Excel y códigos existentes en el enum
+  PASS  L_SiNoNE → yes_no_ne: etiquetas idénticas al Excel y códigos existentes en el enum
+  PASS  L_TipoAct → activity_type: etiquetas idénticas al Excel y códigos existentes en el enum
+  PASS  L_Valor → value_class: etiquetas idénticas al Excel y códigos existentes en el enum
+  PASS  L_Potencial → potential: etiquetas idénticas al Excel y códigos existentes en el enum
+  PASS  L_Fuente → data_source: etiquetas idénticas al Excel y códigos existentes en el enum
+  PASS  L_FuenteInfo → info_source: etiquetas idénticas al Excel y códigos existentes en el enum
+  PASS  L_Confianza → confidence: etiquetas idénticas al Excel y códigos existentes en el enum
+  PASS  L_Planificada → planning: etiquetas idénticas al Excel y códigos existentes en el enum
+  PASS  L_TipoDato → data_kind: etiquetas idénticas al Excel y códigos existentes en el enum
+  PASS  L_AMB → level3: etiquetas idénticas al Excel y códigos existentes en el enum
+  PASS  L_Autonomia → level3: etiquetas idénticas al Excel y códigos existentes en el enum
+  PASS  L_Escenario → scenario: etiquetas idénticas al Excel y códigos existentes en el enum
+  PASS  L_Situacion → situation: etiquetas idénticas al Excel y códigos existentes en el enum
+  PASS  L_Corresp → correspondence: etiquetas idénticas al Excel y códigos existentes en el enum
+  PASS  L_Compat → compatibility: etiquetas idénticas al Excel y códigos existentes en el enum
+  PASS  L_Reasig → reassignment: etiquetas idénticas al Excel y códigos existentes en el enum
+  PASS  L_Unidad → measure_unit: etiquetas idénticas al Excel y códigos existentes en el enum
+  PASS  L_Indicador → indicator_kind: etiquetas idénticas al Excel y códigos existentes en el enum
+  PASS  L_TipoOport → opportunity_type: etiquetas idénticas al Excel y códigos existentes en el enum
+  PASS  L_Hallazgo → finding_class: etiquetas idénticas al Excel y códigos existentes en el enum
+  PASS  L_EstadoValid → validation_status: etiquetas idénticas al Excel y códigos existentes en el enum
+  PASS  L_EstadoPlan → plan_status: etiquetas idénticas al Excel y códigos existentes en el enum
+  PASS  L_TipoIniciativa → initiative_type: etiquetas idénticas al Excel y códigos existentes en el enum
+  PASS  L_Aprob → approval_status: etiquetas idénticas al Excel y códigos existentes en el enum
+  PASS  Todo valor de cada enum de lista queda cubierto por al menos una lista del Excel
+  PASS  Las 34 listas del Excel están contempladas (31 enums + Sí/No, escala 1-5 y Modo + áreas)
+  PASS  drillConfig: ejemplo del brief (estudio → área → cargo → actividad) es válido
+Resultado: 33 pruebas OK, 0 fallidas

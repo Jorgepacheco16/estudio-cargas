@@ -1,0 +1,1 @@
+{ "error": { "code": "VERSION_CONFLICT", "message": "La actividad cambió desde que la abrió.", "details": { "expectedVersion": 3, "currentVersion": 4 } } }

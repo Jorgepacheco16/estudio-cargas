@@ -1,0 +1,235 @@
+{
+ "lists": {
+  "Áreas operativas (agregue nuevas debajo)": [
+   "Administración punto de venta",
+   "Cajas",
+   "Carnes - Operaciones",
+   "Domicilios",
+   "Fruver - Operaciones",
+   "Inventarios",
+   "OPL - Operaciones",
+   "Panadería - Operaciones",
+   "PLS",
+   "Recibo y almacenamiento - Operaciones",
+   "Riesgos y prevención de pérdidas - Operaciones",
+   "SAC - Operaciones",
+   "Servicio al cliente PDV",
+   "Supervisión de cajas y tesorería"
+  ],
+  "L_Frecuencia": [
+   "Diaria",
+   "Semanal",
+   "Quincenal",
+   "Mensual",
+   "Trimestral",
+   "Anual",
+   "Eventual",
+   "Por demanda"
+  ],
+  "L_Periodo": [
+   "Día",
+   "Semana",
+   "Quincena",
+   "Mes",
+   "Trimestre",
+   "Año"
+  ],
+  "L_Modalidad": [
+   "Por evento",
+   "Por unidad"
+  ],
+  "L_Alcance": [
+   "Por colaborador",
+   "Total del cargo en la sede"
+  ],
+  "L_SiNo": [
+   "Sí",
+   "No"
+  ],
+  "L_SiParcialNo": [
+   "Sí",
+   "Parcial",
+   "No"
+  ],
+  "L_SiNoNE": [
+   "Sí",
+   "No",
+   "No evaluada"
+  ],
+  "L_Documentada": [
+   "Sí",
+   "Parcialmente",
+   "No"
+  ],
+  "L_TipoAct": [
+   "Operativa",
+   "Administrativa",
+   "De control",
+   "De coordinación",
+   "De servicio",
+   "De soporte",
+   "Eventual"
+  ],
+  "L_Valor": [
+   "Agrega valor directo",
+   "Necesaria sin agregar valor directo",
+   "Podría ser prescindible"
+  ],
+  "L_Potencial": [
+   "Alto",
+   "Medio",
+   "Bajo",
+   "Ninguno"
+  ],
+  "L_Fuente": [
+   "Declarada por el colaborador",
+   "Declarada por el jefe inmediato",
+   "Observada directamente",
+   "Cronometrada",
+   "Extraída de fuente verificable",
+   "Estimación validada por responsable"
+  ],
+  "L_FuenteInfo": [
+   "Entrevista con colaborador",
+   "Entrevista con jefe inmediato",
+   "Observación directa",
+   "Revisión de procedimientos y perfiles",
+   "Registros históricos o sistemas",
+   "Cronometraje"
+  ],
+  "L_Confianza": [
+   "Alto",
+   "Medio",
+   "Bajo"
+  ],
+  "L_Planificada": [
+   "Planificada",
+   "No planificada"
+  ],
+  "L_TipoDato": [
+   "REAL",
+   "DEMO"
+  ],
+  "L_AMB": [
+   "Alta",
+   "Media",
+   "Baja"
+  ],
+  "L_Escala": [
+   1,
+   2,
+   3,
+   4,
+   5
+  ],
+  "L_Situacion": [
+   "1. Corresponde al cargo, requiere capacitación",
+   "2. No corresponde claramente al propósito del cargo",
+   "3. Requiere especialización no cubierta",
+   "4. Podría simplificarse, estandarizarse o automatizarse",
+   "Sin hallazgo"
+  ],
+  "L_TipoOport": [
+   "Mantener la actividad",
+   "Eliminar actividad prescindible (previa validación)",
+   "Simplificar procedimiento",
+   "Estandarizar tarea",
+   "Automatizar o digitalizar",
+   "Redistribuir responsabilidades",
+   "Agrupar actividades compatibles",
+   "Crear o redefinir función especializada",
+   "Capacitar colaboradores",
+   "Documentar procedimiento",
+   "Reducir esperas y reprocesos",
+   "Mejorar controles y coordinación"
+  ],
+  "L_Hallazgo": [
+   "Hallazgo confirmado",
+   "Hipótesis",
+   "Recomendación pendiente de validación"
+  ],
+  "L_EstadoValid": [
+   "Pendiente",
+   "En validación",
+   "Validada",
+   "Rechazada"
+  ],
+  "L_EstadoPlan": [
+   "No iniciada",
+   "En curso",
+   "Completada",
+   "Bloqueada",
+   "Cancelada"
+  ],
+  "L_TipoIniciativa": [
+   "Rápida implementación",
+   "Requiere inversión",
+   "Ajuste tecnológico",
+   "Capacitación",
+   "Cambio organizacional"
+  ],
+  "L_Modo": [
+   "REAL",
+   "DEMO",
+   "TODOS"
+  ],
+  "L_Escenario": [
+   "Base",
+   "Temporada alta",
+   "Temporada baja",
+   "Tiempo mínimo",
+   "Tiempo máximo"
+  ],
+  "L_Autonomia": [
+   "Bajo",
+   "Medio",
+   "Alto"
+  ],
+  "L_Compat": [
+   "Compatible",
+   "Parcial",
+   "Incompatible"
+  ],
+  "L_Corresp": [
+   "Alta",
+   "Parcial",
+   "Baja",
+   "No corresponde"
+  ],
+  "L_Reasig": [
+   "Sí",
+   "Condicionada",
+   "No"
+  ],
+  "L_Unidad": [
+   "Minutos por ejecución",
+   "Unidades por hora",
+   "% de cumplimiento de plazos",
+   "% de errores",
+   "Tasa de reprocesos",
+   "Exactitud del registro",
+   "Nivel de servicio",
+   "Cumplimiento de controles",
+   "Tiempo de respuesta",
+   "Criterio cualitativo"
+  ],
+  "L_Indicador": [
+   "Tiempo de ciclo",
+   "Unidades procesadas por hora",
+   "% de cumplimiento de plazos",
+   "% de errores",
+   "Tasa de reprocesos",
+   "Exactitud del registro",
+   "Nivel de servicio",
+   "Cumplimiento de controles",
+   "Tiempo de respuesta",
+   "Criterio cualitativo verificable"
+  ],
+  "L_Aprob": [
+   "Propuesta en elaboración",
+   "Validada por responsable del área",
+   "Aprobada por Gerencia",
+   "Rechazada"
+  ]
+ }
+}

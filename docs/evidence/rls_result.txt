@@ -1,0 +1,18 @@
+  PASS  El rol de la app NO puede leer tablas directamente (mínimo privilegio)
+  PASS  Un owner solo ve sus estudios (A, no B)
+  PASS  Un usuario sin membresía no ve actividades de ningún estudio
+  PASS  Un viewer puede leer actividades de su estudio
+  PASS  Un viewer NO puede insertar actividades (42501)
+  PASS  Un viewer NO puede actualizar (0 filas afectadas)
+  PASS  Un owner de A NO puede escribir en el estudio B (42501)
+  PASS  Un owner crea un estudio y su membresía (INSERT … RETURNING) y otro usuario no lo ve
+  PASS  No se puede autoasignar como owner de un estudio ajeno (42501)
+  PASS  Sin fuga: tras la transacción la misma conexión vuelve a app_user sin claims
+  PASS  Si la consulta falla, la transacción se revierte y el rol también (sin fuga)
+  PASS  Contraste: la conexión admin (postgres) SÍ salta RLS y ve todos los estudios
+  PASS  Concurrencia optimista: UPDATE con version correcta incrementa; con version vieja afecta 0 filas
+  PASS  FK compuesta: una actividad no puede apuntar a un cargo de OTRO estudio (23503)
+  PASS  Código de actividad único por estudio (23505)
+  PASS  CHECK de rango: % de reproceso 1.5 es rechazado (23514)
+  PASS  Auditoría solo se agrega: un writer inserta y NO puede borrar
+Resultado: 17 pruebas OK, 0 fallidas

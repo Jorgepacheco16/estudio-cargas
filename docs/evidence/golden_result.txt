@@ -1,0 +1,19 @@
+
+Variante v1_base.json → escenario=base, días/sem=6, reserva=0.1
+  PASS  15 actividades: estado de captura idéntico al Excel
+  PASS  15 actividades × 18 columnas calculadas coinciden con el Excel (tolerancia 1e-9)
+  PASS  5 cargos: ocupantes, capacidad, horas y % de capacidad coinciden con la hoja 4b
+
+Variante v2_alta.json → escenario=high_season, días/sem=7, reserva=0.15
+  PASS  15 actividades: estado de captura idéntico al Excel
+  PASS  15 actividades × 18 columnas calculadas coinciden con el Excel (tolerancia 1e-9)
+  PASS  5 cargos: ocupantes, capacidad, horas y % de capacidad coinciden con la hoja 4b
+
+Variante v3_max.json → escenario=max_time, días/sem=5, reserva=0
+  PASS  15 actividades: estado de captura idéntico al Excel
+  PASS  15 actividades × 18 columnas calculadas coinciden con el Excel (tolerancia 1e-9)
+  PASS  5 cargos: ocupantes, capacidad, horas y % de capacidad coinciden con la hoja 4b
+
+Valores comparados contra el Excel recalculado por LibreOffice: 870
+
+Resultado: 9 pruebas OK, 0 fallidas

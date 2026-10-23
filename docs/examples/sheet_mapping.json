@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "sheetName": "3_Actividades",
+  "headerRow": 6,
+  "firstDataRow": 7,
+  "naturalKey": ["Código de actividad"],
+  "internalColumns": { "id": "ZA", "version": "ZB" },
+  "columns": [
+    { "header": "Código de actividad", "field": "code", "type": "text", "direction": "both", "required": true },
+    { "header": "Modalidad de cálculo", "field": "calcMode", "type": "enum", "list": "L_Modalidad", "direction": "both" },
+    { "header": "Cantidad de ejecuciones por período", "field": "executionsPerPeriod", "type": "number", "direction": "both" },
+    { "header": "Período de las ejecuciones", "field": "period", "type": "enum", "list": "L_Periodo", "direction": "both" },
+    { "header": "% de la carga que asume el cargo responsable", "field": "loadSharePct", "type": "percent", "direction": "both" },
+    { "header": "Estado de captura", "field": "status", "type": "text", "direction": "app_to_sheet" }
+  ]
+}
