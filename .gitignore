@@ -44,3 +44,6 @@ next-env.d.ts
 .env.*
 !.env.example
 .vercel
+
+# Datos reales del estudio: no versionar (Ley 1581, D-22)
+docs/reference/*.xlsx
