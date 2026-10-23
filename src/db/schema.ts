@@ -66,7 +66,7 @@ export const memberships = pgTable("memberships", {
 export const studyParameters = pgTable("study_parameters", {
   studyId: uuid("study_id").primaryKey().references(() => studies.id, { onDelete: "cascade" }),
   workDaysPerWeek: numeric("work_days_per_week", { precision: 4, scale: 2 }).notNull().default("6"),
-  weeksPerMonth: numeric("weeks_per_month", { precision: 10, scale: 6 }).notNull().default("4.333333"),
+  weeksPerMonth: numeric("weeks_per_month", { precision: 16, scale: 12 }).notNull().default("4.333333333333"), // 52/12 con la precisión del Excel (con 6 decimales el recálculo difería en 1e-7)
   weeksPerYear: integer("weeks_per_year").notNull().default(52),
   reservePct: numeric("reserve_pct", { precision: 5, scale: 4 }).notNull().default("0.1000"),
   overloadThreshold: numeric("overload_threshold", { precision: 5, scale: 4 }).notNull().default("1.0000"),

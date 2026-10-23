@@ -1,7 +1,9 @@
 import { sql, eq, and } from "drizzle-orm";
 import { createDb, withRls } from "../src/db/client";
 import * as s from "../src/db/schema";
-import { URL_ADMIN, URL_APP, check, summary, rejects } from "./helpers";
+import { URL_ADMIN, URL_APP, check, summary, rejects, refuseHostedDb } from "./helpers";
+
+refuseHostedDb(); // esta prueba hace TRUNCATE de studies y auth.users
 
 const U1 = "11111111-1111-4111-8111-111111111111", U2 = "22222222-2222-4222-8222-222222222222", U3 = "33333333-3333-4333-8333-333333333333", U4 = "44444444-4444-4444-8444-444444444444";
 const admin = createDb(URL_ADMIN, 1), app = createDb(URL_APP, 1); // max=1 fuerza la reutilización de la MISMA conexión (prueba de no-fuga)

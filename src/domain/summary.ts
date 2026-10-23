@@ -39,7 +39,11 @@ export function analyze(staffAll: StaffingInput[], actsAll: ActivityInput[], prm
 
   const keys = new Map<string, { dataKind: string; area: string; site: string; position: string }>();
   for (const s of staff) keys.set(key(s.dataKind, s.area, s.site, s.position), s);
-  for (const a of acts) if (!keys.has(key(a.dataKind, a.area, a.site, a.position))) keys.set(key(a.dataKind, a.area, a.site, a.position), a);
+  for (const a of acts) {
+    if (!keys.has(key(a.dataKind, a.area, a.site, a.position))) keys.set(key(a.dataKind, a.area, a.site, a.position), a);
+    // El cargo que asume el resto de la carga también aparece (D-08: sin dotación se muestra «Falta registrar cantidad y jornada»).
+    if (a.secondaryPosition && !keys.has(key(a.dataKind, a.area, a.site, a.secondaryPosition))) keys.set(key(a.dataKind, a.area, a.site, a.secondaryPosition), { dataKind: a.dataKind, area: a.area, site: a.site, position: a.secondaryPosition });
+  }
 
   const positions: PositionRow[] = [...keys.entries()].map(([k, p]) => {
     const entries = staff.filter((s) => key(s.dataKind, s.area, s.site, s.position) === k);
@@ -56,14 +60,14 @@ export function analyze(staffAll: StaffingInput[], actsAll: ActivityInput[], prm
     return { dataKind: p.dataKind, area: p.area, site: p.site, position: p.position, occupants, capacity, hours, pct, activities: count, complete, reading, level };
   }).sort((a, b) => a.area.localeCompare(b.area, "es") || a.site.localeCompare(b.site, "es") || a.position.localeCompare(b.position, "es"));
 
+  /* Área (hoja 4b, tabla 1): horas = Σ horas TOTALES de sus actividades completas; capacidad = Σ capacidad de su dotación. */
   const areaMap = new Map<string, AreaRow>();
-  for (const p of positions) {
-    const r = areaMap.get(p.area) ?? { area: p.area, activities: 0, complete: 0, hours: 0, capacity: 0, pct: null };
-    r.activities += p.activities; r.complete += p.complete; r.hours += p.hours; r.capacity += p.capacity; areaMap.set(p.area, r);
-  }
+  const areaRow = (name: string) => { const k = norm(name); let r = areaMap.get(k); if (!r) { r = { area: name, activities: 0, complete: 0, hours: 0, capacity: 0, pct: null }; areaMap.set(k, r); } return r; };
+  acts.forEach((a, i) => { const r = areaRow(a.area); r.activities++; if (results[i].status === "OK") { r.complete++; r.hours += results[i].hTotal!; } });
+  for (const s of staff) areaRow(s.area).capacity += capacityOf([s], prm.reservePct);
   const areas = [...areaMap.values()].map((r) => ({ ...r, pct: r.capacity > 0 && r.hours > 0 ? r.hours / r.capacity : null })).sort((a, b) => b.hours - a.hours);
 
-  const hours = positions.reduce((x, p) => x + p.hours, 0), capacity = positions.reduce((x, p) => x + p.capacity, 0);
+  const hours = areas.reduce((x, r) => x + r.hours, 0), capacity = areas.reduce((x, r) => x + r.capacity, 0);
   const overload = positions.filter((p) => p.level === "overload").length, low = positions.filter((p) => p.level === "low").length;
   return { activities, positions, areas, kpis: { activities: activities.length, complete: activities.filter((a) => a.complete).length, hours, capacity, pct: capacity > 0 && hours > 0 ? hours / capacity : null, alerts: overload + low, overload, low } };
 }

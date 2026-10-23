@@ -47,3 +47,6 @@ next-env.d.ts
 
 # Datos reales del estudio: no versionar (Ley 1581, D-22)
 docs/reference/*.xlsx
+
+# Informes de importación (pueden contener datos del estudio)
+.import-reports/

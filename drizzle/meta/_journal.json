@@ -8,6 +8,13 @@
       "when": 1792719249119,
       "tag": "0000_init",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1792789796133,
+      "tag": "0001_weeks_per_month_precision",
+      "breakpoints": true
     }
   ]
 }

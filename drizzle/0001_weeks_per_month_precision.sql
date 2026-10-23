@@ -1,0 +1,2 @@
+ALTER TABLE "study_parameters" ALTER COLUMN "weeks_per_month" SET DATA TYPE numeric(16, 12);--> statement-breakpoint
+ALTER TABLE "study_parameters" ALTER COLUMN "weeks_per_month" SET DEFAULT '4.333333333333';

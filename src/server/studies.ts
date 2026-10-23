@@ -3,7 +3,7 @@
  * Las funciones reciben `db` (conexión app_user) y `sub` (id del usuario autenticado); no usan la clave de servicio.
  */
 import { and, eq } from "drizzle-orm";
-import { withRls, type Db } from "../db/client";
+import { withRls, type Db, type Tx } from "../db/client";
 import { activities, areas, memberships, positions, sites, staffingEntries, studies, studyParameters } from "../db/schema";
 import type { ActivityInput, Params, StaffingInput } from "../domain/engine";
 import type { Thresholds } from "../domain/summary";
@@ -98,8 +98,15 @@ export async function listActivityVersions(db: Db, sub: string, studyId: string)
 }
 
 /** Carga el estudio completo en la forma que espera el motor de cálculo. */
-export async function loadStudyData(db: Db, sub: string, studyId: string): Promise<{ params: Params; thresholds: Thresholds; staff: StaffingInput[]; acts: ActivityInput[] }> {
-  return withRls(db, { sub }, async (tx) => {
+export type StudyData = { params: Params; thresholds: Thresholds; staff: StaffingInput[]; acts: ActivityInput[] };
+
+export async function loadStudyData(db: Db, sub: string, studyId: string): Promise<StudyData> {
+  return withRls(db, { sub }, (tx) => loadStudyDataTx(tx, studyId));
+}
+
+/** Igual que loadStudyData, dentro de una transacción ya abierta con RLS (lo usa la importación para verificar antes de confirmar). */
+export async function loadStudyDataTx(tx: Tx, studyId: string): Promise<StudyData> {
+  {
     const [p] = await tx.select().from(studyParameters).where(eq(studyParameters.studyId, studyId));
     if (!p) throw new Error("Estudio sin parámetros o sin acceso");
     const pos = await tx.select({ id: positions.id, name: positions.name, area: areas.name, site: sites.name, kind: positions.dataKind }).from(positions)
@@ -120,5 +127,5 @@ export async function loadStudyData(db: Db, sub: string, studyId: string): Promi
     });
     const params: Params = { workDaysPerWeek: Number(p.workDaysPerWeek), weeksPerMonth: Number(p.weeksPerMonth), weeksPerYear: p.weeksPerYear, reservePct: Number(p.reservePct), scenario: p.scenario };
     return { params, thresholds: { high: Number(p.overloadThreshold), low: Number(p.lowLoadThreshold) }, staff, acts };
-  });
+  }
 }
