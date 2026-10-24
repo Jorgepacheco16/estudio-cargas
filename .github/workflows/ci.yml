@@ -57,3 +57,14 @@ jobs:
       - uses: github/codeql-action/init@v3
         with: { languages: javascript-typescript }
       - uses: github/codeql-action/analyze@v3
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run build
+      - name: Pruebas de navegador públicas (sin credenciales; la aplicación muestra datos DEMO)
+        run: npx playwright test e2e/publico.spec.ts

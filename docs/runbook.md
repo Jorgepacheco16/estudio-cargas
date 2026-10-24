@@ -42,3 +42,8 @@ Supabase mantiene copias diarias (según el plan). Para restaurar a un proyecto 
 - **Migraciones**: `drizzle/0003_deviation_thresholds.sql` y luego `sql/0003_history.sql` (función segura de las fotos programadas).
 - **Cron**: `vercel.json` programa `/api/sheets/reconcile` (diario) y `/api/history/snapshot` (lunes 10:00 UTC). Ambos exigen `Authorization: Bearer CRON_SECRET`.
 - **Evaluación del agente**: `npm run eval:agent` y `npm run eval:explain` (consumen tokens; no corren en CI).
+## Pruebas de navegador y oráculo
+- `npm run test:e2e` (públicas; requiere `npm run build` antes) y `E2E_SESSION=1 npm run test:e2e-sesion` (con sesión; usa un usuario temporal y necesita `.env.local`). Con `E2E_BASE_URL=https://…` se prueba un despliegue existente.
+- Playwright necesita su navegador: `npx playwright install chromium`.
+- Oráculo: `npm run test:oracle`. Regenerarlo: LibreOffice instalado (o la copia portátil extraída con `msiexec /a`), el libro de referencia y `npm run make:oracle -- <libro.xlsx> <ruta a soffice.com>`.
+- Región: la función de Vercel debe estar en la misma región que Supabase (`vercel.json` → `regions`). Si cambia la región de la base, cámbiela también aquí.

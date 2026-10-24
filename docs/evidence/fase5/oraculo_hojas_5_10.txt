@@ -1,0 +1,18 @@
+﻿Fixture generado con LibreOffice 25.8.7.3 30742500f2d3eb4366ac312fa33d3dcabdb3eba5
+  PASS  lote 1 · hoja 5 Medibilidad: puntaje, nivel y recomendación (397 filas × 3 columnas)
+  PASS  lote 1 · hoja 6 Pertinencia: alerta de control interno y lectura (400 filas × 2 columnas)
+  PASS  lote 1 · hoja 7 Riesgos: impacto máximo, criticidad, concentración y respaldo (400 filas × 4 columnas)
+  PASS  lote 1 · hoja 8 Oportunidades: impacto económico, puntaje, prioridad, implementación y control (100 filas × 5 columnas)
+  PASS  lote 1 · hoja 10 Plan: duración, diferencia, % de cumplimiento y alerta de plazo con fecha de corte 2026-06-15 (100 filas × 4 columnas)
+  PASS  lote 1 · hoja 9 Rediseño: carga propuesta, % y alerta con la carga y capacidad de la hoja 4b (60 filas × 4 columnas)
+  PASS  lote 2 · hoja 5 Medibilidad: puntaje, nivel y recomendación (400 filas × 3 columnas)
+  PASS  lote 2 · hoja 6 Pertinencia: alerta de control interno y lectura (400 filas × 2 columnas)
+  PASS  lote 2 · hoja 7 Riesgos: impacto máximo, criticidad, concentración y respaldo (400 filas × 4 columnas)
+  PASS  lote 2 · hoja 8 Oportunidades: impacto económico, puntaje, prioridad, implementación y control (100 filas × 5 columnas)
+  PASS  lote 2 · hoja 10 Plan: duración, diferencia, % de cumplimiento y alerta de plazo con fecha de corte 2026-01-20 (100 filas × 4 columnas)
+  PASS  lote 2 · hoja 9 Rediseño: carga propuesta, % y alerta con la carga y capacidad de la hoja 4b (60 filas × 4 columnas)
+  PASS  Indicador sugerido por tipo de actividad (tabla TblIndic del libro) coincide con la aplicación
+
+Valores comparados contra el libro recalculado por LibreOffice: 9478
+
+Resultado: 13 pruebas OK, 0 fallidas

@@ -1,0 +1,57 @@
+﻿
+
+Running 33 tests using 3 workers
+
+  ok  2 [movil] › e2e\publico.spec.ts:6:5 › el tablero muestra los 12 indicadores y las secciones A a F con datos DEMO 
+(3.0s)
+  ok  1 [escritorio] › e2e\publico.spec.ts:6:5 › el tablero muestra los 12 indicadores y las secciones A a F con datos 
+DEMO (3.1s)
+  ok  3 [movil] › e2e\publico.spec.ts:17:5 › el selector de modo cambia entre DEMO, REAL y TODOS sin errores (4.4s)
+  ok  4 [escritorio] › e2e\publico.spec.ts:17:5 › el selector de modo cambia entre DEMO, REAL y TODOS sin errores 
+(4.6s)
+  ok  5 [escritorio] › e2e\sesion.spec.ts:29:5 › la sesión se reconoce y el estudio se crea con sus 14 áreas (7.9s)
+  ok  6 [movil] › e2e\publico.spec.ts:27:5 › toda la navegación principal responde y las páginas de captura piden 
+iniciar sesión (7.4s)
+  ok  7 [escritorio] › e2e\publico.spec.ts:27:5 › toda la navegación principal responde y las páginas de captura piden 
+iniciar sesión (7.7s)
+  ok  9 [movil] › e2e\publico.spec.ts:38:5 › la página de ingreso ofrece Google y no filtra detalles (1.8s)
+  ok 10 [escritorio] › e2e\publico.spec.ts:38:5 › la página de ingreso ofrece Google y no filtra detalles (1.3s)
+  ok  8 [escritorio] › e2e\sesion.spec.ts:39:5 › se registra un cargo con su dotación (2.0s)
+  ok 12 [escritorio] › e2e\publico.spec.ts:45:5 › las vistas descargan Excel, CSV y PDF válidos (3.2s)
+  ok 11 [movil] › e2e\publico.spec.ts:45:5 › las vistas descargan Excel, CSV y PDF válidos (3.3s)
+  ok 13 [escritorio] › e2e\sesion.spec.ts:50:5 › se registra una actividad completa y se calcula su carga; editar el 
+tiempo la recalcula (3.4s)
+  ok 16 [escritorio] › e2e\sesion.spec.ts:71:5 › una actividad con código repetido se rechaza con un mensaje claro 
+(1.1s)
+  ok 15 [movil] › e2e\publico.spec.ts:58:5 › cabeceras de seguridad y rutas internas sin firma (1.6s)
+  ok 14 [escritorio] › e2e\publico.spec.ts:58:5 › cabeceras de seguridad y rutas internas sin firma (1.7s)
+  ok 18 [movil] › e2e\publico.spec.ts:72:5 › sin desbordamiento horizontal y con tema oscuro legible (1.5s)
+  ok 19 [escritorio] › e2e\publico.spec.ts:72:5 › sin desbordamiento horizontal y con tema oscuro legible (1.4s)
+  ok 17 [escritorio] › e2e\sesion.spec.ts:80:5 › el tablero en modo REAL refleja la actividad registrada (5.1s)
+  ok 21 [escritorio] › e2e\publico.spec.ts:82:7 › accesibilidad (axe, sin fallas serias ni críticas): /?modo=demo 
+(4.2s)
+  ok 20 [movil] › e2e\publico.spec.ts:82:7 › accesibilidad (axe, sin fallas serias ni críticas): /?modo=demo (4.6s)
+  ok 23 [escritorio] › e2e\publico.spec.ts:82:7 › accesibilidad (axe, sin fallas serias ni críticas): /login (2.5s)
+  ok 24 [movil] › e2e\publico.spec.ts:82:7 › accesibilidad (axe, sin fallas serias ni críticas): /login (2.5s)
+  ok 25 [escritorio] › e2e\publico.spec.ts:82:7 › accesibilidad (axe, sin fallas serias ni críticas): 
+/cargos?modo=demo (2.9s)
+  ok 26 [movil] › e2e\publico.spec.ts:82:7 › accesibilidad (axe, sin fallas serias ni críticas): /cargos?modo=demo 
+(2.8s)
+  ok 22 [escritorio] › e2e\sesion.spec.ts:89:5 › hoja 7: se captura el riesgo y se muestra la criticidad calculada con 
+las reglas del Excel (7.7s)
+  ok 27 [escritorio] › e2e\publico.spec.ts:82:7 › accesibilidad (axe, sin fallas serias ni críticas): 
+/actividades?modo=demo (2.9s)
+  ok 28 [movil] › e2e\publico.spec.ts:82:7 › accesibilidad (axe, sin fallas serias ni críticas): 
+/actividades?modo=demo (2.9s)
+  ok 29 [escritorio] › e2e\sesion.spec.ts:102:5 › un valor inválido al editar un registro se rechaza (escala 1 a 5) y 
+el dato no cambia (8.5s)
+  ok 30 [escritorio] › e2e\sesion.spec.ts:112:5 › la exportación a Excel con sesión trae los datos del estudio (5.7s)
+  ok 31 [escritorio] › e2e\sesion.spec.ts:120:5 › historia: foto, mediciones con índice de productividad y detección 
+de desviaciones (24.5s)
+  ok 32 [escritorio] › e2e\sesion.spec.ts:151:5 › integraciones y agente cargan para el propietario (9.3s)
+  ok 33 [escritorio] › e2e\sesion.spec.ts:159:5 › cerrar sesión devuelve al ingreso y protege las páginas de captura 
+(11.2s)
+
+  33 passed (1.7m)
+
+

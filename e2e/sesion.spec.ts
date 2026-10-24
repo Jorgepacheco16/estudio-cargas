@@ -14,7 +14,8 @@ let user: TestUser;
 let page: Page;
 const sec = (name: string) => page.locator("section", { has: page.getByRole("heading", { name }) });
 /** Los formularios usan acciones de servidor: solo funcionan cuando React ya hidrató la página, así que se espera a que cargue por completo. */
-const open = async (path: string) => { await page.goto(path); await page.waitForLoadState("networkidle"); };
+const settle = async () => { await page.waitForLoadState("networkidle"); await page.waitForTimeout(1000); };
+const open = async (path: string) => { await page.goto(path); await settle(); };
 const banner = (text: string | RegExp) => expect(page.locator(".banner").filter({ hasText: text })).toBeVisible();
 
 test.beforeAll(async ({ browser, baseURL }) => {
@@ -101,7 +102,7 @@ test("hoja 7: se captura el riesgo y se muestra la criticidad calculada con las 
 test("un valor inválido al editar un registro se rechaza (escala 1 a 5) y el dato no cambia", async () => {
   await open("/captura?hoja=7");
   await page.locator("tr", { hasText: "E2E-1" }).getByRole("link", { name: "Editar" }).click();
-  await page.waitForLoadState("networkidle");
+  await settle();
   const form = page.locator("form", { has: page.locator("input[name=hoja][value='7']") });
   await form.locator("input[name=impactLegal]").fill("9");
   await form.getByRole("button", { name: "Guardar" }).click();

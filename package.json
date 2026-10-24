@@ -27,6 +27,8 @@
         "eval:explain": "tsx --env-file=.env.local scripts/eval-explain.ts",
         "test:history": "tsx tests/history.test.ts",
         "test:oracle": "tsx tests/oracle510.test.ts",
+        "test:e2e": "playwright test e2e/publico.spec.ts",
+        "test:e2e-sesion": "playwright test e2e/sesion.spec.ts --project=escritorio",
         "make:oracle": "tsx scripts/make-oracle-5-10.ts",
         "test:import": "tsx tests/import.test.ts",
         "import:excel": "tsx scripts/import-excel.ts",
