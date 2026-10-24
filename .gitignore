@@ -53,3 +53,7 @@ docs/reference/*.xlsx
 
 .vercel
 .env*
+
+# Playwright
+test-results/
+playwright-report/
