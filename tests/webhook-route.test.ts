@@ -4,7 +4,7 @@ import { sign } from "../src/server/webhook";
 import { check, summary } from "./helpers";
 
 /** Ruta POST /api/sheets/webhook: firma, ventana de tiempo, contrato del cuerpo y hoja desconocida. No llama a Google. */
-process.env.SHEETS_WEBHOOK_SECRET = "secreto-de-prueba-0123456789abcdef";
+process.env.SHEETS_WEBHOOK_SECRET = `${randomUUID()}${randomUUID()}`; // generado en cada ejecución: no hay un secreto literal en el repositorio
 const SECRET = process.env.SHEETS_WEBHOOK_SECRET;
 
 const body = (o: Record<string, unknown> = {}) => JSON.stringify({ eventId: randomUUID(), spreadsheetId: `no-conectada-${randomUUID()}`, sheetName: "3_Actividades", kind: "edit", range: { row: 7, col: 1, rows: 1, cols: 1 }, values: [], editedAt: new Date().toISOString(), ...o });
