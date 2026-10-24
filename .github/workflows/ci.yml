@@ -33,6 +33,7 @@ jobs:
       - run: npm run test:f3
       - run: npm run test:capture
       - run: npm run test:matrix
+      - run: npm run test:policies
       - run: npm run test:agent
       - run: npm run test:sheets
       - run: npm run test:webhook
@@ -43,6 +44,8 @@ jobs:
       - run: npm run test:summary
       - run: npm run test:calculators
       - run: npm run test:oracle
+      - run: npm run test:hook
+      - run: npm run test:arch
       - name: Prueba dorada contra el Excel (LibreOffice real)
         run: sudo apt-get update && sudo apt-get install -y libreoffice-calc && npm run test:golden
       - run: npm audit --omit=dev --audit-level=high

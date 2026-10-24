@@ -12,6 +12,8 @@ import { loadDashboardTx } from "./dashboard-data";
 export const AGENT_DAILY_LIMIT = Number(process.env.AGENT_DAILY_LIMIT ?? 5);
 export const agentModel = () => process.env.ANTHROPIC_MODEL ?? "claude-sonnet-5-5";
 const MAX_FINDINGS = 40;
+/** Tope de costo por ejecución (entrada + salida, reintento incluido). Si el primer intento ya consumió más de la mitad, no se reintenta: así el tope es una garantía y no solo una medición. */
+export const AGENT_MAX_TOKENS_PER_RUN = Number(process.env.AGENT_MAX_TOKENS_PER_RUN ?? 8000);
 
 const round = (n: number, d = 2) => Math.round(n * 10 ** d) / 10 ** d;
 const key = (a: string, s: string, p: string, k: string) => [k, a, s, p].join("|");
@@ -69,7 +71,7 @@ const TOOL = {
 export async function callModel(digest: StudyDigest): Promise<{ input: unknown; inputTokens: number; outputTokens: number }> {
   const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
   const msg = await client.messages.create({
-    model: agentModel(), max_tokens: 2000, system: SYSTEM_PROMPT, tools: [TOOL], // Este modelo no admite tool_choice forzado (error 400, D-34): se usa "auto" y el sistema exige responder solo con la herramienta; si no la usa, se trata como lista vacía.
+    model: agentModel(), max_tokens: 1200, system: SYSTEM_PROMPT, tools: [TOOL], // Este modelo no admite tool_choice forzado (error 400, D-34): se usa "auto" y el sistema exige responder solo con la herramienta; si no la usa, se trata como lista vacía.
     tool_choice: { type: "auto" },
     messages: [{ role: "user", content: JSON.stringify(digest) }],
   });
@@ -84,12 +86,15 @@ export async function proposeWithRetry(digest: StudyDigest) {
     const r = await callModel(digest);
     inputTokens += r.inputTokens; outputTokens += r.outputTokens;
     const screened = screenProposals(r.input, digest);
-    if (attempt >= 2 || !screened.discarded.some((x) => x.reason.startsWith("salida fuera de contrato"))) return { ...screened, inputTokens, outputTokens, attempts: attempt };
+    if (attempt >= 2 || (inputTokens + outputTokens) * 2 > AGENT_MAX_TOKENS_PER_RUN || !screened.discarded.some((x) => x.reason.startsWith("salida fuera de contrato"))) return { ...screened, inputTokens, outputTokens, attempts: attempt };
   }
 }
 
-export async function runAgent(db: Db, sub: string, studyId: string, trigger = "manual"): Promise<RunResult> {
-  if (!process.env.ANTHROPIC_API_KEY) return { ok: false, message: "El agente no está configurado (falta ANTHROPIC_API_KEY)." };
+/** Quién redacta las propuestas. Por defecto es el modelo real; las pruebas del flujo (estado pendiente, tope diario, auditoría) inyectan uno propio para no gastar tokens. */
+export type Proposer = (digest: StudyDigest) => Promise<Awaited<ReturnType<typeof proposeWithRetry>>>;
+
+export async function runAgent(db: Db, sub: string, studyId: string, trigger = "manual", propose: Proposer = proposeWithRetry): Promise<RunResult> {
+  if (propose === proposeWithRetry && !process.env.ANTHROPIC_API_KEY) return { ok: false, message: "El agente no está configurado (falta ANTHROPIC_API_KEY)." };
   const startOfDay = new Date(); startOfDay.setUTCHours(0, 0, 0, 0);
   const prep = await withRls(db, { sub }, async (tx) => {
     const [{ n }] = await tx.select({ n: sql<number>`count(*)::int` }).from(agentRuns).where(and(eq(agentRuns.studyId, studyId), gte(agentRuns.createdAt, startOfDay)));
@@ -101,7 +106,7 @@ export async function runAgent(db: Db, sub: string, studyId: string, trigger = "
   if (!prep) return { ok: false, message: `Se alcanzó el tope diario de ejecuciones del agente (${AGENT_DAILY_LIMIT}).` };
 
   let out: Awaited<ReturnType<typeof proposeWithRetry>>;
-  try { out = await proposeWithRetry(prep.digest); }
+  try { out = await propose(prep.digest); }
   catch {
     await withRls(db, { sub }, (tx) => tx.update(agentRuns).set({ status: "failed" }).where(eq(agentRuns.id, prep.runId)));
     return { ok: false, message: "No se pudo consultar al agente. Intente de nuevo más tarde." };

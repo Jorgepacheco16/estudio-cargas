@@ -1,1 +1,43 @@
-<!DOCTYPE html><html><head><title>Google Drive - Virus scan warning</title><meta http-equiv="content-type" content="text/html; charset=utf-8"/><style nonce="rq1vdKJ0kONs5IOxM4qWrA">.goog-link-button{position:relative;color:#15c;text-decoration:underline;cursor:pointer}.goog-link-button-disabled{color:#ccc;text-decoration:none;cursor:default}body{color:#222;font:normal 13px/1.4 arial,sans-serif;margin:0}.grecaptcha-badge{visibility:hidden}.uc-main{padding-top:50px;text-align:center}#uc-dl-icon{display:inline-block;margin-top:16px;padding-right:1em;vertical-align:top}#uc-text{display:inline-block;max-width:68ex;text-align:left}.uc-error-caption,.uc-warning-caption{color:#222;font-size:16px}#uc-download-link{text-decoration:none}.uc-name-size a{color:#15c;text-decoration:none}.uc-name-size a:visited{color:#61c;text-decoration:none}.uc-name-size a:active{color:#d14836;text-decoration:none}.uc-footer{color:#777;font-size:11px;padding-bottom:5ex;padding-top:5ex;text-align:center}.uc-footer a{color:#15c}.uc-footer a:visited{color:#61c}.uc-footer a:active{color:#d14836}.uc-footer-divider{color:var(--ws-sys-color-divider,#c4c7c5);width:100%}.goog-inline-block{position:relative;display:-moz-inline-box;display:inline-block}* html .goog-inline-block{display:inline}:first-child+html .goog-inline-block{display:inline}sentinel{}</style><link rel="icon" href="//ssl.gstatic.com/docs/doclist/images/drive_favicon_2026_32dp.png"/></head><body><div class="uc-main"><div id="uc-dl-icon" class="image-container"><div class="drive-sprite-aux-download-file"></div></div><div id="uc-text"><p class="uc-warning-caption">Google Drive can't scan this file for viruses.</p><p class="uc-warning-subcaption">This file is executable and may harm your computer. <p class="uc-warning-subcaption"><span class="uc-name-size"><a href="/open?id=11qU5gPZxMuSkBnw9TYo6fKYZXtvrtySo">block-secrets.js</a> (951)</span></p></p><form id="download-form" action="https://drive.usercontent.google.com/download" method="get"><input type="submit" id="uc-download-link" class="goog-inline-block jfk-button jfk-button-action" value="Download anyway"/><input type="hidden" name="id" value="11qU5gPZxMuSkBnw9TYo6fKYZXtvrtySo"><input type="hidden" name="export" value="download"><input type="hidden" name="confirm" value="t"><input type="hidden" name="uuid" value="a3c94861-fb8e-4480-b337-b6d7cd486019"></form></div></div><div class="uc-footer"><hr class="uc-footer-divider"></div></body></html>
+/**
+ * Hook PreToolUse de Claude Code (matcher Write|Edit): bloquea escrituras que contengan secretos o que apunten a archivos de entorno.
+ * Recibe el evento como JSON por la entrada estándar. Salida 2 = BLOQUEAR y avisar a Claude; salida 0 = permitir.
+ * Sin dependencias: funciona igual con CommonJS o con módulos ES.
+ */
+const PATHS_BLOQUEADAS = [/(^|[\\/])\.env(\.(?!example$)[^\\/]*)?$/i, /service-account[^\\/]*\.json$/i, /\.pem$/i, /id_(rsa|ed25519)$/i];
+
+/** Patrones de secretos (formato de los proveedores usados). Se arman por partes para que este archivo no dispare a los escáneres. */
+const PATRONES = [
+  ["clave de Anthropic", new RegExp("sk-ant-" + "[A-Za-z0-9_-]{20,}")],
+  ["token de Supabase (sbp_)", new RegExp("sbp" + "_[A-Za-z0-9]{20,}")],
+  ["clave secreta de Supabase", new RegExp("sb_secret" + "_[A-Za-z0-9_-]{16,}")],
+  ["token de Vercel", new RegExp("vcp" + "_[A-Za-z0-9]{20,}")],
+  ["token de GitHub", new RegExp("gh[pousr]" + "_[A-Za-z0-9]{30,}")],
+  ["JWT (posible service_role)", new RegExp("eyJ" + "[A-Za-z0-9_-]{10,}\\.eyJ[A-Za-z0-9_-]{10,}\\.[A-Za-z0-9_-]{10,}")],
+  ["llave privada", new RegExp("-----BEGIN [A-Z ]*PRIVATE" + " KEY-----")],
+  ["cadena de conexión con contraseña", new RegExp("postgres(?:ql)?://[^\\s:/@]+:[^\\s@]{6,}@(?!localhost|127\\.0\\.0\\.1)")],
+  ["JSON de cuenta de servicio de Google", new RegExp("\"private_key\"\\s*:\\s*\"-----BEGIN")],
+];
+
+function revisar(evento) {
+  const entrada = (evento && evento.tool_input) || {};
+  const ruta = String(entrada.file_path || entrada.path || "");
+  for (const re of PATHS_BLOQUEADAS) if (re.test(ruta)) return `Bloqueado: no se escriben archivos de entorno ni llaves (${ruta}). Use variables de entorno y .env.example sin valores.`;
+  const texto = [entrada.content, entrada.new_string, entrada.new_str].filter((x) => typeof x === "string").join("\n");
+  for (const [nombre, re] of PATRONES) if (re.test(texto)) return `Bloqueado: el contenido parece incluir un secreto (${nombre}). Los secretos solo van en variables de entorno, nunca en el repositorio.`;
+  return null;
+}
+
+if (typeof module !== "undefined" && module.exports) module.exports = { revisar };
+
+if (typeof require === "undefined" || require.main === module) {
+  let datos = "";
+  process.stdin.setEncoding("utf8");
+  process.stdin.on("data", (c) => { datos += c; });
+  process.stdin.on("end", () => {
+    let evento;
+    try { evento = JSON.parse(datos || "{}"); } catch { process.stderr.write("Hook de secretos: entrada ilegible; se bloquea por seguridad.\n"); process.exit(2); }
+    const motivo = revisar(evento);
+    if (motivo) { process.stderr.write(motivo + "\n"); process.exit(2); }
+    process.exit(0);
+  });
+}

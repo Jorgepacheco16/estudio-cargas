@@ -31,8 +31,20 @@ export interface StudyDigest { studyId: string; parameters: Record<string, numbe
  * Separa lo que cumple el contrato de lo que no. Una propuesta se descarta si: no valida con zod, cita evidencia que NO está en el
  * resumen enviado (la IA no puede inventar referencias), o su payload no es aplicable (parámetro fuera de la lista/rango, valor de lista vacío).
  */
+/** Algunos modelos entregan un arreglo u objeto como TEXTO JSON dentro de la herramienta. Se acepta solo si ese texto es JSON válido; después el contrato (zod) lo valida igual que el resto. */
+function unstring(v: unknown): unknown {
+  if (typeof v !== "string") return v;
+  try { return JSON.parse(v); } catch { return v; }
+}
+export function normalizeOutput(raw: unknown): unknown {
+  if (!raw || typeof raw !== "object") return raw;
+  const o = raw as Record<string, unknown>;
+  const proposals = unstring(o.proposals);
+  return { ...o, proposals: Array.isArray(proposals) ? proposals.map((p) => (p && typeof p === "object" ? { ...(p as object), payload: unstring((p as Record<string, unknown>).payload), evidence: unstring((p as Record<string, unknown>).evidence) } : p)) : proposals };
+}
+
 export function screenProposals(raw: unknown, digest: StudyDigest): { accepted: AgentProposal[]; discarded: { reason: string }[] } {
-  const parsed = agentOutput.safeParse(raw);
+  const parsed = agentOutput.safeParse(normalizeOutput(raw));
   if (!parsed.success) return { accepted: [], discarded: [{ reason: `salida fuera de contrato: ${parsed.error.issues[0]?.message ?? "inválida"}` }] };
   const known = new Set(digest.findings.map((f) => `${f.entity}:${f.id}`));
   const accepted: AgentProposal[] = [], discarded: { reason: string }[] = [];
@@ -58,5 +70,6 @@ export const SYSTEM_PROMPT = [
   "Tipos permitidos: parameter (payload {key, value}; key solo reservePct, overloadThreshold o lowLoadThreshold, value como fracción 0-1 o 0-5),",
   "list_value (payload {list:'area', value}), validation_rule (payload libre) y report (resumen narrativo).",
   "Responde SIEMPRE y únicamente llamando a submit_proposals, sin texto adicional.",
+  "Cada summary debe tener entre 10 y 300 caracteres (sé breve).",
   "No inventes cifras: usa únicamente las del resumen. Si no hay base suficiente, devuelve una lista vacía.",
 ].join("\n");
