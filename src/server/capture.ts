@@ -85,6 +85,8 @@ export const optionsOf = (list: keyof typeof LABELS) => Object.entries(LABELS[li
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
+/** Número sin signo: dígitos con, a lo sumo, un separador decimal (coma o punto). */
+const DECIMAL = /^\d+(?:[.,]\d+)?$/;
 
 /** Convierte lo recibido del formulario en los valores de la tabla. Texto no numérico es un error, nunca 0. Devuelve los errores por campo. */
 export function parseForm(def: SheetDef, raw: Record<string, FormDataEntryValue>): { values: Record<string, unknown>; errors: string[] } {
@@ -103,13 +105,14 @@ export function parseForm(def: SheetDef, raw: Record<string, FormDataEntryValue>
       case "bool":
         if (s !== "yes" && s !== "no") errors.push(`${f.label}: elija Sí o No`); else values[f.key] = s === "yes"; break;
       case "scale": case "int": {
-        const n = Number(s.replace(/,/g, "."));
+        const n = DECIMAL.test(s) ? Number(s.replace(",", ".")) : Number.NaN; // formato estricto: dígitos con un solo separador decimal
         const [lo, hi] = f.kind === "scale" ? [1, 5] : [0, f.max ?? 1e6];
         if (!Number.isInteger(n) || n < lo || n > hi) errors.push(`${f.label}: escriba un entero entre ${lo} y ${hi}`); else values[f.key] = n;
         break;
       }
       case "num": case "pct": {
-        const n = Number(s.replace(/%/g, "").replace(/,/g, "."));
+        const body = f.kind === "pct" ? s.replace(/\s*%$/, "") : s; // un «%» solo se admite al final
+        const n = DECIMAL.test(body) ? Number(body.replace(",", ".")) : Number.NaN;
         const v = f.kind === "pct" ? n / 100 : n;
         const hi = f.kind === "pct" ? 1 : f.max ?? 1e12;
         if (!Number.isFinite(n) || v < 0 || v > hi) errors.push(`${f.label}: escriba un número ${f.kind === "pct" ? "entre 0 y 100" : `entre 0 y ${hi}`}`);

@@ -28,6 +28,10 @@ async function main() {
       bad("param", { reservePct: "150" }, "Reserva");
       bad("param", { workDaysPerWeek: "1,2,3" }, "Días laborales"); // varias comas: se rechaza (no se interpreta una sola)
       bad("param", { reservePct: "1%2%" }, "Reserva");
+      bad("param", { reservePct: "%12" }, "Reserva");
+      bad("7", { activityId: randomUUID(), probability: "2,5" }, "Probabilidad"); // un entero no admite decimales
+      const okp = parseForm(def("param"), fd({ reservePct: " 12,5 % " }));
+      if (okp.errors.length || okp.values.reservePct !== "0.1250") throw new Error(`«12,5 %» debía aceptarse: ${JSON.stringify(okp)}`);
       const ok = parseForm(def("param"), fd({ reservePct: "10", workDaysPerWeek: "6,5" }));
       if (ok.values.reservePct !== "0.1000" || ok.values.workDaysPerWeek !== "6.5") throw new Error(JSON.stringify(ok.values));
     });
