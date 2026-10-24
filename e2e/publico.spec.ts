@@ -98,3 +98,21 @@ test("el drill-down baja de nivel con un clic y el comparador de sedes se export
   const [d] = await Promise.all([page.waitForEvent("download"), page.getByRole("link", { name: "Exportar Excel" }).click()]);
   expect(d.suggestedFilename()).toMatch(/sedes.*\.xlsx$/);
 });
+test("la política de contenido usa un código distinto por petición, sin 'unsafe-inline' en scripts, y no hay violaciones ni errores en consola", async ({ page, request }) => {
+  const csp = async () => (await request.get("/login")).headers()["content-security-policy"];
+  const [a, b] = [await csp(), await csp()];
+  expect(a).toMatch(/script-src 'self' 'nonce-[A-Za-z0-9+/=]+' 'strict-dynamic'/);
+  expect(a).not.toMatch(/script-src[^;]*unsafe-inline/);
+  expect(a).not.toMatch(/style-src 'self'[^;]*unsafe-inline/);
+  expect(a).toContain("frame-ancestors 'none'");
+  expect(a).toContain("form-action");
+  expect(a).not.toBe(b); // el nonce cambia en cada petición
+  const problemas: string[] = [];
+  page.on("console", (m) => { if (m.type() === "error") problemas.push(m.text()); });
+  page.on("pageerror", (e) => problemas.push(e.message));
+  for (const ruta of ["/?modo=demo", "/login", "/sedes?modo=demo", "/drill?modo=demo"]) { await page.goto(ruta); await page.waitForLoadState("networkidle"); }
+  expect(problemas).toEqual([]);
+  const h = (await request.get("/login")).headers();
+  expect(h["cross-origin-opener-policy"]).toBe("same-origin");
+  expect(h["cross-origin-resource-policy"]).toBe("same-origin");
+});

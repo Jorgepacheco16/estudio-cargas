@@ -47,3 +47,9 @@ Supabase mantiene copias diarias (según el plan). Para restaurar a un proyecto 
 - Playwright necesita su navegador: `npx playwright install chromium`.
 - Oráculo: `npm run test:oracle`. Regenerarlo: LibreOffice instalado (o la copia portátil extraída con `msiexec /a`), el libro de referencia y `npm run make:oracle -- <libro.xlsx> <ruta a soffice.com>`.
 - Región: la función de Vercel debe estar en la misma región que Supabase (`vercel.json` → `regions`). Si cambia la región de la base, cámbiela también aquí.
+## Respaldo y restauración (procedimiento y prueba)
+1. **Respaldo lógico**: `pg_dump --format=custom` con la conexión de administración (no la de la aplicación). Guárdelo cifrado; contiene datos del estudio.
+2. **Restauración**: crear una base vacía, ejecutar `pg_restore --exit-on-error` y, si es un proyecto nuevo de Supabase, crear el rol `app_user` (D-05) y aplicar las migraciones pendientes (`drizzle/*.sql` y `sql/*.sql` en orden).
+3. **Verificación**: `scripts/restore-verify.ts` (filas por tabla, políticas, aislamiento por usuario e indicadores). El job `restore` de `.github/workflows/ci.yml` hace todo el ciclo en cada cambio.
+4. **Supabase alojado**: confirme en el panel (Database → Backups) qué copias ofrece su plan y su ventana de retención; haga una restauración de prueba a un proyecto nuevo al menos una vez antes de depender de ellas.
+5. **ZAP**: el workflow `zap` escanea la aplicación publicada cada lunes; los hallazgos aparecen como anotaciones del job (ALTO hace fallar el flujo).
