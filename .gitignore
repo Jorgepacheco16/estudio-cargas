@@ -50,3 +50,6 @@ docs/reference/*.xlsx
 
 # Informes de importación (pueden contener datos del estudio)
 .import-reports/
+
+.vercel
+.env*
