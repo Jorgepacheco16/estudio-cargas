@@ -29,10 +29,7 @@ jobs:
       - run: npm run test:f3
       - run: npm run test:capture
       - run: npm run test:matrix
-      - name: Pruebas del agente
-        run: |
-          npm run test:agent > agent.out 2>&1 || { grep -E 'FAIL|Error|error' agent.out | head -8 | sed 's/^/::error::/'; exit 1; }
-          cat agent.out
+      - run: npm run test:agent
       - run: npm run test:import
       - run: npm run test:domain
       - run: npm run test:labels
