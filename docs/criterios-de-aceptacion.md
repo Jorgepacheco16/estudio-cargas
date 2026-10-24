@@ -22,7 +22,7 @@ Lo que no está completo o depende de otra persona figura al final, sin maquilla
 | F4 | Realtime | Reemplazado por refresco automático cada 45 s (D-56) | Parcial, decidido |
 | F5 | 0 diferencias en las columnas calculadas de las hojas 5–10 | `npm run test:oracle`: 9 478 valores, LibreOffice 25.8.7; encontró y corrigió el redondeo de la prioridad (D-47) | Cumplido |
 | F6 | Suite de seguridad verde | `test:rls`, `test:matrix`, `test:policies`, `test:arch`, `test:hook`, `test:webhook` | Cumplido |
-| F6 | CodeQL sin altos | CI `secrets-and-sast`; una alerta alta de `js/incomplete-sanitization` se corrigió | Verificar tras el próximo CI |
+| F6 | CodeQL sin altos | CI `secrets-and-sast`; la única alerta alta (`js/incomplete-sanitization`) se corrigió y hoy hay 0 alertas abiertas | Cumplido |
 | F6 | npm audit sin altos | CI (`npm audit --omit=dev --audit-level=high`) | Cumplido |
 | F6 | ZAP baseline sin altos | `docs/evidence/fase6/zap_baseline.txt`: 0 altas, 2 medias aceptadas (D-58) | Cumplido |
 | F6 | Prueba de restauración documentada | Job `restore` del CI (pg_dump/pg_restore reales) + `docs/runbook.md` (D-59) | Cumplido (la restauración en Supabase alojado depende del plan) |
