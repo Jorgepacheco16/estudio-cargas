@@ -30,6 +30,9 @@ export const SUGGESTED_INDICATORS: Record<string, string> = {
   occasional: "Tiempo de respuesta; criterio cualitativo verificable",
 };
 
+/** ROUND(x;0) de Excel: redondea sobre 15 cifras significativas, mitad hacia arriba. (23/40*100 da 57,49999999999999 en coma flotante; Excel devuelve 58.) */
+export const excelRound = (x: number) => { const y = Number(x.toPrecision(15)); return y < 0 ? -Math.round(-y) : Math.round(y); };
+
 const tri = (v: Tri, yes: number, partial: number) => (v === "yes" ? yes : v === "partial" ? partial : 0);
 
 export function computeMeasurability(m: MeasInput): MeasResult {
@@ -87,7 +90,7 @@ export function computeOpportunity(o: OppInput, p: OppParams): OppResult {
   const annualImpact = o.hoursPerWeek === null ? null : p.hourlyCost === null ? "Defina costo/hora en Parametros" : o.hoursPerWeek * p.weeksPerYear * p.hourlyCost;
   const scores = [o.impact, o.ease, o.effort, o.cost, o.risk];
   const score = scores.some((x) => x === null) ? null
-    : Math.round(((o.impact! * p.wImpact + o.ease! * p.wEase + (6 - o.effort!) * p.wEffort + (6 - o.cost!) * p.wCost + (6 - o.risk!) * p.wRisk) / (5 * (p.wImpact + p.wEase + p.wEffort + p.wCost + p.wRisk))) * 100);
+    : excelRound(((o.impact! * p.wImpact + o.ease! * p.wEase + (6 - o.effort!) * p.wEffort + (6 - o.cost!) * p.wCost + (6 - o.risk!) * p.wRisk) / (5 * (p.wImpact + p.wEase + p.wEffort + p.wCost + p.wRisk))) * 100);
   const priority = score === null ? "Falta calificar" : score >= 70 ? "Alta" : score >= 50 ? "Media" : "Baja";
   const implementation = o.effort === null || o.cost === null ? null : o.effort <= 2 && o.cost <= 2 ? "Rápida implementación" : "Requiere proyecto";
   const control = !o.findingClass ? "Falta clasificar el hallazgo" : o.findingClass === "confirmed" ? (!o.evidence ? "Confirmado sin evidencia registrada" : "OK") : "Pendiente de validación: no presentar como hallazgo confirmado";

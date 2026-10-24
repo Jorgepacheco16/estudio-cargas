@@ -11,7 +11,7 @@ export default async function Actividades({ searchParams }: { searchParams: Prom
       </div>
       <section className="card">
         {a.activities.length === 0 ? <div className="empty">No hay actividades en este modo de análisis.</div> : (
-          <div className="tbl-wrap">
+          <div className="tbl-wrap" tabIndex={0} role="region" aria-label="Tabla desplazable">
             <table>
               <thead><tr><th>Código</th><th>Área · sede · cargo</th><th>Estado de captura</th><th className="num">Horas/sem</th><th className="num">Horas/mes</th></tr></thead>
               <tbody>

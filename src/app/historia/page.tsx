@@ -92,13 +92,13 @@ export default async function Historia({ searchParams }: { searchParams: Promise
         {diff && (
           <section className="card">
             <h2>Qué cambió entre las dos fotos</h2>
-            <div className="tbl-wrap"><table>
+            <div className="tbl-wrap" tabIndex={0} role="region" aria-label="Tabla desplazable"><table>
               <thead><tr><th>Indicador</th><th className="num">Antes</th><th className="num">Después</th><th className="num">Cambio</th></tr></thead>
               <tbody>{diff.indicators.filter((r) => r.from !== r.to).map((r) => <tr key={r.key}><td>{r.key}</td><td className="num">{typeof r.from === "number" ? nf(r.from) : String(r.from ?? "—")}</td><td className="num">{typeof r.to === "number" ? nf(r.to) : String(r.to ?? "—")}</td><td className="num">{r.delta === null ? "—" : nf(r.delta)}</td></tr>)}
                 {diff.indicators.every((r) => r.from === r.to) && <tr><td colSpan={4} className="muted">Los indicadores no cambiaron.</td></tr>}</tbody>
             </table></div>
             <p className="note">Actividades incompletas: {diff.incomplete.from} → {diff.incomplete.to}.</p>
-            {diff.areas.length > 0 && <div className="tbl-wrap"><table><thead><tr><th>Área</th><th className="num">Horas antes</th><th className="num">Horas después</th><th className="num">% antes</th><th className="num">% después</th></tr></thead>
+            {diff.areas.length > 0 && <div className="tbl-wrap" tabIndex={0} role="region" aria-label="Tabla desplazable"><table><thead><tr><th>Área</th><th className="num">Horas antes</th><th className="num">Horas después</th><th className="num">% antes</th><th className="num">% después</th></tr></thead>
               <tbody>{diff.areas.map((r) => <tr key={r.area}><td>{r.area}</td><td className="num">{nf(r.hoursFrom)}</td><td className="num">{nf(r.hoursTo)}</td><td className="num">{r.pctFrom === null ? "—" : `${nf(r.pctFrom * 100, 1)} %`}</td><td className="num">{r.pctTo === null ? "—" : `${nf(r.pctTo * 100, 1)} %`}</td></tr>)}</tbody></table></div>}
             {diff.crossings.length > 0 && <p className="note">Cargos que cambiaron de nivel: {diff.crossings.map((c) => `${c.position} (${c.area}): ${c.from ?? "nuevo"} → ${c.to}`).join("; ")}.</p>}
           </section>
@@ -116,7 +116,7 @@ export default async function Historia({ searchParams }: { searchParams: Promise
         <section className="card">
           <h2>Productividad real por actividad</h2>
           <div className="banner" style={{ marginTop: 12 }}>El Excel solo trae tiempos estimados. Mientras una actividad no tenga mediciones se muestra «Sin mediciones», nunca un número. El índice (real ÷ estándar) se calcula con al menos {inp.minN} mediciones con unidades.</div>
-          <div className="tbl-wrap"><table>
+          <div className="tbl-wrap" tabIndex={0} role="region" aria-label="Tabla desplazable"><table>
             <thead><tr><th>Actividad</th><th>Mediciones</th><th className="num">Estándar por hora</th><th className="num">Real por hora</th><th className="num">Índice</th><th>Lectura</th></tr></thead>
             <tbody>{inp.rows.map((r) => {
               const p = productivity({ calcMode: r.calcMode, timeAvgMin: r.timeAvgMin }, r.measures, inp.minN);
@@ -138,7 +138,7 @@ export default async function Historia({ searchParams }: { searchParams: Promise
         </section>
         <section className="card">
           <h2>Mediciones registradas ({ms.length})</h2>
-          {ms.length === 0 ? <div className="empty">Sin mediciones.</div> : <div className="tbl-wrap"><table>
+          {ms.length === 0 ? <div className="empty">Sin mediciones.</div> : <div className="tbl-wrap" tabIndex={0} role="region" aria-label="Tabla desplazable"><table>
             <thead><tr><th>Fecha</th><th>Actividad</th><th className="num">Unidades</th><th className="num">Horas-persona</th><th>Método</th><th>Observador</th><th /></tr></thead>
             <tbody>{ms.map((m) => <tr key={m.id}><td>{when(m.observedAt)}</td><td>{code.get(m.activityId)}</td><td className="num">{nf(m.unitsProcessed === null ? null : Number(m.unitsProcessed))}</td><td className="num">{nf(Number(m.personHours))}</td><td>{optionsOf("L_Fuente").find((o) => o.code === m.method)?.label}</td><td>{m.observer ?? ""}</td>
               <td><form action={deleteMeasurementAction}><input type="hidden" name="id" value={m.id} /><button className="btn" type="submit" disabled={!canWrite}>Eliminar</button></form></td></tr>)}</tbody>
@@ -157,7 +157,7 @@ export default async function Historia({ searchParams }: { searchParams: Promise
         <h2>Desviaciones ({devs.filter((d) => d.status === "open").length} abiertas)</h2>
         <form action={detectAction} style={{ marginTop: 12 }}><button className="btn solid" type="submit" disabled={!canWrite}>Detectar desviaciones ahora</button></form>
         <p className="note">Ocho reglas explícitas (R1 a R8) comparan fotos, mediciones y el plan. Los umbrales (diferencia estimado vs medido, mínimo de mediciones, salto de horas y mínimo de historia) se editan en <Link href="/captura?hoja=param">Parámetros</Link> y son provisionales. Una desviación descartada no vuelve a aparecer durante 30 días; una abierta o reconocida no se duplica.</p>
-        {devs.length === 0 ? <div className="empty">Sin desviaciones.</div> : <div className="tbl-wrap"><table>
+        {devs.length === 0 ? <div className="empty">Sin desviaciones.</div> : <div className="tbl-wrap" tabIndex={0} role="region" aria-label="Tabla desplazable"><table>
           <thead><tr><th>Regla</th><th>Qué se detectó</th><th>Base → observado</th><th>Estado</th><th>Explicación del agente</th><th>Acciones</th></tr></thead>
           <tbody>{devs.map((d) => {
             const b = d.baseline as Record<string, unknown>, msg = String(b._message ?? ""), clean = Object.fromEntries(Object.entries(b).filter(([k]) => !k.startsWith("_")));

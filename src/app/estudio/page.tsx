@@ -20,11 +20,10 @@ export default async function Estudio({ searchParams }: { searchParams: Promise<
   let areas: { id: string; name: string }[] = [], positions: Awaited<ReturnType<typeof listPositions>> = [];
   let rows: { code: string; name: string; status: string; hours: number | null; id: string; version: number; time: number | null }[] = [];
   if (active) {
-    areas = await listAreas(db, user!.id, active.id);
-    positions = await listPositions(db, user!.id, active.id);
-    const d = await loadStudyData(db, user!.id, active.id);
+    const [areaList, positionList, d, versionList] = await Promise.all([listAreas(db, user!.id, active.id), listPositions(db, user!.id, active.id), loadStudyData(db, user!.id, active.id), listActivityVersions(db, user!.id, active.id)]);
+    areas = areaList; positions = positionList;
     const a = analyze(d.staff, d.acts, d.params, d.thresholds, "all");
-    const versions = new Map((await listActivityVersions(db, user!.id, active.id)).map((v) => [v.code, v]));
+    const versions = new Map(versionList.map((v) => [v.code, v]));
     rows = a.activities.map((x) => {
       const v = versions.get(x.code)!;
       return { code: x.code, name: `${x.position} · ${x.site}`, status: x.status, hours: x.hoursWeek, id: v.id, version: v.version, time: d.acts.find((y) => y.code === x.code)?.timeAvgMin ?? null };
@@ -97,7 +96,7 @@ export default async function Estudio({ searchParams }: { searchParams: Promise<
           <section className="card">
             <h2>Actividades del estudio ({rows.length})</h2>
             {rows.length === 0 ? <div className="empty">Aún no hay actividades.</div> : (
-              <div className="tbl-wrap">
+              <div className="tbl-wrap" tabIndex={0} role="region" aria-label="Tabla desplazable">
                 <table>
                   <thead><tr><th>Código</th><th>Cargo · sede</th><th>Estado de captura</th><th className="num">Horas/sem</th><th>Tiempo promedio (min)</th></tr></thead>
                   <tbody>

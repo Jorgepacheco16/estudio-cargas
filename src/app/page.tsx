@@ -7,7 +7,7 @@ function ShareList({ title, rows, total }: { title: string; rows: Share[]; total
   return (
     <section className="card" aria-label={title}>
       <h2>{title}</h2>
-      <div className="tbl-wrap"><table style={{ minWidth: 0 }}>
+      <div className="tbl-wrap" tabIndex={0} role="region" aria-label="Tabla desplazable"><table style={{ minWidth: 0 }}>
         <thead><tr><th>Categoría</th><th className="num">Horas/sem</th><th className="num">% del total</th></tr></thead>
         <tbody>{rows.map((r) => <tr key={r.label}><td>{r.label}</td><td className="num">{fmt(r.hours)}</td><td className="num">{fmtPct(r.pct)}</td></tr>)}</tbody>
       </table></div>
@@ -56,7 +56,7 @@ export default async function Tablero({ searchParams }: { searchParams: Promise<
 
       <section className="card" aria-label="Carga por área">
         <h2>A. Carga laboral por área</h2>
-        <div className="tbl-wrap">
+        <div className="tbl-wrap" tabIndex={0} role="region" aria-label="Tabla desplazable">
           <table>
             <thead><tr><th>Área</th><th className="num">Actividades</th><th className="num">Completas</th><th className="num">Horas/sem</th><th className="num">Capacidad</th><th>% capacidad</th><th>Alerta o lectura</th></tr></thead>
             <tbody>
@@ -87,7 +87,7 @@ export default async function Tablero({ searchParams }: { searchParams: Promise<
       <section className="card" aria-label="Top 10">
         <h2>C. Las 10 actividades que más horas consumen</h2>
         {d.top10.length === 0 ? <div className="empty">Aún no hay actividades con datos completos.</div> : (
-          <div className="tbl-wrap"><table>
+          <div className="tbl-wrap" tabIndex={0} role="region" aria-label="Tabla desplazable"><table>
             <thead><tr><th>Actividad</th><th>Código</th><th>Área</th><th>Cargo</th><th>Sede</th><th className="num">Horas/sem</th><th className="num">% del total</th></tr></thead>
             <tbody>{d.top10.map((t) => <tr key={t.code}><td>{t.name}</td><td><b>{t.code}</b></td><td>{t.area}</td><td>{t.position}</td><td>{t.site}</td><td className="num">{fmt(t.hours)}</td><td className="num">{fmtPct(t.pct)}</td></tr>)}</tbody>
           </table></div>
@@ -97,13 +97,13 @@ export default async function Tablero({ searchParams }: { searchParams: Promise<
       <div className="row">
         <section className="card" aria-label="Cobertura y calidad">
           <h2>D. Cobertura y calidad de la información</h2>
-          <div className="tbl-wrap"><table style={{ minWidth: 0 }}>
+          <div className="tbl-wrap" tabIndex={0} role="region" aria-label="Tabla desplazable"><table style={{ minWidth: 0 }}>
             <tbody>{d.coverage.map((c) => <tr key={c.label}><td>{c.label}{c.note && <div className="muted">{c.note}</div>}</td><td className="num"><b>{c.value}</b></td></tr>)}</tbody>
           </table></div>
         </section>
         <section className="card" aria-label="Oportunidades y plan">
           <h2>E. Oportunidades de mejora y plan de acción</h2>
-          <div className="tbl-wrap"><table style={{ minWidth: 0 }}>
+          <div className="tbl-wrap" tabIndex={0} role="region" aria-label="Tabla desplazable"><table style={{ minWidth: 0 }}>
             <tbody>{d.opportunities.map((c) => <tr key={c.label}><td>{c.label}</td><td className="num"><b>{c.value}</b></td></tr>)}</tbody>
           </table></div>
         </section>

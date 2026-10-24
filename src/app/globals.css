@@ -116,3 +116,5 @@ tbody tr:hover { background: var(--blue-soft); }
 .tabs a { padding: 10px 14px; border: 1px solid var(--line); border-radius: 8px; background: var(--card); font-size: .875rem; min-height: 44px; display: inline-flex; align-items: center; }
 .tabs a.on { background: var(--blue); color: #fff; border-color: var(--blue); font-weight: 700; }
 textarea { border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; font: inherit; background: var(--card); color: var(--ink); resize: vertical; }
+
+.tbl-wrap:focus-visible { outline: 3px solid var(--blue); outline-offset: 2px; }

@@ -55,7 +55,7 @@ export default async function Captura({ searchParams }: { searchParams: Promise<
         return `Puntaje ${x.score ?? "—"} · Prioridad ${x.priority} · ${x.control}`; }
       case "9": {
         const area = areaName.get(String(r.areaId)), pos = String(r.currentPositionName).trim().toLowerCase();
-        const ps = analysis.positions.filter((p) => p.area === area && p.position.trim().toLowerCase() === pos);
+        const ps = analysis.positions.filter((p) => p.area === area && p.dataKind === String(r.dataKind) && p.position.trim().toLowerCase() === pos); // como el SUMIFS de la hoja 9: mismo tipo de dato, área y cargo (todas las sedes)
         const x = computeRedesign({ currentLoad: ps.reduce((a, p) => a + p.hours, 0), capacity: ps.reduce((a, p) => a + p.capacity, 0), hoursOut: n(r.hoursOutPerWeek), hoursIn: n(r.hoursInPerWeek), hoursRecovered: n(r.hoursRecoveredPerWeek), receivingPosition: s(r.receivingPositionName) }, d.thresholds.high);
         return `Carga propuesta ${fmt(x.proposedLoad)} h · ${x.proposedPct === null ? "—" : fmt(x.proposedPct * 100, 1) + "%"} · ${x.alert}`;
       }
@@ -118,7 +118,7 @@ export default async function Captura({ searchParams }: { searchParams: Promise<
         <section className="card">
           <h2>Registros ({rows.length})</h2>
           {rows.length === 0 ? <div className="empty">Aún no hay registros en esta hoja.</div> : (
-            <div className="tbl-wrap">
+            <div className="tbl-wrap" tabIndex={0} role="region" aria-label="Tabla desplazable">
               <table>
                 <thead><tr><th>{def.id === "5" || def.id === "6" || def.id === "7" ? "Actividad" : def.id === "9" ? "Área · cargo" : "Código"}</th><th>Resultado calculado</th><th>Acciones</th></tr></thead>
                 <tbody>

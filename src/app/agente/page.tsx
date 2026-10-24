@@ -48,7 +48,7 @@ export default async function Agente({ searchParams }: { searchParams: Promise<R
           <section className="card">
             <h2>Propuestas ({proposals.length})</h2>
             {proposals.length === 0 ? <div className="empty">Sin propuestas.</div> : (
-              <div className="tbl-wrap">
+              <div className="tbl-wrap" tabIndex={0} role="region" aria-label="Tabla desplazable">
                 <table>
                   <thead><tr><th>Tipo</th><th>Resumen</th><th>Cambio</th><th>Evidencia</th><th>Estado</th><th>Acciones</th></tr></thead>
                   <tbody>

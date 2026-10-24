@@ -12,7 +12,7 @@
         "test:domain": "tsx tests/domain.test.ts",
         "test:golden": "tsx tests/golden.test.ts",
         "audit:deps": "npm audit --omit=dev --audit-level=high",
-        "verify": "npm run typecheck && npm run test:domain && npm run test:examples && npm run test:labels && npm run test:summary && npm run test:calculators && npm run test:rls && npm run test:f3 && npm run test:capture && npm run test:matrix && npm run test:agent && npm run test:sheets && npm run test:webhook && npm run test:history && npm run test:import && npm run test:golden && npm run audit:deps",
+        "verify": "npm run typecheck && npm run test:domain && npm run test:examples && npm run test:labels && npm run test:summary && npm run test:calculators && npm run test:oracle && npm run test:rls && npm run test:f3 && npm run test:capture && npm run test:matrix && npm run test:agent && npm run test:sheets && npm run test:webhook && npm run test:history && npm run test:import && npm run test:golden && npm run audit:deps",
         "test:labels": "tsx tests/labels.test.ts",
         "test:examples": "tsx tests/examples.test.ts",
         "test:summary": "tsx tests/summary.test.ts",
@@ -26,6 +26,8 @@
         "eval:agent": "tsx --env-file=.env.local scripts/eval-agent.ts",
         "eval:explain": "tsx --env-file=.env.local scripts/eval-explain.ts",
         "test:history": "tsx tests/history.test.ts",
+        "test:oracle": "tsx tests/oracle510.test.ts",
+        "make:oracle": "tsx scripts/make-oracle-5-10.ts",
         "test:import": "tsx tests/import.test.ts",
         "import:excel": "tsx scripts/import-excel.ts",
         "test:calculators": "tsx tests/calculators.test.ts",
@@ -47,6 +49,8 @@
         "zod": "^4.6.7"
     },
     "devDependencies": {
+        "@axe-core/playwright": "^4.14.0",
+        "@playwright/test": "^1.64.1",
         "@types/node": "^26.6.5",
         "@types/react": "^19",
         "@types/react-dom": "^19",

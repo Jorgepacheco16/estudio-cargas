@@ -7,7 +7,7 @@ const LABEL: Record<string, string> = { overload: "ALERTA", low: "VALIDAR", ok: 
 export function CargosTable({ rows }: { rows: PositionRow[] }) {
   if (rows.length === 0) return <div className="empty">No hay cargos en este modo de análisis.</div>;
   return (
-    <div className="tbl-wrap">
+    <div className="tbl-wrap" tabIndex={0} role="region" aria-label="Tabla desplazable">
       <table>
         <thead>
           <tr><th>Cargo y sede</th><th className="num">Ocupantes</th><th className="num">Horas/sem</th><th className="num">Capacidad</th><th>% de capacidad</th><th>Lectura</th></tr>
