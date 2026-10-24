@@ -1,5 +1,6 @@
 name: zap
 # Escaneo de seguridad dinámico (OWASP ZAP baseline) contra producción: semanal y a demanda. Falla si hay alertas de riesgo ALTO.
+# Última revisión: tras la CSP con nonce (D-58).
 on:
   workflow_dispatch: {}
   schedule: [{ cron: "0 12 * * 1" }]
