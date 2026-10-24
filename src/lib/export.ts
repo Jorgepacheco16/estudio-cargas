@@ -9,7 +9,7 @@ export interface Table { name: string; columns: Column[]; rows: Record<string, C
 const safeText = (s: string) => (/^[=+\-@\t\r]/.test(s) ? `'${s}` : s);
 const csvCell = (v: Cell): string => {
   if (v === null || v === undefined) return "";
-  const t = typeof v === "number" ? String(v).replace(".", ",") : safeText(v);
+  const t = typeof v === "number" ? String(v).replace(/\./g, ",") : safeText(v);
   return /[;"\n\r]/.test(t) ? `"${t.replace(/"/g, '""')}"` : t;
 };
 

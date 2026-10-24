@@ -29,7 +29,7 @@ async function session() {
 
 /** Número con coma o punto decimal. Vacío → null; texto no numérico → error (nunca se convierte en 0). */
 const num = (label: string, min = 0, max = 1e9) => z.preprocess((v) => {
-  const s = String(v ?? "").trim().replace(",", ".");
+  const s = String(v ?? "").trim().replace(/,/g, ".");
   if (s === "") return null;
   const n = Number(s);
   return Number.isFinite(n) ? n : Number.NaN;

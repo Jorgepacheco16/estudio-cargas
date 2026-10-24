@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 
 export async function GET(req: NextRequest) {
   const code = req.nextUrl.searchParams.get("code");
-  const proto = req.headers.get("x-forwarded-proto") ?? req.nextUrl.protocol.replace(":", "");
+  const proto = req.headers.get("x-forwarded-proto") ?? req.nextUrl.protocol.replace(/:/g, "");
   const host = req.headers.get("x-forwarded-host") ?? req.headers.get("host");
   const origin = `${proto}://${host}`;
   if (code) {

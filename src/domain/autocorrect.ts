@@ -6,7 +6,7 @@ const strip = (s: string) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").
 export function parseDecimalEs(raw: string): number | null {
   const t = raw.trim().replace(/\s/g, "");
   if (!/^-?\d{1,3}(\.\d{3})*(,\d+)?$|^-?\d+(,\d+)?$|^-?\d+(\.\d+)?$/.test(t)) return null;
-  const v = t.includes(",") ? Number(t.replace(/\./g, "").replace(",", ".")) : Number(t);
+  const v = t.includes(",") ? Number(t.replace(/\./g, "").replace(/,/g, ".")) : Number(t);
   return Number.isFinite(v) ? v : null;
 }
 export function parsePercent(raw: string): number | null {

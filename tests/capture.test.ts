@@ -26,6 +26,8 @@ async function main() {
       bad("10", { code: "A1", action: "x", status: "inventado" }, "Estado");
       bad("8", { code: "" }, "Código: es obligatorio");
       bad("param", { reservePct: "150" }, "Reserva");
+      bad("param", { workDaysPerWeek: "1,2,3" }, "Días laborales"); // varias comas: se rechaza (no se interpreta una sola)
+      bad("param", { reservePct: "1%2%" }, "Reserva");
       const ok = parseForm(def("param"), fd({ reservePct: "10", workDaysPerWeek: "6,5" }));
       if (ok.values.reservePct !== "0.1000" || ok.values.workDaysPerWeek !== "6.5") throw new Error(JSON.stringify(ok.values));
     });

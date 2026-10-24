@@ -103,13 +103,13 @@ export function parseForm(def: SheetDef, raw: Record<string, FormDataEntryValue>
       case "bool":
         if (s !== "yes" && s !== "no") errors.push(`${f.label}: elija Sí o No`); else values[f.key] = s === "yes"; break;
       case "scale": case "int": {
-        const n = Number(s.replace(",", "."));
+        const n = Number(s.replace(/,/g, "."));
         const [lo, hi] = f.kind === "scale" ? [1, 5] : [0, f.max ?? 1e6];
         if (!Number.isInteger(n) || n < lo || n > hi) errors.push(`${f.label}: escriba un entero entre ${lo} y ${hi}`); else values[f.key] = n;
         break;
       }
       case "num": case "pct": {
-        const n = Number(s.replace("%", "").replace(",", "."));
+        const n = Number(s.replace(/%/g, "").replace(/,/g, "."));
         const v = f.kind === "pct" ? n / 100 : n;
         const hi = f.kind === "pct" ? 1 : f.max ?? 1e12;
         if (!Number.isFinite(n) || v < 0 || v > hi) errors.push(`${f.label}: escriba un número ${f.kind === "pct" ? "entre 0 y 100" : `entre 0 y ${hi}`}`);

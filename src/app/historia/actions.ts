@@ -31,7 +31,7 @@ export async function snapshotAction(fd: FormData) {
   back("linea", "ok", "Foto del tablero guardada.");
 }
 
-const toNum = (v: unknown) => { const s = String(v ?? "").trim().replace(",", "."); return s === "" ? null : Number(s); };
+const toNum = (v: unknown) => { const s = String(v ?? "").trim().replace(/,/g, "."); return s === "" ? null : Number(s); };
 const optNum = (label: string, min: number, max: number) => z.preprocess(toNum, z.number({ error: `${label}: escriba un número` }).min(min, `${label}: mínimo ${min}`).max(max, `${label}: máximo ${max}`).nullable());
 const reqNum = (label: string, min: number, max: number) => z.preprocess(toNum, z.number({ error: `${label}: escriba un número` }).min(min, `${label}: mínimo ${min}`).max(max, `${label}: máximo ${max}`));const measureSchema = z.object({
   activityId: z.string().uuid("Elija una actividad"), observedAt: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Fecha inválida"),

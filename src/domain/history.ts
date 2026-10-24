@@ -177,7 +177,7 @@ export function detectDeviations(i: DevInput): Candidate[] {
 
 /* ───────── Explicación redactada por el modelo: sin cifras nuevas ───────── */
 const NUM = /\d+(?:[.,]\d+)?/g;
-export const numbersIn = (s: string) => (s.match(NUM) ?? []).map((x) => Number(x.replace(",", ".")));
+export const numbersIn = (s: string) => (s.match(NUM) ?? []).map((x) => Number(x.replace(/,/g, ".")));
 const flatNumbers = (v: unknown): number[] => (typeof v === "number" ? [v] : typeof v === "string" ? numbersIn(v) : v && typeof v === "object" ? Object.values(v).flatMap(flatNumbers) : []);
 
 /**

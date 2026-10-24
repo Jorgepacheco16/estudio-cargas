@@ -43,9 +43,9 @@ export function num(r: Report, loc: Loc, v: unknown): number | null {
   const s = String(p).trim();
   if (/^-?\d+([.,]\d+)?$/.test(s)) {
     if (/^-?\d{1,3}\.\d{3}$/.test(s)) { r.add(loc, "AMBIGUOUS_NUMBER", "warning", `Número ambiguo '${s}' (¿separador de miles o decimal?); no se importó`); return null; }
-    return Number(s.replace(",", "."));
+    return Number(s.replace(/,/g, "."));
   }
-  if (/^-?\d{1,3}(\.\d{3})+(,\d+)?$/.test(s)) return Number(s.replace(/\./g, "").replace(",", "."));
+  if (/^-?\d{1,3}(\.\d{3})+(,\d+)?$/.test(s)) return Number(s.replace(/\./g, "").replace(/,/g, "."));
   r.add(loc, "NOT_A_NUMBER", "warning", `Se esperaba un número y llegó '${s.slice(0, 30)}'; no se importó`);
   return null;
 }
