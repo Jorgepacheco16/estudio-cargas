@@ -1,0 +1,39 @@
+name: zap
+# Escaneo de seguridad dinámico (OWASP ZAP baseline) contra producción: semanal y a demanda. Falla si hay alertas de riesgo ALTO.
+on:
+  workflow_dispatch: {}
+  schedule: [{ cron: "0 12 * * 1" }]
+  push: { branches: [main], paths: ["next.config.ts", "vercel.json", "src/proxy.ts", ".github/workflows/zap.yml"] }
+permissions: { contents: read }
+jobs:
+  baseline:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: ZAP baseline (rastreo pasivo de la aplicación publicada)
+        uses: zaproxy/action-baseline@v0.14.0
+        with:
+          target: "https://estudio-cargas-six.vercel.app"
+          allow_issue_writing: false
+          fail_action: false
+          artifact_name: zap_baseline
+          cmd_options: "-a -j"
+      - name: Resumen de alertas y falla ante riesgo ALTO
+        run: |
+          node -e '
+          const fs = require("fs");
+          const f = ["report_json.json", "zap-report.json"].find((x) => fs.existsSync(x));
+          if (!f) { console.log("::error::No se generó el informe JSON de ZAP"); process.exit(1); }
+          const r = JSON.parse(fs.readFileSync(f, "utf8"));
+          const alerts = (r.site || []).flatMap((s) => s.alerts || []);
+          let high = 0;
+          for (const a of alerts) {
+            const risk = Number(a.riskcode);
+            const msg = `${a.name} · riesgo ${a.riskdesc} · ${a.instances ? a.instances.length : a.count} instancia(s)`;
+            if (risk >= 3) { high++; console.log(`::error title=ZAP ALTO::${msg}`); }
+            else if (risk === 2) console.log(`::warning title=ZAP MEDIO::${msg}`);
+            else console.log(`::notice title=ZAP ${risk === 1 ? "BAJO" : "INFO"}::${msg}`);
+          }
+          console.log(`ZAP: ${alerts.length} alerta(s), ${high} de riesgo alto`);
+          process.exit(high ? 1 : 0);
+          '

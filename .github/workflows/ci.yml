@@ -72,3 +72,38 @@ jobs:
       - run: npm run build
       - name: Pruebas de navegador públicas (sin credenciales; la aplicación muestra datos DEMO)
         run: npx playwright test e2e/publico.spec.ts
+  restore:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env: { POSTGRES_PASSWORD: pg_admin, POSTGRES_DB: studydb }
+        ports: ["5432:5432"]
+        options: --health-cmd "pg_isready -U postgres" --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      DATABASE_URL_ADMIN: postgres://postgres:pg_admin@localhost:5432/studydb
+      DATABASE_URL: postgres://app_user:app_pw@localhost:5432/studydb
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - name: Migraciones reales sobre PostgreSQL real
+        run: |
+          psql "$DATABASE_URL_ADMIN" -v ON_ERROR_STOP=1 -f sql/local_bootstrap.sql
+          for f in drizzle/0000_init.sql sql/0001_rls.sql drizzle/0001_weeks_per_month_precision.sql drizzle/0002_sheet_connections_actor.sql sql/0002_sheets.sql drizzle/0003_deviation_thresholds.sql sql/0003_history.sql; do
+            psql "$DATABASE_URL_ADMIN" -v ON_ERROR_STOP=1 -f "$f"
+          done
+      - name: Sembrar un estudio completo en la base de origen
+        run: npx tsx scripts/restore-seed.ts
+      - name: Copia de seguridad real (pg_dump) y restauración (pg_restore) en otra base, con las mismas herramientas de PostgreSQL 16
+        run: |
+          docker run --rm --network host -e PGPASSWORD=pg_admin postgres:16 pg_dump -h localhost -U postgres --format=custom studydb > backup.dump
+          ls -l backup.dump
+          psql "postgres://postgres:pg_admin@localhost:5432/postgres" -v ON_ERROR_STOP=1 -c 'create database studydb_restored'
+          docker run -i --rm --network host -e PGPASSWORD=pg_admin postgres:16 pg_restore -h localhost -U postgres -d studydb_restored --exit-on-error < backup.dump
+      - name: Verificar la base restaurada (filas, RLS, aislamiento y resultados)
+        env:
+          RESTORE_ADMIN_URL: postgres://postgres:pg_admin@localhost:5432/studydb_restored
+          RESTORE_APP_URL: postgres://app_user:app_pw@localhost:5432/studydb_restored
+        run: npx tsx scripts/restore-verify.ts | tee restore.out
