@@ -83,7 +83,7 @@ export function productivity(a: ActivityStd, ms: Measure[], minN: number): Produ
 
 /* ───────── Desviaciones ───────── */
 export interface DevParams { estimatePct: number; minMeasurements: number; jumpPct: number; minHistory: number }
-export const DISPERSION_PCT = 0.3;         // regla del comparador de sedes del Excel (hoja 2b)
+export const DISPERSION_PCT = 0.3;         // regla del comparador de sedes del Excel (hoja 2b, celda F25): (máx − mín) ÷ promedio de horas por ocupante
 export const RECURRING_CONFLICTS = 3;      // veces que una misma fila debe entrar en conflicto para considerarse recurrente
 export interface Candidate { ruleCode: string; entity: string; entityId: string | null; key: string; baseline: Record<string, unknown>; observed: Record<string, unknown>; message: string }
 
@@ -158,7 +158,7 @@ export function detectDeviations(i: DevInput): Candidate[] {
     const spreadOf = (m: SnapMetrics) => {
       const g = new Map<string, number[]>();
       for (const p of m.positions) if (p.occupants > 0 && p.hours > 0) g.set(`${p.kind}|${p.area}|${p.position}`.toLowerCase(), [...(g.get(`${p.kind}|${p.area}|${p.position}`.toLowerCase()) ?? []), p.hours / p.occupants]);
-      return new Map([...g].filter(([, v]) => v.length >= 2).map(([k, v]) => [k, Math.max(...v) / Math.min(...v) - 1]));
+      return new Map([...g].filter(([, v]) => v.length >= 2).map(([k, v]) => [k, (Math.max(...v) - Math.min(...v)) / (v.reduce((a, b) => a + b, 0) / v.length)])); // como la hoja 2b: (máx − mín) ÷ promedio
     };
     const now = spreadOf(cur), before = prev ? spreadOf(prev) : new Map<string, number>();
     for (const [k, s] of now) if (s > DISPERSION_PCT && (!before.has(k) || s > (before.get(k) ?? 0))) {

@@ -6,7 +6,7 @@ import { getUser } from "@/lib/supabase/server";
 import { activeStudyId } from "@/data/source";
 import { rateLimit } from "@/lib/ratelimit";
 import { googleGateway } from "@/server/sheets/gateway";
-import { connectSheet, listConnections, previewSync, syncNow } from "@/server/sheets/sync";
+import { NeedsConfirmation, connectSheet, listConnections, previewSync, syncNow } from "@/server/sheets/sync";
 
 const back = (kind: "ok" | "error", msg: string): never => redirect(`/integraciones?${kind}=${encodeURIComponent(msg)}`);
 const isRedirect = (e: unknown) => (e as { digest?: string })?.digest?.startsWith("NEXT_REDIRECT");
@@ -39,7 +39,8 @@ export async function connectAction(fd: FormData) {
   back("ok", "Hoja conectada. Pulse «Sincronizar ahora» para vincular las filas.");
 }
 
-export async function syncAction() {
+export async function syncAction(fd: FormData) {
+  const confirm = fd.get("confirmAutofix") === "yes";
   const { user, study } = await ctx();
   if (study.role === "viewer") back("error", "Su rol es de solo lectura.");
   if (!rateLimit(`sync:${user.id}`, 3, 60_000).ok) back("error", "Espere un momento antes de sincronizar de nuevo.");
@@ -49,13 +50,14 @@ export async function syncAction() {
     if (!conns.length) back("error", "No hay una hoja conectada.");
     let created = 0, updated = 0, linked = 0, conflict = 0, rejected = 0, appended = 0, refreshed = 0;
     for (const c of conns) {
-      const r = await syncNow(getDb(), { id: c.id, studyId: c.studyId, actorId: c.actorId, spreadsheetId: c.spreadsheetId, mode: c.mode });
+      const r = await syncNow(getDb(), { id: c.id, studyId: c.studyId, actorId: c.actorId, spreadsheetId: c.spreadsheetId, mode: c.mode }, undefined, confirm);
       for (const s of r.pull) { created += s.counts.created; updated += s.counts.updated; linked += s.counts.linked; conflict += s.counts.conflict; rejected += s.counts.rejected; }
       for (const s of r.push) { appended += s.appended; refreshed += s.refreshed; }
     }
     msg = `Sincronizado. Hoja → app: ${created} nueva(s), ${updated} actualizada(s), ${linked} vinculada(s), ${conflict} en conflicto, ${rejected} rechazada(s). App → hoja: ${appended} agregada(s), ${refreshed} actualizada(s).`;
   } catch (e) {
     if (isRedirect(e)) throw e;
+    if (e instanceof NeedsConfirmation) back("error", `${e.message}. Marque «Confirmo aplicar las correcciones automáticas» y vuelva a sincronizar.`);
     back("error", "La sincronización falló. Intente de nuevo; si persiste, revise la conexión.");
   }
   back("ok", msg);
@@ -68,13 +70,13 @@ export async function previewAction() {
   try {
     const conns = (await listConnections(getDb(), user.id, study.id)).filter((c) => c.mode !== "off");
     if (!conns.length) back("error", "No hay una hoja conectada.");
-    const tot = { created: 0, updated: 0, linked: 0, conflict: 0, rejected: 0, unchanged: 0, appended: 0 };
+    const tot = { created: 0, updated: 0, linked: 0, conflict: 0, rejected: 0, unchanged: 0, appended: 0, autofixes: 0 };
     for (const c of conns) {
       const r = await previewSync(getDb(), { id: c.id, studyId: c.studyId, actorId: c.actorId, spreadsheetId: c.spreadsheetId, mode: c.mode });
-      for (const s of r.pull) for (const k of ["created", "updated", "linked", "conflict", "rejected", "unchanged"] as const) tot[k] += s.counts[k];
+      for (const s of r.pull) { for (const k of ["created", "updated", "linked", "conflict", "rejected", "unchanged"] as const) tot[k] += s.counts[k]; tot.autofixes += s.autofixes; }
       for (const s of r.push) tot.appended += s.appended;
     }
-    msg = `Vista previa (no se cambió nada): hoja → app ${tot.created} nueva(s), ${tot.updated} con cambios, ${tot.linked} por vincular, ${tot.unchanged} sin cambios, ${tot.conflict} en conflicto, ${tot.rejected} rechazada(s); app → hoja ${tot.appended} por agregar.`;
+    msg = `Vista previa (no se cambió nada)${tot.autofixes ? `, con ${tot.autofixes} corrección(es) automática(s) de listas` : ""}: hoja → app ${tot.created} nueva(s), ${tot.updated} con cambios, ${tot.linked} por vincular, ${tot.unchanged} sin cambios, ${tot.conflict} en conflicto, ${tot.rejected} rechazada(s); app → hoja ${tot.appended} por agregar.`;
   } catch (e) {
     if (isRedirect(e)) throw e;
     back("error", "No se pudo generar la vista previa. Revise la conexión con la hoja.");

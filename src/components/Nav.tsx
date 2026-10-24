@@ -5,6 +5,8 @@ import { usePathname } from "next/navigation";
 const ITEMS = [
   { href: "/", label: "Tablero" },
   { href: "/cargos", label: "Cargos y dotación" },
+  { href: "/sedes", label: "Comparador de sedes" },
+  { href: "/drill", label: "Drill-down" },
   { href: "/actividades", label: "Actividades" },
   { href: "/estudio", label: "Estudio (captura)" },
   { href: "/captura", label: "Hojas 5–10 y parámetros" },

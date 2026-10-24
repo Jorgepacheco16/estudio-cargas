@@ -204,6 +204,22 @@ async function main() {
       sheet.set("3_Actividades", "B", 15, null);
     });
 
+    await check("Tope de 50 correcciones automáticas por lote: sin confirmación no se aplica nada (evento y sincronización); con confirmación sí", async () => {
+      const big = new FakeSheet(TABS);
+      for (let i = 0; i < 60; i++) big.setRow("3_Actividades", 40 + i, act({ B: `BIG-${i}`, Q: "dia" })); // 60 correcciones «dia» → «Día»
+      const before = (await loadStudyData(app.db, owner, studyId)).acts.length;
+      const ev = await handleEvent(app.db, mk("3_Actividades", 40, 60), big);
+      if (ev.status !== "error" || !String(ev.message).includes("confirmación")) throw new Error(`evento: ${JSON.stringify(ev).slice(0, 160)}`);
+      let blocked = false;
+      try { await reconcile(app.db, conn, big); } catch (e) { blocked = (e as Error).name !== "Error" || String((e as Error).message).includes("confirmación"); }
+      if (!blocked) throw new Error("la reconciliación aplicó más de 50 correcciones sin confirmar");
+      if ((await loadStudyData(app.db, owner, studyId)).acts.length !== before) throw new Error("se aplicó algo sin confirmación");
+      const pv = await previewSync(app.db, conn, big);
+      if (pv.pull.find((x) => x.sheet === "3_Actividades")!.autofixes !== 60) throw new Error("la vista previa no cuenta las correcciones");
+      await reconcile(app.db, conn, big, false, true);
+      if ((await loadStudyData(app.db, owner, studyId)).acts.length !== before + 60) throw new Error("con confirmación debían crearse las 60");
+    });
+
     await check("RLS: una conexión cuyo actor es de solo lectura no puede escribir; el evento falla sin dejar datos", async () => {
       const sid = `test-${randomUUID()}`; sid2 = sid;
       await admin.db.execute(sql`insert into public.sheet_connections (study_id, spreadsheet_id, actor_id, mode) values (${studyId}, ${sid}, ${viewer}, 'bidirectional')`);

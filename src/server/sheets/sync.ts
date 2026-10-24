@@ -10,7 +10,7 @@ import { and, eq, getTableColumns, sql } from "drizzle-orm";
 import { withRls, type Db, type Tx } from "../../db/client";
 import { auditLog, sheetConnections, syncEvents, validationIssues } from "../../db/schema";
 import type { SheetChangeEvent } from "../../domain/contracts";
-import { looksLikeFormula } from "../../domain/cellguard";
+import { AUTOFIX_BATCH_LIMIT, looksLikeFormula } from "../../domain/cellguard";
 import { colToIndex, indexToCol, INTERNAL_HEADERS } from "../../domain/sheetmap";
 import { key, Report } from "../import/normalize";
 import { readRowFrom } from "../import/parse";
@@ -19,7 +19,7 @@ import { googleGateway, type CellValue, type SheetGateway } from "./gateway";
 
 export interface Conn { id: string; studyId: string; actorId: string; spreadsheetId: string; mode: string }
 export type Result = "created" | "updated" | "linked" | "unchanged" | "conflict" | "rejected" | "skipped";
-export interface RowOutcome { row: number; code: string; result: Result; message?: string; rec?: Rec; appCells?: Record<string, string | number> }
+export interface RowOutcome { row: number; code: string; result: Result; message?: string; rec?: Rec; appCells?: Record<string, string | number>; autofixes?: number }
 
 const q = (sheet: string) => `'${sheet}'`;
 const MAX_ROWS = 2000;
@@ -129,8 +129,11 @@ async function applyOne(c: Ctx, a: Adapter, it: { code: string; row: ReturnType<
 
 /** Lee las filas indicadas de la hoja, las normaliza y las aplica a la app. Devuelve un resultado por fila (nada se oculta). */
 class DryRun extends Error {}
+/** Más correcciones automáticas por lote que el tope (D-19/D-41): no se aplica nada hasta que una persona confirme. */
+export class NeedsConfirmation extends Error { constructor(readonly autofixes: number) { super(`Se aplicarían ${autofixes} correcciones automáticas (más de ${AUTOFIX_BATCH_LIMIT}); se requiere confirmación`); } }
+const autofixesOf = (rep: Report) => rep.issues.filter((i) => i.rule === "LABEL_AUTOFIXED").length;
 
-export async function applyRows(db: Db, conn: Conn, gw: SheetGateway, a: Adapter, rowNums: number[], dryRun = false): Promise<RowOutcome[]> {
+export async function applyRows(db: Db, conn: Conn, gw: SheetGateway, a: Adapter, rowNums: number[], dryRun = false, confirmAutofix = false): Promise<RowOutcome[]> {
   const s = a.sheet;
   const rows = [...new Set(rowNums)].filter((r) => r >= s.firstDataRow && r < MAX_ROWS).sort((x, y) => x - y);
   if (!rows.length) return [];
@@ -154,6 +157,10 @@ export async function applyRows(db: Db, conn: Conn, gw: SheetGateway, a: Adapter
     items.push({ code, row, rep, linkId: asText(link[0]), linkVer: Number.isFinite(ver) && link[1] !== "" ? ver : null, rowNo: r });
   }
 
+  // Tope de correcciones automáticas por lote: si se supera, no se aplica nada sin confirmación (la vista previa solo cuenta).
+  const totalFixes = items.reduce((s, it) => s + autofixesOf(it.rep), 0);
+  if (totalFixes > AUTOFIX_BATCH_LIMIT && !confirmAutofix && !dryRun) throw new NeedsConfirmation(totalFixes);
+
   // Detecta códigos repetidos dentro del lote: no se fusiona ni se borra nada (se rechazan las repeticiones).
   const seen = new Set<string>();
   const unique = items.filter((it) => {
@@ -165,7 +172,7 @@ export async function applyRows(db: Db, conn: Conn, gw: SheetGateway, a: Adapter
   try { await withRls(db, { sub: conn.actorId }, async (tx) => {
     for (const it of unique) {
       const c: Ctx = { tx, studyId: conn.studyId, rep: it.rep, sheet: s.sheetName, rowNo: it.rowNo };
-      try { outcomes.push(await tx.transaction((sp) => applyOne({ ...c, tx: sp as unknown as Tx }, a, it, conn.actorId))); }
+      try { const o = await tx.transaction((sp) => applyOne({ ...c, tx: sp as unknown as Tx }, a, it, conn.actorId)); o.autofixes = autofixesOf(it.rep); outcomes.push(o); }
       catch (e) { outcomes.push({ row: it.rowNo, code: it.code, result: "rejected", message: safeMessage(e) }); }
     }
     // Valores vigentes de la app para las filas en conflicto (se restituyen en la hoja).
@@ -236,6 +243,7 @@ export async function handleEvent(db: Db, ev: SheetChangeEvent, gw: SheetGateway
     await finish("processed", bad ? `${bad} fila(s) rechazada(s); ver hallazgos` : null, conflictRows.length ? { conflictRows } : undefined); // las filas en conflicto alimentan la regla R8 (conflictos recurrentes)
     return { status: "processed", outcomes };
   } catch (e) {
+    if (e instanceof NeedsConfirmation) { await finish("error", e.message); return { status: "error", message: e.message }; }
     await finish("error", "Error al procesar el evento");
     return { status: "error", message: e instanceof Error ? e.message.slice(0, 160) : "error" };
   }
@@ -277,21 +285,26 @@ export async function pushAll(db: Db, conn: Conn, gw: SheetGateway, dryRun = fal
 }
 
 /* ───────── Reconciliación (lectura periódica) ───────── */
-export interface ReconcileStats { sheet: string; counts: Record<Result, number> }
+export interface ReconcileStats { sheet: string; counts: Record<Result, number>; autofixes: number }
 
-export async function reconcile(db: Db, conn: Conn, gw: SheetGateway, dryRun = false): Promise<ReconcileStats[]> {
+export async function reconcile(db: Db, conn: Conn, gw: SheetGateway, dryRun = false, confirmAutofix = false): Promise<ReconcileStats[]> {
+  if (!dryRun && !confirmAutofix) {
+    // El tope de correcciones automáticas es por lote COMPLETO (no por tramo de 200 filas): primero se cuenta en seco.
+    const total = (await reconcile(db, conn, gw, true)).reduce((s, x) => s + x.autofixes, 0);
+    if (total > AUTOFIX_BATCH_LIMIT) throw new NeedsConfirmation(total);
+  }
   const out: ReconcileStats[] = [];
   for (const a of ADAPTERS) {
     const s = a.sheet;
     const keys = await gw.read(`${q(s.sheetName)}!${s.keyColumn}${s.firstDataRow}:${s.keyColumn}${MAX_ROWS}`);
     const rowNums = keys.flatMap((k, i) => (asText((k as unknown[])[0]) ? [s.firstDataRow + i] : []));
-    const counts: Record<Result, number> = { created: 0, updated: 0, linked: 0, unchanged: 0, conflict: 0, rejected: 0, skipped: 0 };
+    const counts: Record<Result, number> = { created: 0, updated: 0, linked: 0, unchanged: 0, conflict: 0, rejected: 0, skipped: 0 }; let autofixes = 0;
     for (let i = 0; i < rowNums.length; i += 200) {
-      const outcomes = await applyRows(db, conn, gw, a, rowNums.slice(i, i + 200), dryRun);
+      const outcomes = await applyRows(db, conn, gw, a, rowNums.slice(i, i + 200), dryRun, confirmAutofix);
       if (!dryRun) await writeBack(gw, a, outcomes);
-      for (const o of outcomes) counts[o.result]++;
+      for (const o of outcomes) { counts[o.result]++; autofixes += o.autofixes ?? 0; }
     }
-    out.push({ sheet: s.sheetName, counts });
+    out.push({ sheet: s.sheetName, counts, autofixes });
   }
   return out;
 }
@@ -302,8 +315,8 @@ export async function previewSync(db: Db, conn: Conn, gw: SheetGateway = googleG
 }
 
 /** Ciclo completo según el modo de la conexión: primero hoja → app (reconcile), luego app → hoja (push). Registra el resultado. */
-export async function syncNow(db: Db, conn: Conn, gw: SheetGateway = googleGateway(conn.spreadsheetId)) {
-  const pull = conn.mode === "pull" || conn.mode === "bidirectional" ? await reconcile(db, conn, gw) : [];
+export async function syncNow(db: Db, conn: Conn, gw: SheetGateway = googleGateway(conn.spreadsheetId), confirmAutofix = false) {
+  const pull = conn.mode === "pull" || conn.mode === "bidirectional" ? await reconcile(db, conn, gw, false, confirmAutofix) : [];
   const push = conn.mode === "push" || conn.mode === "bidirectional" ? await pushAll(db, conn, gw) : [];
   await withRls(db, { sub: conn.actorId }, async (tx) => {
     await tx.update(sheetConnections).set({ lastSyncAt: new Date(), status: "idle" }).where(eq(sheetConnections.id, conn.id));

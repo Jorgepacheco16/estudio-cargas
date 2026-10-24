@@ -2,7 +2,7 @@
  * Acceso a datos de estudios (Fase 3). TODA consulta pasa por withRls(): la base aplica los permisos por usuario.
  * Las funciones reciben `db` (conexión app_user) y `sub` (id del usuario autenticado); no usan la clave de servicio.
  */
-import { and, eq } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { withRls, type Db, type Tx } from "../db/client";
 import { activities, areas, memberships, positions, sites, staffingEntries, studies, studyParameters } from "../db/schema";
 import type { ActivityInput, Params, StaffingInput } from "../domain/engine";
@@ -128,4 +128,16 @@ export async function loadStudyDataTx(tx: Tx, studyId: string): Promise<StudyDat
     const params: Params = { workDaysPerWeek: Number(p.workDaysPerWeek), weeksPerMonth: Number(p.weeksPerMonth), weeksPerYear: p.weeksPerYear, reservePct: Number(p.reservePct), scenario: p.scenario };
     return { params, thresholds: { high: Number(p.overloadThreshold), low: Number(p.lowLoadThreshold) }, staff, acts };
   }
+}
+
+/** Actividades «No» o «Parcialmente» documentadas formalmente, por (tipo, área, sede, cargo): columna K del comparador de sedes (hoja 2b). */
+export async function loadUndocumented(db: Db, sub: string, studyId: string): Promise<Map<string, number>> {
+  return withRls(db, { sub }, async (tx) => {
+    const rows = await tx.select({ kind: positions.dataKind, area: areas.name, site: sites.name, position: positions.name }).from(activities)
+      .innerJoin(positions, eq(positions.id, activities.positionId)).innerJoin(areas, eq(areas.id, positions.areaId)).innerJoin(sites, eq(sites.id, positions.siteId))
+      .where(and(eq(activities.studyId, studyId), inArray(activities.formallyDocumented, ["no", "partial"])));
+    const out = new Map<string, number>();
+    for (const r of rows) { const k = [r.kind, r.area.trim().toLowerCase(), r.site.trim().toLowerCase(), r.position.trim().toLowerCase()].join("|"); out.set(k, (out.get(k) ?? 0) + 1); }
+    return out;
+  });
 }

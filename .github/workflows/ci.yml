@@ -43,6 +43,7 @@ jobs:
       - run: npm run test:labels
       - run: npm run test:summary
       - run: npm run test:calculators
+      - run: npm run test:drill
       - run: npm run test:oracle
       - run: npm run test:hook
       - run: npm run test:arch

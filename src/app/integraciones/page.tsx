@@ -35,7 +35,10 @@ export default async function Integraciones({ searchParams }: { searchParams: Pr
             )}
             <div style={{ display: "flex", gap: 8, marginTop: 12, flexWrap: "wrap" }}>
               <form action={previewAction}><button className="btn" type="submit" disabled={conns.length === 0}>Vista previa (no cambia nada)</button></form>
-              <form action={syncAction}><button className="btn solid" type="submit" disabled={conns.length === 0 || study.role === "viewer"}>Sincronizar ahora</button></form>
+              <form action={syncAction} style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+                <button className="btn solid" type="submit" disabled={conns.length === 0 || study.role === "viewer"}>Sincronizar ahora</button>
+                <label style={{ display: "flex", gap: 6, alignItems: "center", fontSize: ".8125rem" }}><input type="checkbox" name="confirmAutofix" value="yes" style={{ minHeight: 24, width: 24 }} />Confirmo aplicar las correcciones automáticas si son más de 50</label>
+              </form>
             </div>
             <p className="note">Sincronizar lee la hoja, aplica los cambios (con control de versión), vincula las filas idénticas y escribe en la hoja lo que solo existe en la app. Las filas distintas se reportan como conflicto y no se sobrescriben.</p>
           </section>

@@ -1,4 +1,5 @@
 import { loadAnalysis, parseMode } from "@/data/source";
+import Link from "next/link";
 import { CargosTable } from "@/components/CargosTable";
 import { ExportButtons, ModeForm, fmt, fmtPct } from "@/components/Tools";
 import type { Share } from "@/domain/dashboard";
@@ -62,7 +63,7 @@ export default async function Tablero({ searchParams }: { searchParams: Promise<
             <tbody>
               {d.areas.map((r) => (
                 <tr key={r.area}>
-                  <td><b>{r.area}</b></td><td className="num">{r.activities || "—"}</td><td className="num">{r.activities ? r.complete : "—"}</td>
+                  <td>{r.activities ? <Link href={`/drill?modo=${mode}&level=area&area=${encodeURIComponent(r.area)}`} style={{ textDecoration: "underline" }}><b>{r.area}</b></Link> : <b>{r.area}</b>}</td><td className="num">{r.activities || "—"}</td><td className="num">{r.activities ? r.complete : "—"}</td>
                   <td className="num">{r.hours === null ? "—" : fmt(r.hours)}</td><td className="num">{r.capacity === null ? "—" : fmt(r.capacity)}</td>
                   <td>{r.pct === null ? "—" : <div style={{ display: "flex", gap: 8, alignItems: "center" }}><div className="bar" style={{ flex: 1 }}><span style={{ width: `${Math.min(100, r.pct * 100)}%`, background: "var(--blue)" }} /></div><b>{fmtPct(r.pct)}</b></div>}</td>
                   <td className="muted">{r.reading}</td>

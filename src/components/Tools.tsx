@@ -2,8 +2,8 @@ import type { Mode } from "@/domain/summary";
 import type { View } from "@/lib/tables";
 
 /** Botones de exportación (Excel y CSV) de la vista actual, respetando el modo de análisis. */
-export function ExportButtons({ view, mode }: { view: View; mode: Mode }) {
-  const q = `modo=${mode}`;
+export function ExportButtons({ view, mode, extra = "" }: { view: View; mode: Mode; extra?: string }) {
+  const q = `modo=${mode}${extra ? `&${extra}` : ""}`;
   return (
     <>
       <a className="btn solid" href={`/api/export/${view}?format=xlsx&${q}`} download>Exportar Excel</a>

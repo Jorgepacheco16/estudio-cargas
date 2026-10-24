@@ -1,8 +1,11 @@
 import type { Analysis } from "@/domain/summary";
 import type { Dashboard } from "@/domain/dashboard";
 import type { Table } from "./export";
+import { compareSites } from "@/domain/sites";
+import { PRESETS, PRESET_ES, LEVEL_ES, METRIC_ES, drillRows, type DrillFilters, type LevelKey } from "@/domain/drill";
+import type { Mode } from "@/domain/summary";
 
-export const VIEWS = ["tablero", "cargos", "actividades", "areas", "agente"] as const;
+export const VIEWS = ["tablero", "cargos", "actividades", "areas", "sedes", "drill", "agente"] as const;
 export type View = (typeof VIEWS)[number];
 export const isView = (v: string): v is View => (VIEWS as readonly string[]).includes(v);
 
@@ -91,12 +94,39 @@ export function agenteTable(rows: ProposalRow[] = []): Table {
   };
 }
 
-export function tablesFor(view: View, a: Analysis, d: Dashboard, proposals: ProposalRow[] = []): { title: string; tables: Table[] } {
+/** Comparador de sedes (hoja 2b) del cargo elegido. */
+export function sedesTable(a: Analysis, area: string, position: string, mode: Mode, reservePct: number, undocumented?: Map<string, number>): Table {
+  const c = compareSites(a, area, position, mode, reservePct, undocumented);
+  return {
+    name: "Comparador de sedes",
+    columns: [{ key: "site", header: "Sede", width: 26 }, { key: "occ", header: "Ocupantes", fmt: "0" }, { key: "wh", header: "Jornada semanal (h)", fmt: "#,##0.0" }, { key: "cap", header: "Capacidad (h/sem)", fmt: "#,##0.00" }, { key: "hours", header: "Horas/sem asignadas", fmt: "#,##0.00" },
+      { key: "pct", header: "% de capacidad", fmt: "0.0%" }, { key: "per", header: "Horas/sem por ocupante", fmt: "#,##0.00" }, { key: "acts", header: "Actividades registradas", fmt: "0" }, { key: "und", header: "No documentadas formalmente", fmt: "0" }, { key: "read", header: "Alerta o lectura de la sede", width: 70 }],
+    rows: [...c.rows.map((r) => ({ site: r.site, occ: r.occupants, wh: r2(r.weeklyHours), cap: r2(r.capacity), hours: r2(r.hours), pct: pctOf(r.pct), per: r2(r.perOccupant), acts: r.activities, und: r.undocumented, read: r.reading })),
+      { site: "Dispersión (máx − mín) ÷ promedio", occ: null, wh: null, cap: null, hours: null, pct: pctOf(c.dispersion), per: r2(c.average), acts: null, und: null, read: c.reading }],
+  };
+}
+
+/** Un nivel del drill-down como tabla. */
+export function drillTable(a: Analysis, config: string, level: LevelKey, filters: DrillFilters): Table {
+  const cfg = PRESETS[config] ?? PRESETS["carga-por-area"];
+  const metrics = cfg.levels.find((l) => l.key === level)?.metrics ?? [];
+  const pct = new Set(["pct"]);
+  return {
+    name: `${PRESET_ES[cfg.id] ?? cfg.id} · ${LEVEL_ES[level]}`.slice(0, 31),
+    columns: [{ key: "label", header: LEVEL_ES[level], width: 32 }, { key: "detail", header: "Detalle", width: 40 }, ...metrics.map((m) => ({ key: m, header: METRIC_ES[m], fmt: pct.has(m) ? "0.0%" : m === "incomplete" ? "0" : "#,##0.00" })), { key: "status", header: "Lectura o estado de captura", width: 60 }],
+    rows: drillRows(a, cfg, level, filters).map((r) => ({ label: r.label, detail: r.detail ?? null, ...Object.fromEntries(metrics.map((m) => [m, m === "pct" ? pctOf(r.metrics.pct ?? null) : r2(r.metrics[m] ?? null)])), status: r.status ?? null })),
+  };
+}
+
+export interface ViewQuery { area?: string; position?: string; config?: string; level?: string; site?: string; code?: string; alert?: string }
+export function tablesFor(view: View, a: Analysis, d: Dashboard, proposals: ProposalRow[] = [], q: ViewQuery = {}, mode: Mode = "all", reservePct = 0.1): { title: string; tables: Table[] } {
   switch (view) {
     case "tablero": return { title: "Tablero ejecutivo", tables: [...dashboardTables(d).slice(0, 1), cargosTable(a), ...dashboardTables(d).slice(1)] };
     case "cargos": return { title: "Cargos y dotación", tables: [cargosTable(a)] };
     case "actividades": return { title: "Inventario de actividades", tables: [actividadesTable(a)] };
     case "areas": return { title: "Áreas", tables: [areasTable(a)] };
+    case "sedes": return { title: "Comparador de sedes", tables: [sedesTable(a, q.area ?? "", q.position ?? "", mode, reservePct)] };
+    case "drill": { const lv = (["study", "area", "position", "activity"] as const).find((x) => x === q.level) ?? "study"; return { title: "Drill-down", tables: [drillTable(a, q.config ?? "carga-por-area", lv, { area: q.area, site: q.site, position: q.position, alertOnly: (q.alert as DrillFilters["alertOnly"]) ?? "", ...(q.code ? { code: q.code } : {}) } as DrillFilters)] }; }
     case "agente": return { title: "Agente de IA", tables: [agenteTable(proposals)] };
   }
 }

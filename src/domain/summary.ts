@@ -5,7 +5,7 @@ export interface Thresholds { high: number; low: number }
 export type Mode = "real" | "demo" | "all";
 export type AlertLevel = "overload" | "low" | "ok" | "nodata";
 
-export interface ActivityRow { code: string; dataKind: string; area: string; site: string; position: string; status: string; complete: boolean; hoursWeek: number | null; hoursMonth: number | null; result: ActivityResult }
+export interface ActivityRow { code: string; dataKind: string; area: string; site: string; position: string; secondaryPosition: string | null; status: string; complete: boolean; hoursWeek: number | null; hoursMonth: number | null; result: ActivityResult }
 export interface PositionRow {
   dataKind: string; area: string; site: string; position: string; occupants: number; capacity: number; hours: number; pct: number | null;
   activities: number; complete: number; reading: string; level: AlertLevel;
@@ -33,7 +33,7 @@ export function analyze(staffAll: StaffingInput[], actsAll: ActivityInput[], prm
   const acts = actsAll.filter((a) => keep(a.dataKind));
   const results = acts.map((a) => computeActivity(a, prm, occupantsOf(staff, a)));
   const activities: ActivityRow[] = acts.map((a, i) => ({
-    code: a.code, dataKind: a.dataKind, area: a.area, site: a.site, position: a.position, status: STATUS_ES[results[i].status], complete: results[i].status === "OK",
+    code: a.code, dataKind: a.dataKind, area: a.area, site: a.site, position: a.position, secondaryPosition: a.secondaryPosition ?? null, status: STATUS_ES[results[i].status], complete: results[i].status === "OK",
     hoursWeek: results[i].hTotal ?? null, hoursMonth: results[i].hMonth ?? null, result: results[i],
   }));
 

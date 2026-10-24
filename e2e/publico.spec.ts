@@ -78,7 +78,7 @@ test("sin desbordamiento horizontal y con tema oscuro legible", async ({ page })
   expect(bg).not.toBe("rgb(244, 246, 251)");
 });
 
-for (const ruta of ["/?modo=demo", "/login", "/cargos?modo=demo", "/actividades?modo=demo"]) {
+for (const ruta of ["/?modo=demo", "/login", "/cargos?modo=demo", "/actividades?modo=demo", "/sedes?modo=demo", "/drill?modo=demo&level=area&area=Cajas"]) {
   test(`accesibilidad (axe, sin fallas serias ni críticas): ${ruta}`, async ({ page }) => {
     await page.goto(ruta);
     const r = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa"]).analyze();
@@ -86,3 +86,15 @@ for (const ruta of ["/?modo=demo", "/login", "/cargos?modo=demo", "/actividades?
     expect(graves.map((v) => `${v.id}: ${v.nodes.length} elemento(s) · ${v.help}`)).toEqual([]);
   });
 }
+
+test("el drill-down baja de nivel con un clic y el comparador de sedes se exporta", async ({ page }) => {
+  await page.goto("/drill?modo=demo");
+  await expect(page.getByRole("heading", { name: /Drill-down/ })).toBeVisible();
+  await page.getByRole("table").first().getByRole("link").first().click();
+  await expect(page).toHaveURL(/level=area/);
+  await expect(page.getByRole("navigation", { name: "Ruta del drill-down" })).toContainText("Estudio");
+  await page.goto("/sedes?modo=demo");
+  await expect(page.getByRole("heading", { name: "Comparador de sedes" })).toBeVisible();
+  const [d] = await Promise.all([page.waitForEvent("download"), page.getByRole("link", { name: "Exportar Excel" }).click()]);
+  expect(d.suggestedFilename()).toMatch(/sedes.*\.xlsx$/);
+});
