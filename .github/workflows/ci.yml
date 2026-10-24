@@ -34,6 +34,7 @@ jobs:
       - run: npm run test:capture
       - run: npm run test:matrix
       - run: npm run test:policies
+      - run: npm run test:backup
       - run: npm run test:agent
       - run: npm run test:sheets
       - run: npm run test:webhook

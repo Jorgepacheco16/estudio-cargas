@@ -53,3 +53,7 @@ Supabase mantiene copias diarias (según el plan). Para restaurar a un proyecto 
 3. **Verificación**: `scripts/restore-verify.ts` (filas por tabla, políticas, aislamiento por usuario e indicadores). El job `restore` de `.github/workflows/ci.yml` hace todo el ciclo en cada cambio.
 4. **Supabase alojado**: confirme en el panel (Database → Backups) qué copias ofrece su plan y su ventana de retención; haga una restauración de prueba a un proyecto nuevo al menos una vez antes de depender de ellas.
 5. **ZAP**: el workflow `zap` escanea la aplicación publicada cada lunes; los hallazgos aparecen como anotaciones del job (ALTO hace fallar el flujo).
+## Respaldo, sesiones y dependencias
+- **Respaldo completo en Excel**: pantalla *Estudio* → «Descargar respaldo completo (Excel)» (cualquier miembro, incluido solo lectura). Una hoja por tabla con nombres técnicos de columna. Es una copia legible, no sustituye al `pg_dump`.
+- **Sesiones y Google en Supabase Auth**: Supabase → Authentication → Sessions (tiempo de vida y inactividad) y Providers (Google). Fije ahí el tiempo de vida de sesión según la política de la empresa; no se puede fijar desde el código de la aplicación (brief §16.3).
+- **Dependencias**: `.github/dependabot.yml` abre propuestas semanales (npm y GitHub Actions); `npm run audit:deps` bloquea en el CI ante vulnerabilidades altas o críticas.

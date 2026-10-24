@@ -54,6 +54,7 @@ export default async function Estudio({ searchParams }: { searchParams: Promise<
           <button className="btn solid" type="submit">Crear estudio</button>
         </form>
         <p className="note">Al crear un estudio se cargan las 14 áreas operativas del Excel y los parámetros por defecto.</p>
+        {active && <p style={{ marginTop: 12 }}><a className="btn" href="/api/respaldo" download>Descargar respaldo completo (Excel)</a></p>}
       </section>
 
       {active && (

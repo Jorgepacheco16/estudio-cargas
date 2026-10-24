@@ -44,6 +44,23 @@ async function main() {
     if (bad.length) throw new Error(`posible filtración de errores internos: ${bad.join(", ")}`);
   });
 
+  await check("Sin inyección SQL: ningún sql.raw en el código de la aplicación (Drizzle parametriza todo)", () => {
+    const bad = outsideDb.filter((f) => /\bsql\.raw\s*\(/.test(f.text)).map((f) => f.path);
+    if (bad.length) throw new Error(`sql.raw en: ${bad.join(", ")}`);
+  });
+
+  await check("Datos sensibles en registros: no hay console.* en el código de la aplicación (los errores se muestran con mensajes seguros)", () => {
+    const bad = files.filter((f) => /\bconsole\.(log|error|warn|info|debug)\s*\(/.test(f.text)).map((f) => f.path);
+    if (bad.length) throw new Error(`console en: ${bad.join(", ")}`);
+  });
+
+  await check("Las únicas rutas que modifican datos por HTTP (POST/PUT/PATCH/DELETE) son el webhook firmado; lo demás son acciones de servidor (Next valida el origen)", () => {
+    const bad = files.filter((f) => /(^|\/)route\.ts$/.test(f.path) && /export\s+(async\s+)?function\s+(POST|PUT|PATCH|DELETE)\b/.test(f.text) && !f.path.endsWith("api/sheets/webhook/route.ts")).map((f) => f.path);
+    if (bad.length) throw new Error(`rutas que modifican sin firma: ${bad.join(", ")}`);
+    const webhook = files.find((f) => f.path.endsWith("api/sheets/webhook/route.ts"))!;
+    if (!/verifySignature/.test(webhook.text)) throw new Error("el webhook no verifica la firma");
+  });
+
   await check("Ningún archivo versionado de src/ contiene secretos (patrones del hook)", async () => {
     const { revisar } = await import("../.claude/hooks/block-secrets.js") as { revisar: (e: unknown) => string | null };
     const bad = files.map((f) => ({ f, r: revisar({ tool_input: { file_path: f.path, content: f.text } }) })).filter((x) => x.r).map((x) => `${x.f.path}: ${x.r}`);

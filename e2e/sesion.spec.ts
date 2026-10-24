@@ -157,6 +157,15 @@ test("la exportación a Excel con sesión trae los datos del estudio", async () 
   expect(cells).toContain("Cajero E2E");
 });
 
+test("el respaldo completo en Excel se descarga y trae los datos del estudio", async () => {
+  await open("/estudio");
+  const [d] = await Promise.all([page.waitForEvent("download"), page.getByRole("link", { name: "Descargar respaldo completo (Excel)" }).click()]);
+  expect(d.suggestedFilename()).toMatch(/^respaldo-estudio_.*\.xlsx$/);
+  const wb = new ExcelJS.Workbook(); await wb.xlsx.readFile((await d.path())!);
+  expect(wb.getWorksheet("Actividades")!.rowCount).toBeGreaterThanOrEqual(2);
+  expect(wb.getWorksheet("Léame")).toBeTruthy();
+});
+
 test("historia: foto, mediciones con índice de productividad y detección de desviaciones", async () => {
   await open("/historia?vista=linea");
   await page.locator("input[name=label]").fill("Foto E2E");
