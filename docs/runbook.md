@@ -37,3 +37,8 @@ Supabase mantiene copias diarias (según el plan). Para restaurar a un proyecto 
 - **Conflictos**: si la app tiene una versión más nueva que la de la fila, la hoja recupera el valor de la app y queda un hallazgo «VERSION_CONFLICT» en Integraciones.
 - **Rotar el secreto del webhook**: cambiar `SHEETS_WEBHOOK_SECRET` en Vercel y `WEBHOOK_SECRET` en Apps Script a la vez; entre un cambio y otro los eventos se rechazan (401) y la reconciliación los recupera.
 - **Migraciones**: `drizzle/0002_sheet_connections_actor.sql` y luego `sql/0002_sheets.sql` (función segura para ubicar la conexión desde el webhook).
+
+## Historia y desviaciones
+- **Migraciones**: `drizzle/0003_deviation_thresholds.sql` y luego `sql/0003_history.sql` (función segura de las fotos programadas).
+- **Cron**: `vercel.json` programa `/api/sheets/reconcile` (diario) y `/api/history/snapshot` (lunes 10:00 UTC). Ambos exigen `Authorization: Bearer CRON_SECRET`.
+- **Evaluación del agente**: `npm run eval:agent` y `npm run eval:explain` (consumen tokens; no corren en CI).

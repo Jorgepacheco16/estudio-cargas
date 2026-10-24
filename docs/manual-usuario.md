@@ -30,3 +30,9 @@ Los datos del estudio pueden incluir información laboral de personas. Antes de 
 
 ## 7. Integraciones (Google Sheets)
 En **Integraciones** el propietario conecta una hoja de Google. **Vista previa** muestra qué pasaría sin cambiar nada; **Sincronizar ahora** aplica los cambios: lo que editó en la hoja pasa a la aplicación (con control de versión) y lo que solo existe en la aplicación se agrega a la hoja. La aplicación manda: si la misma fila cambió en los dos lados, gana la aplicación y la hoja recupera el valor vigente (queda un hallazgo). Las celdas con errores (p. ej. texto en un número) no borran el dato guardado; aparecen en *Calidad de datos*.
+
+## 8. Historia, productividad y desviaciones
+En **Historia y desviaciones** hay tres vistas.
+- **Línea de tiempo**: cambios de los últimos 90 días por origen (aplicación, hoja, importación, autocorrector, agente), fotos del tablero y fechas de fin del plan. Cada lunes se toma una foto automática; también puede tomarla a mano. Elija dos fotos y pulse *Comparar* para ver qué cambió.
+- **Productividad real**: registre mediciones (unidades procesadas y horas-persona). Mientras una actividad no tenga el mínimo de mediciones verá «Sin mediciones» o «Faltan mediciones», nunca un número. Un índice bajo no concluye ineficiencia: puede ser un tiempo estimado optimista o esperas no registradas.
+- **Desviaciones**: ocho reglas (estimado vs medido, cruce de umbral, salto sin respaldo, pérdida de calidad, dispersión entre sedes, plan vencido reincidente, más actividades incompletas y conflictos recurrentes). Puede *Reconocer*, *Descartar* (no vuelve a aparecer en 30 días) o *Reabrir*. *Explicar con IA* redacta una explicación que cita los cambios registrados y no puede inventar cifras. Los umbrales se editan en *Parámetros* y son provisionales.

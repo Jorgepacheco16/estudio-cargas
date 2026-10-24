@@ -221,7 +221,8 @@ export async function handleEvent(db: Db, ev: SheetChangeEvent, gw: SheetGateway
   catch { return { status: "error", message: "La conexión no tiene permiso para escribir en el estudio (revise el rol de quien la creó)" }; }
   if (!logId) return { status: "duplicate" };
   const id = logId;
-  const finish = (status: string, error: string | null) => withRls(db, { sub: conn.actorId }, (tx) => tx.update(syncEvents).set({ status, error, processedAt: new Date() }).where(eq(syncEvents.id, id)));
+  const finish = (status: string, error: string | null, extra?: Record<string, unknown>) => withRls(db, { sub: conn.actorId }, (tx) => tx.update(syncEvents)
+    .set({ status, error, processedAt: new Date(), ...(extra ? { payload: sql`${syncEvents.payload} || ${JSON.stringify(extra)}::jsonb` } : {}) }).where(eq(syncEvents.id, id)));
 
   if (!a) { await finish("ignored", "Hoja no sincronizada"); return { status: "ignored", message: "Hoja no sincronizada" }; }
   if (conn.mode === "push") { await finish("ignored", "La conexión es solo app → hoja"); return { status: "ignored", message: "La conexión es solo app → hoja" }; }
@@ -231,7 +232,8 @@ export async function handleEvent(db: Db, ev: SheetChangeEvent, gw: SheetGateway
     const outcomes = await applyRows(db, conn, gw, a, rowNums);
     await writeBack(gw, a, outcomes);
     const bad = outcomes.filter((o) => o.result === "rejected").length;
-    await finish("processed", bad ? `${bad} fila(s) rechazada(s); ver hallazgos` : null);
+    const conflictRows = outcomes.filter((o) => o.result === "conflict").map((o) => o.row);
+    await finish("processed", bad ? `${bad} fila(s) rechazada(s); ver hallazgos` : null, conflictRows.length ? { conflictRows } : undefined); // las filas en conflicto alimentan la regla R8 (conflictos recurrentes)
     return { status: "processed", outcomes };
   } catch (e) {
     await finish("error", "Error al procesar el evento");

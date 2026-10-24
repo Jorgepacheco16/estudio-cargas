@@ -75,6 +75,8 @@ export const SHEETS: SheetDef[] = [
     { key: "weightImpact", label: "Peso: impacto", kind: "int", notNull: true, max: 10 }, { key: "weightEase", label: "Peso: facilidad", kind: "int", notNull: true, max: 10 },
     { key: "weightEffort", label: "Peso: esfuerzo", kind: "int", notNull: true, max: 10 }, { key: "weightCost", label: "Peso: costo", kind: "int", notNull: true, max: 10 },
     { key: "weightRisk", label: "Peso: riesgo", kind: "int", notNull: true, max: 10 },
+    { key: "devEstimatePct", label: "Desviación: diferencia estimado vs medido (%)", kind: "pct", notNull: true }, { key: "devMinMeasurements", label: "Desviación: mínimo de mediciones", kind: "int", notNull: true, max: 100 },
+    { key: "devJumpPct", label: "Desviación: salto de horas entre fotos (%)", kind: "pct", notNull: true }, { key: "devMinHistory", label: "Desviación: mínimo de fotos de historia", kind: "int", notNull: true, max: 100 },
   ] },
 ];
 export const sheetById = (id: string | undefined) => SHEETS.find((s) => s.id === id);

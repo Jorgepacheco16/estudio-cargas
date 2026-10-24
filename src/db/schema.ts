@@ -79,6 +79,11 @@ export const studyParameters = pgTable("study_parameters", {
   weightEffort: smallint("weight_effort").notNull().default(1),
   weightCost: smallint("weight_cost").notNull().default(1),
   weightRisk: smallint("weight_risk").notNull().default(1),
+  /* Umbrales de la detección de desviaciones (F10). Valores iniciales PROVISIONALES: los decide el responsable con datos reales (D-20). */
+  devEstimatePct: numeric("dev_estimate_pct", { precision: 5, scale: 4 }).notNull().default("0.2000"),
+  devMinMeasurements: smallint("dev_min_measurements").notNull().default(3),
+  devJumpPct: numeric("dev_jump_pct", { precision: 5, scale: 4 }).notNull().default("0.2500"),
+  devMinHistory: smallint("dev_min_history").notNull().default(3),
   ...stamps(),
 }, (t) => [
   check("study_parameters_ranges_ck", sql`${t.workDaysPerWeek} between 1 and 7 and ${t.reservePct} between 0 and 1 and ${t.lowLoadThreshold} <= ${t.overloadThreshold}`),

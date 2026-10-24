@@ -1,0 +1,18 @@
+﻿  PASS  Estándar por hora: 60 ÷ tiempo promedio; sin modalidad o sin tiempo no hay estándar
+  PASS  Productividad: sin mediciones o con menos del mínimo NO hay número; con el mínimo, índice = real ÷ estándar
+  PASS  R1 estimado vs medido: con n mediciones y diferencia > X %; no con pocas mediciones ni con diferencia pequeña
+  PASS  R2 cruce de umbral: solo cuando un cargo PASA a sobrecarga entre dos fotos
+  PASS  R3 salto sin respaldo: contra la mediana de las fotos previas, con mínimo de historia y sin cambio de fuente/confianza/evidencia
+  PASS  R4 pérdida de calidad: baja la confianza o la fuente deja de ser verificable
+  PASS  R5 dispersión entre sedes: > 30 % de horas por ocupante; avisa si aparece o crece, no si se mantiene
+  PASS  R6 plan reincidente, R7 más incompletas y R8 conflictos recurrentes
+  PASS  Comparar dos fotos: indicadores, cargos que cambian de nivel e incompletas
+  PASS  Explicación del modelo: debe citar cambios entregados y no introducir cifras nuevas
+  PASS  Fotos: se guardan con los indicadores, se listan y se leen para comparar; el viewer no puede tomarlas
+  PASS  Mediciones: se guardan, la productividad pasa de «sin mediciones» a índice con el mínimo, y el viewer no escribe
+  PASS  Detección: R1 se crea una vez; repetir no duplica; descartar suprime; reconocer y reabrir cambian el estado; todo queda auditado
+  PASS  Umbrales del estudio: subir el mínimo de mediciones desactiva R1 en una detección nueva
+  PASS  Borrar una medición la elimina y deja auditoría; la línea de tiempo trae eventos por origen
+  PASS  Fotos programadas: la función segura entrega un propietario por estudio y no datos del estudio
+
+Resultado: 16 pruebas OK, 0 fallidas

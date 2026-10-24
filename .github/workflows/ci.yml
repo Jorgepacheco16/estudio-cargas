@@ -27,6 +27,8 @@ jobs:
           psql "$DATABASE_URL_ADMIN" -v ON_ERROR_STOP=1 -f drizzle/0001_weeks_per_month_precision.sql
           psql "$DATABASE_URL_ADMIN" -v ON_ERROR_STOP=1 -f drizzle/0002_sheet_connections_actor.sql
           psql "$DATABASE_URL_ADMIN" -v ON_ERROR_STOP=1 -f sql/0002_sheets.sql
+          psql "$DATABASE_URL_ADMIN" -v ON_ERROR_STOP=1 -f drizzle/0003_deviation_thresholds.sql
+          psql "$DATABASE_URL_ADMIN" -v ON_ERROR_STOP=1 -f sql/0003_history.sql
       - run: npm run test:rls
       - run: npm run test:f3
       - run: npm run test:capture
@@ -34,6 +36,7 @@ jobs:
       - run: npm run test:agent
       - run: npm run test:sheets
       - run: npm run test:webhook
+      - run: npm run test:history
       - run: npm run test:import
       - run: npm run test:domain
       - run: npm run test:labels
