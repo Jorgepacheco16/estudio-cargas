@@ -1,0 +1,10 @@
+﻿3_Actividades      filas en el libro  27 · comparadas  27 · campos  1188 · diferencias 1 · no importadas (rechazadas y reportadas) 0
+5_Medibilidad      filas en el libro   1 · comparadas   1 · campos    10 · diferencias 0 · no importadas (rechazadas y reportadas) 0
+6_Pertinencia      filas en el libro   0 · comparadas   0 · campos     0 · diferencias 0 · no importadas (rechazadas y reportadas) 0
+7_Riesgos          filas en el libro   0 · comparadas   0 · campos     0 · diferencias 0 · no importadas (rechazadas y reportadas) 0
+8_Oportunidades    filas en el libro   0 · comparadas   0 · campos     0 · diferencias 0 · no importadas (rechazadas y reportadas) 0
+10_Plan_accion     filas en el libro   0 · comparadas   0 · campos     0 · diferencias 0 · no importadas (rechazadas y reportadas) 0
+
+TOTAL: 28 filas, 1198 campos comparados, 1 diferencias, 0 filas no importadas (ver informe de importación).
+
+Explicacion de la unica diferencia: la fila 12 de la hoja 3 tiene el tiempo promedio vacio en el libro Excel original, pero en la aplicacion tiene un valor porque la persona responsable lo edito en la hoja de Google a las 14:52 (registro de auditoria: origen 'sheet', accion update, campo timeAvgMin). Es un cambio legitimo posterior a la importacion, no un error de importacion. Los otros 1 197 campos son identicos.

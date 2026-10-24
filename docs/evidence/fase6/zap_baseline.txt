@@ -1,0 +1,12 @@
+﻿ZAP baseline contra https://estudio-cargas-six.vercel.app (workflow zap, accion zaproxy/action-baseline)
+
+Primer escaneo (CSP con unsafe-inline): 0 ALTAS, 5 MEDIAS, 5 BAJAS, 5 INFORMATIVAS.
+  MEDIAS: Cross-Domain Misconfiguration; CSP style-src unsafe-inline; CSP script-src unsafe-inline; CSP sin form-action; Ausencia de tokens anti-CSRF.
+
+Segundo escaneo (CSP por peticion con nonce, form-action, COOP y CORP): 0 ALTAS, 2 MEDIAS, 3 BAJAS, 7 INFORMATIVAS.
+  MEDIAS (aceptadas, ver D-58): Cross-Domain Misconfiguration (CORS abierto de los archivos estaticos de Vercel, sin datos);
+                                Absence of Anti-CSRF Tokens (falso positivo: las acciones de servidor validan el origen de cada peticion).
+  BAJAS: HSTS no establecido en 1 recurso; COEP no definido (decision: no se agrega, puede romper recursos externos); Big Redirect (redireccion a /login de paginas protegidas).
+  Resuelto: CSP con unsafe-inline (script y style), CSP sin form-action, COOP, CORP.
+
+Pruebas de navegador tras el cambio de CSP: 41 de 41 contra produccion (escritorio y movil, con y sin sesion).

@@ -1,6 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import ExcelJS from "exceljs";
-import { createTestUser, e2eEnabled, removeTestUser, signInCookies, type TestUser } from "./support/sesion";
+import { addMembership, createTestUser, e2eEnabled, removeTestUser, signInCookies, type TestUser } from "./support/sesion";
 
 /**
  * Recorrido completo CON SESIÓN contra la aplicación compilada y el Supabase de desarrollo: crear estudio → cargo → actividad → editar tiempo →
@@ -11,6 +11,7 @@ test.describe.configure({ mode: "serial" });
 test.skip(!e2eEnabled, "Requiere E2E_SESSION=1 y las claves de desarrollo en .env.local (no corre en CI)");
 
 let user: TestUser;
+let viewer: TestUser | undefined;
 let page: Page;
 const sec = (name: string) => page.locator("section", { has: page.getByRole("heading", { name }) });
 /** Los formularios usan acciones de servidor: solo funcionan cuando React ya hidrató la página, así que se espera a que cargue por completo. */
@@ -24,7 +25,7 @@ test.beforeAll(async ({ browser, baseURL }) => {
   await signInCookies(user, context, baseURL!);
   page = await context.newPage();
 });
-test.afterAll(async () => { await page?.context().close(); if (user) await removeTestUser(user); });
+test.afterAll(async () => { await page?.context().close(); if (user) await removeTestUser(user); if (viewer) await removeTestUser(viewer); });
 
 test("la sesión se reconoce y el estudio se crea con sus 14 áreas", async () => {
   await open("/estudio");
@@ -75,6 +76,45 @@ test("una actividad con código repetido se rechaza con un mensaje claro", async
   await s.locator("select[name=positionId]").selectOption({ label: "Cajero E2E · Sede E2E (Cajas)" });
   await s.getByRole("button", { name: "Guardar actividad" }).click();
   await banner("Ya existe un registro con ese código");
+});
+
+test("409 por versión desactualizada: dos pestañas editan la misma actividad y la segunda recibe el conflicto sin pisar a la primera", async () => {
+  const other = await page.context().newPage();
+  try {
+    await open("/estudio");                 // esta pestaña queda con la versión vista
+    await other.goto("/estudio"); await other.waitForLoadState("networkidle"); await other.waitForTimeout(1000);
+    const row2 = other.locator("tr", { hasText: "E2E-1" });
+    await row2.getByLabel("Tiempo promedio de E2E-1").fill("10");
+    await row2.getByRole("button", { name: "Guardar" }).click();
+    await expect(other.locator(".banner").filter({ hasText: "Tiempo actualizado" })).toBeVisible();   // la otra pestaña guarda primero: sube la versión
+    const row = page.locator("tr", { hasText: "E2E-1" });
+    await row.getByLabel("Tiempo promedio de E2E-1").fill("77");
+    await row.getByRole("button", { name: "Guardar" }).click();
+    await banner("Conflicto (409)");
+    await open("/estudio");
+    await expect(page.locator("tr", { hasText: "E2E-1" }).getByLabel("Tiempo promedio de E2E-1")).toHaveValue("10"); // el 77 no se guardó
+  } finally { await other.close(); }
+});
+
+test("un usuario de solo lectura (viewer) ve los datos pero no puede modificar nada", async ({ browser, baseURL }) => {
+  viewer = await createTestUser();
+  await addMembership(user, viewer, "viewer");
+  const ctx = await browser.newContext({ baseURL, locale: "es-CO", timezoneId: "America/Bogota" });
+  try {
+    await signInCookies(viewer, ctx, baseURL!);
+    const p = await ctx.newPage();
+    for (const [ruta, boton] of [["/estudio", "Guardar cargo"], ["/captura?hoja=7", "Guardar"]] as const) {
+      await p.goto(ruta); await p.waitForLoadState("networkidle");
+      await expect(p.getByText("Su rol es de solo lectura")).toBeVisible();
+      await expect(p.getByRole("button", { name: boton }).first()).toBeDisabled();
+    }
+    await p.goto("/?modo=real"); await p.waitForLoadState("networkidle");
+    await expect(p.getByLabel("Indicadores").locator(".card", { hasText: "Actividades registradas" }).locator(".kpi")).toHaveText("1"); // sí puede leer
+    await p.goto("/integraciones"); await p.waitForLoadState("networkidle");
+    await expect(p.getByRole("button", { name: "Conectar" })).toBeDisabled();
+    await p.goto("/historia?vista=productividad"); await p.waitForLoadState("networkidle");
+    await expect(p.getByRole("button", { name: "Guardar medición" })).toBeDisabled();
+  } finally { await ctx.close(); }
 });
 
 test("el tablero en modo REAL refleja la actividad registrada", async () => {

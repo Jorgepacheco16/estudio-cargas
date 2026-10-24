@@ -1,0 +1,17 @@
+﻿  PASS  Primitivas de Google: se escribe en RAW (una fórmula queda como texto) y se lee lo escrito
+  PASS  Escenario 1 · EDICIÓN en la hoja: una fila nueva se aplica, «dia» se corrige a «Día» y la hoja recibe id y versión en columnas ocultas
+  PASS  Escenario 4 · EVENTO REPETIDO: el mismo evento no se aplica dos veces
+  PASS  Escenario 2 · CAMBIO DESDE LA APP: la hoja recibe el valor nuevo y la versión (app → hoja)
+  PASS  Escenario 3 · CONFLICTO: una edición con la versión vieja no pisa a la app y la hoja recupera el valor vigente
+  PASS  Escenario 5 · EVENTO PERDIDO: una edición sin evento se recupera con la reconciliación y repetirla no cambia nada
+  PASS  Escenario 6 · FÓRMULA INYECTADA: un nombre que empieza con «=» llega a la hoja como TEXTO, nunca como fórmula
+   hoja → app · 3_Actividades: unchanged 27
+   hoja → app · 5_Medibilidad: unchanged 1
+   hoja → app · 6_Pertinencia: sin filas
+   hoja → app · 7_Riesgos: sin filas
+   hoja → app · 8_Oportunidades: sin filas
+   hoja → app · 10_Plan_accion: sin filas
+  PASS  Vista previa de SOLO LECTURA sobre su hoja real y su estudio real: lee todo y no cambia la estructura de la hoja
+Pestañas temporales y estudio de prueba eliminados.
+
+Resultado: 8 pruebas OK, 0 fallidas

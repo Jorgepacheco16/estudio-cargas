@@ -37,3 +37,13 @@ export async function removeTestUser(u: TestUser) {
   try { await sql`delete from public.studies where created_by = ${u.id}`; } finally { await sql.end(); }
   await admin(`users/${u.id}`, { method: "DELETE" });
 }
+
+/** Agrega al usuario `member` como miembro del estudio de `owner` con el rol indicado (para probar permisos). */
+export async function addMembership(owner: TestUser, member: TestUser, role: "editor" | "analyst" | "viewer") {
+  const sql = postgres(process.env.DATABASE_URL_MIGRATIONS!, { max: 1, prepare: false });
+  try {
+    const [s] = await sql`select id from public.studies where created_by = ${owner.id} order by created_at desc limit 1`;
+    if (!s) throw new Error("El usuario de prueba no tiene estudio");
+    await sql`insert into public.memberships (study_id, user_id, role) values (${s.id}, ${member.id}, ${role})`;
+  } finally { await sql.end(); }
+}
