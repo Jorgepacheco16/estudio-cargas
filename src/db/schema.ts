@@ -389,12 +389,13 @@ export const sheetConnections = pgTable("sheet_connections", {
   id: uuid("id").primaryKey().defaultRandom(),
   studyId: studyFk(),
   spreadsheetId: text("spreadsheet_id").notNull(),
+  actorId: uuid("actor_id").notNull(),             // usuario en cuyo nombre se aplican los eventos de la hoja (RLS sigue vigente); FK a auth.users en sql/0002_sheets.sql
   mode: text("mode").notNull().default("off"),     // 'off' | 'push' | 'pull' | 'bidirectional'
   mappingVersion: integer("mapping_version").notNull().default(1),
   lastSyncAt: timestamp("last_sync_at", { withTimezone: true }),
   status: text("status").notNull().default("idle"),
   ...stamps(),
-}, (t) => [unique("sheet_conn_study_sheet_uq").on(t.studyId, t.spreadsheetId)]);
+}, (t) => [unique("sheet_conn_study_sheet_uq").on(t.studyId, t.spreadsheetId), unique("sheet_conn_spreadsheet_uq").on(t.spreadsheetId)]);
 
 export const syncEvents = pgTable("sync_events", {
   id: uuid("id").primaryKey().defaultRandom(),

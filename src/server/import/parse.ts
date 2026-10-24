@@ -5,7 +5,7 @@ import { Report, bool, date, int, isFormula, label, num, pct, plain, range, scal
 
 type Cell = string | number | boolean | null;
 type Kind = "text" | "num" | "pct" | "date" | "bool" | "scale" | { label: keyof typeof LABELS } | { int: [number, number] } | { range: [number, number] };
-type Spec = Record<string, [col: string, kind: Kind]>;
+export type Spec = Record<string, [col: string, kind: Kind]>;
 
 export class Row {
   constructor(readonly row: number, private d: Record<string, Cell>) {}
@@ -15,7 +15,7 @@ export class Row {
   has(...fields: string[]) { return fields.some((f) => this.d[f] !== null && this.d[f] !== undefined); }
 }
 
-const SHEETS = {
+export const SHEETS = {
   staff: "2_Caracterizacion", activities: "3_Actividades", meas: "5_Medibilidad", suit: "6_Pertinencia", risk: "7_Riesgos",
   opp: "8_Oportunidades", redesign: "9_Rediseno", plan: "10_Plan_accion", params: "Parametros", calc: "4a_Calculo_tiempos",
 } as const;
@@ -25,7 +25,7 @@ const STAFF: Spec = {
   boss: ["H", "text"], objective: ["I", "text"], functions: ["J", "text"], weeklyHours: ["K", { range: [0, 84] }], surveyDate: ["L", "date"], surveyor: ["M", "text"],
   infoSource: ["N", { label: "L_FuenteInfo" }], notes: ["O", "text"],
 };
-const ACTIVITY: Spec = {
+export const ACTIVITY: Spec = {
   kind: ["A", { label: "L_TipoDato" }], code: ["B", "text"], area: ["D", "text"], site: ["E", "text"], position: ["F", "text"], employeeCode: ["G", "text"], name: ["H", "text"], description: ["I", "text"],
   process: ["J", "text"], objective: ["K", "text"], otherPositions: ["L", "text"], documented: ["M", { label: "L_Documentada" }], frequency: ["N", { label: "L_Frecuencia" }],
   calcMode: ["O", { label: "L_Modalidad" }], executions: ["P", { range: [0, 1e9] }], period: ["Q", { label: "L_Periodo" }], scope: ["R", { label: "L_Alcance" }], units: ["S", { range: [0, 1e9] }],
@@ -36,21 +36,21 @@ const ACTIVITY: Spec = {
   activityType: ["AP", { label: "L_TipoAct" }], valueClass: ["AQ", { label: "L_Valor" }], mandatory: ["AR", "bool"], stdPotential: ["AS", { label: "L_Potencial" }], simplPotential: ["AT", { label: "L_Potencial" }],
   autoPotential: ["AU", { label: "L_Potencial" }], integration: ["AV", { label: "L_SiNoNE" }], evidence: ["AW", "text"], notes: ["AX", "text"], pending: ["AY", "text"],
 };
-const MEAS: Spec = {
+export const MEAS: Spec = {
   code: ["B", "text"], direct: ["G", { label: "L_SiParcialNo" }], hasIndicators: ["H", "bool"], hasHistory: ["I", { label: "L_SiParcialNo" }], hasStandard: ["J", "bool"],
   reliability: ["K", { label: "L_AMB" }], external: ["L", { label: "L_AMB" }], verifiable: ["M", { label: "L_SiParcialNo" }], unit: ["N", { label: "L_Unidad" }], indicator: ["O", { label: "L_Indicador" }], criterion: ["P", "text"],
 };
-const SUIT: Spec = {
+export const SUIT: Spec = {
   code: ["B", "text"], correspondence: ["F", { label: "L_Corresp" }], knowledge: ["G", "text"], training: ["H", "text"], experience: ["I", "text"], techComp: ["J", "text"], behavComp: ["K", "text"],
   authorizations: ["L", "text"], autonomy: ["M", { label: "L_Autonomia" }], compatibility: ["N", { label: "L_Compat" }], currentComp: ["O", "text"], gaps: ["P", "text"],
   trainingPossible: ["Q", { label: "L_SiParcialNo" }], reassign: ["R", { label: "L_Reasig" }], specialization: ["S", "bool"], situation: ["T", { label: "L_Situacion" }],
   sensitive: ["U", "bool"], separation: ["V", "bool"],
 };
-const RISK: Spec = {
+export const RISK: Spec = {
   code: ["B", "text"], risk: ["F", "text"], consequences: ["G", "text"], impOp: ["H", "scale"], impEco: ["I", "scale"], impLab: ["J", "scale"], impLegal: ["K", "scale"], impService: ["L", "scale"],
   probability: ["M", "scale"], controls: ["N", "text"], evidence: ["O", "text"], dependencies: ["P", "text"], people: ["Q", { int: [0, 100000] }], duplications: ["R", "text"], incompat: ["S", "bool"],
 };
-const OPP: Spec = {
+export const OPP: Spec = {
   kind: ["A", { label: "L_TipoDato" }], code: ["B", "text"], type: ["C", { label: "L_TipoOport" }], finding: ["D", { label: "L_Hallazgo" }], problem: ["E", "text"], activityCode: ["F", "text"], evidence: ["G", "text"],
   cause: ["H", "text"], proposal: ["I", "text"], area: ["J", "text"], position: ["K", "text"], benefit: ["L", "text"], hours: ["M", { range: [0, 1e6] }], assumptions: ["O", "text"], risks: ["P", "text"],
   impact: ["Q", "scale"], ease: ["R", "scale"], effort: ["S", "scale"], cost: ["T", "scale"], riskScore: ["U", "scale"], owner: ["V", "text"], due: ["W", "date"], indicator: ["X", "text"], validation: ["Y", { label: "L_EstadoValid" }],
@@ -60,7 +60,7 @@ const REDESIGN: Spec = {
   transferred: ["I", "text"], receiving: ["J", "text"], newResp: ["K", "text"], limits: ["L", "text"], competencies: ["M", "text"], training: ["N", "text"], indicators: ["O", "text"], reporting: ["P", "text"],
   hoursOut: ["T", { range: [0, 1e6] }], hoursIn: ["U", { range: [0, 1e6] }], hoursRecovered: ["V", { range: [0, 1e6] }], justification: ["Z", "text"], benefits: ["AA", "text"], risks: ["AB", "text"], approval: ["AC", { label: "L_Aprob" }],
 };
-const PLAN: Spec = {
+export const PLAN: Spec = {
   kind: ["A", { label: "L_TipoDato" }], code: ["B", "text"], finding: ["C", "text"], action: ["D", "text"], area: ["E", "text"], position: ["F", "text"], resources: ["G", "text"], cost: ["H", { range: [0, 1e13] }],
   priority: ["I", { label: "L_AMB" }], initiative: ["J", { label: "L_TipoIniciativa" }], start: ["K", "date"], end: ["L", "date"], dependencies: ["M", "text"], risks: ["N", "text"], indicator: ["O", "text"],
   target: ["P", "num"], status: ["Q", { label: "L_EstadoPlan" }], actual: ["R", "num"],
@@ -86,9 +86,14 @@ export interface Parsed {
 }
 
 function readRow(ws: ExcelJS.Worksheet, sheet: string, r: number, spec: Spec, rep: Report): Row {
+  return readRowFrom((col) => ws.getCell(`${col}${r}`).value, sheet, r, spec, rep);
+}
+
+/** Normaliza una fila a partir de una función que entrega el valor crudo de cada columna (libro de Excel o valores de Google Sheets). */
+export function readRowFrom(get: (col: string) => unknown, sheet: string, r: number, spec: Spec, rep: Report): Row {
   const d: Record<string, Cell> = {};
   for (const [field, [col, kind]] of Object.entries(spec)) {
-    const raw = ws.getCell(`${col}${r}`).value;
+    const raw = get(col);
     const loc: Loc = { sheet, row: r, field };
     if (isFormula(raw)) { d[field] = null; continue; } // columna calculada: no es dato
     if (kind === "text") d[field] = text(raw);

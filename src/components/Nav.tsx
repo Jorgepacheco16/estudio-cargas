@@ -8,6 +8,7 @@ const ITEMS = [
   { href: "/actividades", label: "Actividades" },
   { href: "/estudio", label: "Estudio (captura)" },
   { href: "/captura", label: "Hojas 5–10 y parámetros" },
+  { href: "/integraciones", label: "Integraciones" },
   { href: "/agente", label: "Agente de IA" },
 ];
 

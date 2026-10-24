@@ -29,3 +29,11 @@ Supabase mantiene copias diarias (según el plan). Para restaurar a un proyecto 
 - **Ingreso falla**: revise la URL de redirección en Google Cloud y en Supabase Auth.
 - **Fuga de un secreto**: rótelo de inmediato (sección anterior) y revise `gitleaks` en CI.
 - **Conflicto 409 frecuente**: dos personas editan el mismo registro; coordine o recargue.
+
+## Sincronización con Google Sheets
+- **Variables**: `GOOGLE_SERVICE_ACCOUNT_JSON` (llave completa de la cuenta de servicio), `SHEETS_WEBHOOK_SECRET` (el mismo valor va en la propiedad `WEBHOOK_SECRET` de Apps Script), `CRON_SECRET` (Vercel lo envía como `Authorization: Bearer` a `/api/sheets/reconcile`).
+- **Conectar**: Integraciones → pegar la dirección de la hoja (nativa de Google, compartida como Editor con la cuenta de servicio) → *Vista previa* → *Sincronizar ahora*. La primera sincronización agrega dos columnas ocultas al final de cada pestaña (`__app_id`, `__app_version`); no las borre ni las edite.
+- **Apps Script** (cambios casi inmediatos): Integraciones → *Descargar Code.gs* → Extensiones → Apps Script → pegar → Configuración del proyecto → Propiedades del script → `WEBHOOK_SECRET` → Activadores: `onEditInstalled` (al editar) y `onChangeInstalled` (al cambiar).
+- **Conflictos**: si la app tiene una versión más nueva que la de la fila, la hoja recupera el valor de la app y queda un hallazgo «VERSION_CONFLICT» en Integraciones.
+- **Rotar el secreto del webhook**: cambiar `SHEETS_WEBHOOK_SECRET` en Vercel y `WEBHOOK_SECRET` en Apps Script a la vez; entre un cambio y otro los eventos se rechazan (401) y la reconciliación los recupera.
+- **Migraciones**: `drizzle/0002_sheet_connections_actor.sql` y luego `sql/0002_sheets.sql` (función segura para ubicar la conexión desde el webhook).

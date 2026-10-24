@@ -13,6 +13,7 @@ import { analyze } from "../../domain/summary";
 import { loadStudyDataTx } from "../studies";
 import { key, type Issue } from "./normalize";
 import { FIELDS, hasAnyInput, type Parsed, type Row } from "./parse";
+import { activityFields, measFields, oppFields, planFields, riskFields, suitFields } from "./rowmaps";
 
 export interface SheetCount { rows: number; inserted: number; skipped: number; rejected: number }
 export interface Diff { code: string; field: string; app: number | string | null; excel: number | string | null }
@@ -135,17 +136,7 @@ async function run(tx: Tx, sub: string, studyId: string, p: Parsed): Promise<Imp
     const primary = await ensurePosition(kind, area, site, pos, {}, true, { sheet: SH3, row: r.row });
     const sec = r.s("secondaryPosition");
     const secondary = sec ? await ensurePosition(kind, area, site, sec, {}, true, { sheet: SH3, row: r.row }) : null;
-    newActs.push({ code, values: {
-      studyId, dataKind: kind, code, positionId: primary.id, employeeCode: r.s("employeeCode"), name, description: r.s("description"), process: r.s("process"), objectiveResult: r.s("objective"),
-      otherPositions: r.s("otherPositions"), formallyDocumented: r.s("documented") as never, frequency: r.s("frequency") as never, calcMode: r.s("calcMode") as never, executionsPerPeriod: S(r.n("executions")),
-      period: r.s("period") as never, scope: r.s("scope") as never, unitsPerExecution: S(r.n("units")), timeAvgMin: S(r.n("timeAvg")), timeMinMin: S(r.n("timeMin")), timeMaxMin: S(r.n("timeMax")),
-      seasonHighFactor: S(r.n("seasonHigh")), seasonLowFactor: S(r.n("seasonLow")), dataSource: r.s("source") as never, confidence: r.s("confidence") as never, simultaneousPeople: r.n("simultaneous"),
-      loadSharePct: S(r.n("loadShare")), secondaryPositionId: secondary?.id ?? null, planning: r.s("planning") as never, tools: r.s("tools"), inputs: r.s("inputs"), deliverable: r.s("deliverable"),
-      dependencies: r.s("dependencies"), waitMin: S(r.n("waitMin")), waitOccupiesPerson: r.b("waitOccupies"), travelMin: S(r.n("travelMin")), reworkPct: S(r.n("reworkPct")), reworkMin: S(r.n("reworkMin")),
-      consequences: r.s("consequences"), controls: r.s("controls"), activityType: r.s("activityType") as never, valueClass: r.s("valueClass") as never, mandatory: r.b("mandatory"),
-      standardizationPotential: r.s("stdPotential") as never, simplificationPotential: r.s("simplPotential") as never, automationPotential: r.s("autoPotential") as never,
-      integrationPossible: r.s("integration") as never, evidence: r.s("evidence"), notes: r.s("notes"), pendingValidation: r.s("pending"),
-    } });
+    newActs.push({ code, values: { studyId, dataKind: kind, code, positionId: primary.id, secondaryPositionId: secondary?.id ?? null, ...(activityFields(r) as Partial<typeof activities.$inferInsert>), name } });
     c(SH3).inserted++;
   }
   for (const part of chunk(newActs, 50)) {
@@ -169,20 +160,9 @@ async function run(tx: Tx, sub: string, studyId: string, p: Parsed): Promise<Imp
     }
     for (const part of chunk(out, 100)) await tx.insert(table).values(part as never);
   };
-  await assess("5_Medibilidad", p.meas, FIELDS.MEAS, measurabilityAssessments, (r, activityId) => ({
-    studyId, activityId, directMeasurement: r.s("direct"), hasIndicators: r.b("hasIndicators"), hasHistory: r.s("hasHistory"), hasTimeStandard: r.b("hasStandard"), sourceReliability: r.s("reliability"),
-    externalDependency: r.s("external"), resultVerifiable: r.s("verifiable"), recommendedUnit: r.s("unit"), proposedIndicator: r.s("indicator"), qualitativeCriterion: r.s("criterion"),
-  }));
-  await assess("6_Pertinencia", p.suit, FIELDS.SUIT, suitabilityAssessments, (r, activityId) => ({
-    studyId, activityId, correspondence: r.s("correspondence"), technicalKnowledge: r.s("knowledge"), training: r.s("training"), experience: r.s("experience"), technicalCompetencies: r.s("techComp"),
-    behavioralCompetencies: r.s("behavComp"), authorizations: r.s("authorizations"), autonomy: r.s("autonomy"), compatibility: r.s("compatibility"), currentCompetencies: r.s("currentComp"), gaps: r.s("gaps"),
-    trainingPossible: r.s("trainingPossible"), reassignmentPossible: r.s("reassign"), specializationNeeded: r.b("specialization"), situation: r.s("situation"), sensitiveResponsibility: r.b("sensitive"), separationEvaluated: r.b("separation"),
-  }));
-  await assess("7_Riesgos", p.risk, FIELDS.RISK, riskAssessments, (r, activityId) => ({
-    studyId, activityId, risk: r.s("risk"), consequences: r.s("consequences"), impactOperational: r.n("impOp"), impactEconomic: r.n("impEco"), impactLabor: r.n("impLab"), impactLegal: r.n("impLegal"),
-    impactService: r.n("impService"), probability: r.n("probability"), controls: r.s("controls"), evidence: r.s("evidence"), dependencies: r.s("dependencies"), peopleWhoCanExecute: r.n("people"),
-    duplications: r.s("duplications"), functionIncompatibility: r.b("incompat"),
-  }));
+  await assess("5_Medibilidad", p.meas, FIELDS.MEAS, measurabilityAssessments, (r, activityId) => ({ studyId, activityId, ...measFields(r) }));
+  await assess("6_Pertinencia", p.suit, FIELDS.SUIT, suitabilityAssessments, (r, activityId) => ({ studyId, activityId, ...suitFields(r) }));
+  await assess("7_Riesgos", p.risk, FIELDS.RISK, riskAssessments, (r, activityId) => ({ studyId, activityId, ...riskFields(r) }));
 
   /* Hoja 8: oportunidades */
   const SH8 = "8_Oportunidades";
@@ -197,11 +177,7 @@ async function run(tx: Tx, sub: string, studyId: string, p: Parsed): Promise<Imp
     if (act && !aId) issue(SH8, r.row, "activityCode", "ORPHAN_REFERENCE", "warning", `La actividad relacionada '${act.slice(0, 30)}' no existe; el vínculo quedó vacío`);
     const area = r.s("area"); const arId = area ? areaIds.get(key(area)) ?? null : null;
     if (area && !arId) issue(SH8, r.row, "area", "NOT_IN_LIST", "warning", `Área '${area.slice(0, 50)}' no registrada; el vínculo quedó vacío`);
-    oppRows.push({
-      studyId, dataKind: kindOf(r, SH8), code, type: r.s("type"), findingClass: r.s("finding"), problem: r.s("problem"), relatedActivityId: aId, evidence: r.s("evidence"), probableCause: r.s("cause"), proposal: r.s("proposal"),
-      areaId: arId, positionName: r.s("position"), expectedBenefit: r.s("benefit"), recoverableHoursPerWeek: S(r.n("hours")), impactAssumptions: r.s("assumptions"), implementationRisks: r.s("risks"),
-      impactScore: r.n("impact"), easeScore: r.n("ease"), effortScore: r.n("effort"), costScore: r.n("cost"), riskScore: r.n("riskScore"), owner: r.s("owner"), dueDate: r.s("due"), followUpIndicator: r.s("indicator"), validationStatus: r.s("validation"),
-    });
+    oppRows.push({ studyId, dataKind: kindOf(r, SH8), code, relatedActivityId: aId, areaId: arId, ...oppFields(r) });
     c(SH8).inserted++;
   }
   for (const part of chunk(oppRows, 100)) await tx.insert(improvementOpportunities).values(part as never);
@@ -241,11 +217,7 @@ async function run(tx: Tx, sub: string, studyId: string, p: Parsed): Promise<Imp
     const [start, end] = [r.s("start"), r.s("end")];
     const badDates = start && end && end < start;
     if (badDates) issue(SH10, r.row, "end", "DATE_ORDER", "warning", "La fecha de fin es anterior a la de inicio; ambas fechas quedaron vacías");
-    planRows.push({
-      studyId, dataKind: kindOf(r, SH10), code, finding: r.s("finding"), action: r.s("action"), areaId: arId, positionName: r.s("position"), resources: r.s("resources"), estimatedCost: S(r.n("cost")),
-      priority: r.s("priority"), initiativeType: r.s("initiative"), startDate: badDates ? null : start, endDate: badDates ? null : end, dependencies: r.s("dependencies"), risks: r.s("risks"),
-      resultIndicator: r.s("indicator"), target: S(r.n("target")), status: r.s("status"), actualResult: S(r.n("actual")),
-    });
+    planRows.push({ studyId, dataKind: kindOf(r, SH10), code, areaId: arId, startDate: badDates ? null : start, endDate: badDates ? null : end, ...planFields(r) });
     c(SH10).inserted++;
   }
   for (const part of chunk(planRows, 100)) await tx.insert(actionItems).values(part as never);

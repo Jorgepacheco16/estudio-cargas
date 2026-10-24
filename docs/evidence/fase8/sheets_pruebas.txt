@@ -1,0 +1,20 @@
+﻿  PASS  Contrato del evento de Apps Script y detección de texto con forma de fórmula
+  PASS  La conexión se ubica por spreadsheetId sin sesión (función segura) y una hoja desconocida no se conecta
+  PASS  Hoja → app: fila nueva se crea, «dia» se corrige a «Día» con hallazgo, y la hoja recibe id y versión (columnas ocultas)
+  PASS  Un evento repetido (mismo eventId) no se aplica dos veces (idempotencia)
+  PASS  Control de versión: con la versión vigente actualiza; con una versión vieja hay conflicto y la hoja recupera el valor de la app
+  PASS  Un valor ilegible («abc») no borra el valor guardado y queda como hallazgo
+  PASS  Fila sin vincular: idéntica se vincula; distinta NO se sobrescribe y se reporta; código repetido en el lote se rechaza
+  PASS  Área inexistente: la fila se rechaza (la hoja no crea listas) y nada queda a medias
+  PASS  Hojas 5, 6, 7, 8 y 10: se crean desde la hoja; una evaluación de actividad inexistente se rechaza
+  PASS  Auditoría: cada cambio aplicado desde la hoja queda con origen «sheet»
+  PASS  Ida y vuelta: app → celdas → fila normalizada → columnas de la base devuelve lo mismo (sin pérdidas)
+  PASS  Valores a celdas: etiquetas en español, Sí/No, fechas como número de serie y porcentajes como fracción
+  PASS  App → hoja: lo que solo existe en la app se agrega con id y versión; las fórmulas de la hoja no se tocan; texto con forma de fórmula va como texto
+  PASS  Reconciliación: recupera una edición cuyo evento se perdió y no duplica nada al repetirse
+  PASS  Vista previa: cuenta lo que pasaría sin escribir nada en la hoja ni en la base
+  PASS  RLS: una conexión cuyo actor es de solo lectura no puede escribir; el evento falla sin dejar datos
+  PASS  Modo «solo app → hoja»: los eventos de la hoja se ignoran
+  PASS  Los índices de columnas son consistentes (A=1, Z=26, AA=27, AY=51)
+
+Resultado: 18 pruebas OK, 0 fallidas

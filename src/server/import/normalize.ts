@@ -1,5 +1,6 @@
 /** Normalización de celdas del Excel (§10.3 del brief). Funciones puras; los hallazgos se acumulan en un informe, nunca se ocultan. */
 import { LABELS } from "../../domain/labels";
+import { matchList } from "../../domain/autocorrect";
 
 export type Severity = "error" | "warning" | "info";
 export interface Issue { sheet: string; row: number; field: string; rule: string; severity: Severity; message: string }
@@ -100,7 +101,8 @@ export function label(r: Report, loc: Loc, list: keyof typeof LABELS, v: unknown
   if (t in map) return map[t];
   const hit = Object.keys(map).find((k) => fold(k) === fold(t));
   if (hit) { r.add(loc, "LABEL_AUTOFIXED", "info", `'${t.slice(0, 40)}' → '${hit}' (mayúsculas/acentos)`); return map[hit]; }
-  r.add(loc, "NOT_IN_LIST", "warning", `'${t.slice(0, 50)}' no está en la lista ${list}; no se importó`);
+  const near = matchList(t, Object.keys(map));
+  r.add(loc, "NOT_IN_LIST", "warning", `'${t.slice(0, 50)}' no está en la lista ${list}${near.rule === "LIST_FUZZY" ? `; ¿quiso decir '${near.match}'? (sugerencia, no se aplicó)` : ""}; no se importó`);
   return null;
 }
 

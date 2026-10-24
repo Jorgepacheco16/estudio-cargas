@@ -24,3 +24,10 @@
 - **D-34** El modelo claude-sonnet-5-5 rechaza `tool_choice` forzado (400). Se usa `auto`, el sistema exige responder solo con `submit_proposals`, la salida se valida con zod y se reintenta una vez si no cumple el contrato. Sin herramienta = lista vacía. Las reglas de validación (`validation_rule`) se pueden aprobar pero no aplicar: el motor de reglas aún no existe.
 - **D-35** La evaluación tiene 8 casos (el brief pide 20 o más) y la salida del modelo no es determinista (una ejecución previa falló 2 de 8). Falta ampliar a 20 casos y repetir cada uno varias veces antes de fijar el modelo (D-09). No corre en CI (cuesta tokens y requiere clave).
 - **D-36** Términos de retención del proveedor (D-16): revisar antes de que el agente reciba datos del cliente real. El resumen ya excluye nombres, sedes, cargos y textos libres.
+
+## F8
+- **D-37** Sincronización con Sheets: hojas 3, 5, 6, 7, 8 y 10 (clave en la columna B). Las hojas 2 y 9 tienen clave compuesta (área/sede/cargo) y no se sincronizan todavía; siguen entrando por la importación. La hoja no crea áreas (las listas las decide la app); sí crea sede y cargo faltantes como la importación (D-08).
+- **D-38** App → hoja no es en tiempo real: ocurre con «Sincronizar ahora» y con la reconciliación diaria (Vercel Cron, plan Hobby = 1 vez al día). Hoja → app es casi inmediato si se instala Apps Script; si no, por reconciliación.
+- **D-39** Una celda ilegible en una fila ya guardada (p. ej. «abc» en un número) NO borra el valor vigente: se conserva y queda el hallazgo. Una fila sin vincular que difiere de la app no se sobrescribe (la app manda, D-13).
+- **D-40** La cuenta de servicio no puede crear archivos en Google (permiso denegado): la prueba contra Google real usa una pestaña temporal en la hoja del cliente y una vista previa de solo lectura. La primera sincronización real (escritura de las columnas internas __app_id / __app_version) la dispara el propietario con «Sincronizar ahora».
+- **D-41** El tope de 50 correcciones automáticas por lote (D-19) está definido (cellguard.ts) pero aún no se exige confirmación en la interfaz.

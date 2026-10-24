@@ -27,3 +27,6 @@ Cada vista tiene **Exportar Excel**, **CSV** y **PDF**. El CSV usa «;» y coma 
 
 ## 6. Datos personales
 Los datos del estudio pueden incluir información laboral de personas. Antes de abrir el acceso a más usuarios debe existir la validación jurídica (Ley 1581 de 2012). El asistente de IA recibirá solo resúmenes sin nombres.
+
+## 7. Integraciones (Google Sheets)
+En **Integraciones** el propietario conecta una hoja de Google. **Vista previa** muestra qué pasaría sin cambiar nada; **Sincronizar ahora** aplica los cambios: lo que editó en la hoja pasa a la aplicación (con control de versión) y lo que solo existe en la aplicación se agrega a la hoja. La aplicación manda: si la misma fila cambió en los dos lados, gana la aplicación y la hoja recupera el valor vigente (queda un hallazgo). Las celdas con errores (p. ej. texto en un número) no borran el dato guardado; aparecen en *Calidad de datos*.

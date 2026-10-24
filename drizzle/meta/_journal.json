@@ -15,6 +15,13 @@
       "when": 1792789796133,
       "tag": "0001_weeks_per_month_precision",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1792865608500,
+      "tag": "0002_sheet_connections_actor",
+      "breakpoints": true
     }
   ]
 }

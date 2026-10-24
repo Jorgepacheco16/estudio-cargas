@@ -1,0 +1,6 @@
+﻿  PASS  Firma válida pero hoja no conectada → 404 (sin tocar la base ni Google)
+  PASS  Secreto incorrecto, cuerpo alterado, evento viejo y firma ausente → 401
+  PASS  Firma válida con cuerpo fuera de contrato (campo extra, JSON roto, UUID inválido) → 400
+  PASS  Sin SHEETS_WEBHOOK_SECRET configurado el servicio responde 503 y no acepta nada
+
+Resultado: 4 pruebas OK, 0 fallidas

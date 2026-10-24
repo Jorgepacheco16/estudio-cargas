@@ -1,0 +1,18 @@
+﻿  PASS  Google real: se escribe en RAW (una fórmula queda como texto) y se lee lo escrito
+  PASS  Google real: se agregan columnas al final y quedan ocultas
+   hoja → app · 3_Actividades: linked 27
+   hoja → app · 5_Medibilidad: linked 1
+   hoja → app · 6_Pertinencia: sin filas
+   hoja → app · 7_Riesgos: sin filas
+   hoja → app · 8_Oportunidades: sin filas
+   hoja → app · 10_Plan_accion: sin filas
+   app → hoja · 3_Actividades: agregaría 0, sin vincular 27
+   app → hoja · 5_Medibilidad: agregaría 0, sin vincular 1
+   app → hoja · 6_Pertinencia: agregaría 0, sin vincular 0
+   app → hoja · 7_Riesgos: agregaría 0, sin vincular 0
+   app → hoja · 8_Oportunidades: agregaría 0, sin vincular 0
+   app → hoja · 10_Plan_accion: agregaría 0, sin vincular 0
+  PASS  Google real: la vista previa sobre su hoja y su estudio lee todo y NO escribe nada
+Pestaña temporal eliminada.
+
+Resultado: 3 pruebas OK, 0 fallidas
