@@ -1,4 +1,5 @@
 import { Purpose } from "@/components/Purpose";
+import { sentenceCase } from "@/lib/text";
 import { loadAnalysis, parseMode } from "@/data/source";
 import Link from "next/link";
 import { CargosTable } from "@/components/CargosTable";
@@ -33,8 +34,8 @@ export default async function Tablero({ searchParams }: { searchParams: Promise<
         </div>
         <div className="tools"><ModeForm mode={mode} /><ExportButtons view="tablero" mode={mode} /></div>
       </div>
-      <div className="banner" style={warn ? undefined : { background: "var(--blue-soft)", color: "var(--blue)" }}>{d.modeBanner}</div>
-      <div className="banner">{d.assumptionsBanner}</div>
+      <div className="banner" style={warn ? undefined : { background: "var(--blue-soft)", color: "var(--blue)" }}>{sentenceCase(d.modeBanner)}</div>
+      <div className="banner">{sentenceCase(d.assumptionsBanner)}</div>
 
       <section className="grid-kpi" aria-label="Indicadores">
         <div className="card"><div className="lbl">Áreas con información</div><div className="kpi">{k.areasWithInfo}</div></div>
@@ -84,7 +85,7 @@ export default async function Tablero({ searchParams }: { searchParams: Promise<
       <div className="row">
         <ShareList title="B. Aporte de valor" rows={d.byValue} />
         <ShareList title="B. Tipo de actividad" rows={d.byType} />
-        <ShareList title="B. Potencial ALTO de…" rows={d.byPotential} total />
+        <ShareList title="B. Potencial alto de…" rows={d.byPotential} total />
       </div>
 
       <section className="card" aria-label="Top 10">
@@ -101,7 +102,7 @@ export default async function Tablero({ searchParams }: { searchParams: Promise<
         <section className="card" aria-label="Cobertura y calidad">
           <h2>D. Cobertura y calidad de la información</h2>
           <div className="tbl-wrap" tabIndex={0} role="region" aria-label="Tabla desplazable"><table style={{ minWidth: 0 }}>
-            <tbody>{d.coverage.map((c) => <tr key={c.label}><td>{c.label}{c.note && <div className="muted">{c.note}</div>}</td><td className="num"><b>{c.value}</b></td></tr>)}</tbody>
+            <tbody>{d.coverage.map((c) => <tr key={c.label}><td>{sentenceCase(c.label)}{c.note && <div className="muted">{c.note}</div>}</td><td className="num"><b>{c.value}</b></td></tr>)}</tbody>
           </table></div>
         </section>
         <section className="card" aria-label="Oportunidades y plan">
@@ -116,7 +117,7 @@ export default async function Tablero({ searchParams }: { searchParams: Promise<
         <h2>F. Conclusiones preliminares</h2>
         <p className="note">Se generan con los datos disponibles y dependen de la cobertura y la calidad de la información.</p>
         <ul style={{ margin: "12px 0 0", paddingLeft: 18, display: "flex", flexDirection: "column", gap: 10, fontSize: ".875rem", lineHeight: 1.5 }}>
-          {d.conclusions.map((c) => <li key={c}>{c}</li>)}
+          {d.conclusions.map((c) => <li key={c}>{sentenceCase(c)}</li>)}
         </ul>
       </section>
     </main>

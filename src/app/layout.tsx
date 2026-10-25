@@ -15,11 +15,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body>
         <header className="topbar">
           <div className="topbar-in">
-            <Image className="logo" src="/logo-megatiendas.png" alt="Megatiendas" width={170} height={62} priority />
-            <div style={{ display: "flex", gap: 16, alignItems: "center", flexWrap: "wrap" }}>
-              <div className="tag">Estudio de Actividades y Cargas Laborales</div>
-              <UserBadge />
+            <div className="brand">
+              <Image className="logo" src="/logo-megatiendas.png" alt="Megatiendas" width={170} height={62} priority />
+              <div className="brand-name">Estudio de actividades y cargas laborales</div>
             </div>
+            <div className="topbar-user"><UserBadge /></div>
           </div>
         </header>
         <Nav />

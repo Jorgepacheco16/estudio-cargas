@@ -35,15 +35,15 @@ export default async function Parametros({ searchParams }: { searchParams: Promi
       <section className="card">
         <h2>Áreas ({areas.length})</h2>
         <p className="note">Esta lista alimenta la lista desplegable «Área» de las hojas del libro. Un área debe existir aquí antes de usarla.</p>
-        <ul style={{ margin: "8px 0", paddingLeft: 0, listStyle: "none", display: "grid", gap: 6 }}>
+        <ul className="rowlist">
           {areas.map((a) => (
-            <li key={a.id} style={{ display: "flex", gap: 8, alignItems: "center" }}>
+            <li key={a.id}>
               <span>{a.name}</span>
               {canWrite && <form action={removeAreaAction}><input type="hidden" name="name" value={a.name} /><button className="btn danger" type="submit" aria-label={`Quitar ${a.name}`}>Quitar</button></form>}
             </li>
           ))}
         </ul>
-        {canWrite && <form action={addAreaAction} style={{ display: "flex", gap: 8, alignItems: "flex-end", flexWrap: "wrap" }}><label className="f">Nueva área<input name="name" required maxLength={120} /></label><button className="btn solid" type="submit">Agregar área</button></form>}
+        {canWrite && <form action={addAreaAction} style={{ display: "flex", gap: 16, alignItems: "flex-end", flexWrap: "wrap" }}><label className="f">Nueva área<input name="name" required maxLength={120} /></label><button className="btn solid" type="submit">Agregar área</button></form>}
       </section>
     </main>
   );

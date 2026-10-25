@@ -6,7 +6,7 @@ export function ExportButtons({ view, mode, extra = "" }: { view: View; mode: Mo
   const q = `modo=${mode}${extra ? `&${extra}` : ""}`;
   return (
     <>
-      <a className="btn solid" href={`/api/export/${view}?format=xlsx&${q}`} download>Exportar Excel</a>
+      <a className="btn" href={`/api/export/${view}?format=xlsx&${q}`} download>Exportar Excel</a>
       <a className="btn" href={`/api/export/${view}?format=csv&${q}`} download>Exportar CSV</a>
       <a className="btn" href={`/api/export/${view}?format=pdf&${q}`} download>Exportar PDF</a>
     </>
