@@ -21,7 +21,7 @@ export type CoverageOutcome =
   | { ok: true; result: CoverageResult; cargo: string }
   | { ok: false; code: CoverageFailure; message: string };
 
-export interface ModelCall { raw: unknown; inputTokens: number; outputTokens: number }
+export interface ModelCall { raw: unknown; inputTokens: number; outputTokens: number; /** La respuesta se cortó por exceder el tope de salida: el tramo debe dividirse. */ truncated?: boolean }
 /** Quién clasifica. Por defecto es el modelo real; las pruebas inyectan uno propio para no gastar tokens. */
 export type CoverageProposer = (functionsText: string, activities: CoverageActivity[], timeoutMs: number) => Promise<ModelCall>;
 
@@ -43,12 +43,34 @@ const TOOL = {
 export const callCoverageModel: CoverageProposer = async (functionsText, acts, timeoutMs) => {
   const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY, timeout: timeoutMs, maxRetries: 0 });
   const content = JSON.stringify({ funciones_del_perfil: functionsText, actividades_del_cargo: acts.map((a) => ({ codigo: a.code, nombre: a.name.slice(0, 300), descripcion: (a.description ?? "").slice(0, 700) })) });
-  const base = { model: agentModel(), max_tokens: 6000, system: COVERAGE_SYSTEM, tools: [TOOL], tool_choice: { type: "auto" as const }, messages: [{ role: "user" as const, content }] };
+  const base = { model: agentModel(), max_tokens: 4096, system: COVERAGE_SYSTEM, tools: [TOOL], tool_choice: { type: "auto" as const }, messages: [{ role: "user" as const, content }] };
   // Este modelo no admite fijar la temperatura: la consistencia entre ejecuciones se favorece con instrucciones estrictas, una herramienta con contrato y validación posterior.
   const msg = await client.messages.create(base);
   const block = msg.content.find((b) => b.type === "tool_use");
-  return { raw: block && block.type === "tool_use" ? block.input : {}, inputTokens: msg.usage.input_tokens, outputTokens: msg.usage.output_tokens };
+  return { raw: block && block.type === "tool_use" ? block.input : {}, inputTokens: msg.usage.input_tokens, outputTokens: msg.usage.output_tokens, truncated: msg.stop_reason === "max_tokens" };
 };
+
+/** Tamaño de cada tramo del perfil: pocas funciones por llamada para que la respuesta sea corta y rápida, y los tramos se piden EN PARALELO. */
+export const CHUNK_CHARS = 1200;
+const MIN_SPLIT_CHARS = 300;
+
+/**
+ * Clasifica todo el perfil: lo divide en tramos, los envía en paralelo y, si la respuesta de algún tramo se corta por tamaño, divide ese tramo en dos y lo
+ * repite. Devuelve las respuestas crudas (se validan después, todas juntas). Lanza error si no hay tiempo o un tramo ya no se puede dividir.
+ */
+export async function classifyProfile(propose: CoverageProposer, text: string, acts: CoverageActivity[], deadline: number, usage: { inTok: number; outTok: number }): Promise<unknown[]> {
+  const one = async (chunk: string): Promise<unknown[]> => {
+    const left = deadline - Date.now();
+    if (left < 5_000) throw new Error("tiempo agotado");
+    const r = await propose(chunk, acts, Math.min(CALL_TIMEOUT_MS, left));
+    usage.inTok += r.inputTokens; usage.outTok += r.outputTokens;
+    if (!r.truncated) return [r.raw];
+    const halves = chunk.length > MIN_SPLIT_CHARS ? splitProfile(chunk, Math.ceil(chunk.length / 2) + 40) : [];
+    if (halves.length < 2) throw new Error("respuesta truncada");
+    return (await Promise.all(halves.map(one))).flat();
+  };
+  return (await Promise.all(splitProfile(text, CHUNK_CHARS).map(one))).flat();
+}
 
 const label = (p: { area: string; site: string; name: string; kind: string }) => `${p.name} · ${p.area} · ${p.site}${p.kind === "demo" ? " · DEMO" : ""}`;
 
@@ -95,29 +117,22 @@ export async function validateCoverage(db: Db, sub: string, studyId: string, pos
 
   // 3) IA: tramos del perfil (si es muy largo), respuesta validada; si no cumple el contrato se reintenta UNA vez. Nunca se muestra un resultado parcial.
   const input: CoverageInput = { functionsText: text, activities: data.acts };
-  const chunks = splitProfile(text);
   const deadline = Date.now() + TOTAL_BUDGET_MS;
-  let tokensIn = 0, tokensOut = 0, outcome: CoverageOutcome | null = null, reason = "";
+  const usage = { inTok: 0, outTok: 0 };
+  let outcome: CoverageOutcome | null = null;
   try {
     for (let attempt = 1; attempt <= 2 && !outcome; attempt++) {
-      const raws: unknown[] = [];
-      for (const chunk of chunks) {
-        const left = deadline - Date.now();
-        if (left < 5_000) throw new Error("tiempo agotado");
-        const r = await propose(chunk, data.acts, Math.min(CALL_TIMEOUT_MS, left));
-        tokensIn += r.inputTokens; tokensOut += r.outputTokens; raws.push(r.raw);
-      }
+      const raws = await classifyProfile(propose, text, data.acts, deadline, usage);
       const built = buildCoverage(raws, input);
       if (built.ok) outcome = { ok: true, result: built.result, cargo };
-      else { reason = built.reason; if (deadline - Date.now() < 15_000) break; }
+      else if (deadline - Date.now() < 20_000) break; // sin tiempo para un segundo intento
     }
   } catch {
     outcome = { ok: false, code: "error", message: "La IA no respondió a tiempo o no estuvo disponible. Puede reintentar." };
   }
   outcome ??= { ok: false, code: "error", message: "La respuesta de la IA llegó incompleta o con un formato inválido, así que no se muestra ningún resultado parcial. Puede reintentar." };
-  void reason;
   await withRls(db, { sub }, async (tx) => {
-    await tx.update(agentRuns).set({ status: outcome!.ok ? "done" : "failed", inputTokens: tokensIn, outputTokens: tokensOut }).where(eq(agentRuns.id, runId));
+    await tx.update(agentRuns).set({ status: outcome!.ok ? "done" : "failed", inputTokens: usage.inTok, outputTokens: usage.outTok }).where(eq(agentRuns.id, runId));
     await tx.insert(auditLog).values({ studyId, actorId: sub, origin: "agent", action: "run", entity: "coverage_run", entityId: runId, diff: null });
   }).catch(() => undefined);
   return outcome;

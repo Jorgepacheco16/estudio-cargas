@@ -23,7 +23,7 @@ const acts = (n: number): CoverageActivity[] => Array.from({ length: n }, (_, i)
 const fn = (text: string, status: "covered" | "partial" | "none", activities: string[], note = "") => ({ text, status, activities, note });
 
 async function main() {
-  const { validateCoverage, listCoverageCargos } = await import("../src/server/coverage");
+  const { validateCoverage, listCoverageCargos, classifyProfile } = await import("../src/server/coverage");
   const { runAgent } = await import("../src/server/agent");
   const admin = createDb(URL_ADMIN, 2), app = createDb(URL_APP, 4);
   const owner = randomUUID(), viewer = randomUUID();
@@ -63,6 +63,23 @@ async function main() {
       if (parts.length < 3 || parts.join("\n").replace(/\s+/g, "") !== text.replace(/\s+/g, "")) throw new Error(`tramos ${parts.length}`);
       const r = buildCoverage([{ functions: [fn("Atender clientes", "covered", ["A-1"])] }, { functions: [fn("atender  clientes", "partial", ["A-2"], "Falta una parte"), fn("Otra", "covered", ["A-2"])] }], { functionsText: "x", activities: acts(2) });
       if (!r.ok || r.result.counts.total !== 2 || r.result.functions.find((f) => f.text.toLowerCase().includes("atender"))!.status !== "partial") throw new Error(JSON.stringify(r));
+    });
+
+    await check("Perfil largo (≈57 funciones): se divide en tramos en paralelo y, si la respuesta de un tramo se corta por tamaño, ese tramo se divide y se repite; no se pierde ni se duplica ninguna función", async () => {
+      const lines = Array.from({ length: 60 }, (_, i) => `${i + 1}. Función número ${i + 1} del cargo, descrita con suficiente texto para ocupar espacio.`);
+      const handled: string[] = []; let truncatedCalls = 0, calls = 0;
+      const proposer = async (chunk: string) => {
+        calls++;
+        if (chunk.length > 700) { truncatedCalls++; return { raw: {}, inputTokens: 1, outputTokens: 4096, truncated: true }; }
+        const ls = chunk.split("\n"); handled.push(...ls);
+        return { raw: { functions: ls.map((l) => fn(l, "covered", ["A-1"])) }, inputTokens: 1, outputTokens: 1 };
+      };
+      const raws = await classifyProfile(proposer, lines.join("\n"), acts(1), Date.now() + 30_000, { inTok: 0, outTok: 0 });
+      const built = buildCoverage(raws, { functionsText: "x", activities: acts(1) });
+      if (!built.ok || built.result.counts.total !== 60 || handled.length !== 60 || new Set(handled).size !== 60 || truncatedCalls === 0 || calls < 4) throw new Error(`total ${built.ok && built.result.counts.total} tratadas ${handled.length} truncadas ${truncatedCalls} llamadas ${calls}`);
+      let failed = false;
+      try { await classifyProfile(async () => ({ raw: {}, inputTokens: 1, outputTokens: 1, truncated: true }), "Una función corta", acts(1), Date.now() + 30_000, { inTok: 0, outTok: 0 }); } catch { failed = true; }
+      if (!failed) throw new Error("un tramo que ya no se puede dividir debe fallar, no devolver un resultado parcial");
     });
 
     /* ───── Con la base de datos ───── */
