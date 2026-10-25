@@ -71,7 +71,7 @@ const TOOL = {
 export async function callModel(digest: StudyDigest): Promise<{ input: unknown; inputTokens: number; outputTokens: number }> {
   const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
   const msg = await client.messages.create({
-    model: agentModel(), max_tokens: 1200, system: SYSTEM_PROMPT, tools: [TOOL], // Este modelo no admite tool_choice forzado (error 400, D-34): se usa "auto" y el sistema exige responder solo con la herramienta; si no la usa, se trata como lista vacía.
+    model: agentModel(), max_tokens: 2500, system: SYSTEM_PROMPT, tools: [TOOL], // Este modelo no admite tool_choice forzado (error 400, D-34): se usa "auto" y el sistema exige responder solo con la herramienta; si no la usa, se trata como lista vacía.
     tool_choice: { type: "auto" },
     messages: [{ role: "user", content: JSON.stringify(digest) }],
   });

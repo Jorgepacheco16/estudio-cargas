@@ -25,7 +25,7 @@ export async function runAgentAction() {
   try {
     const r = await runAgent(getDb(), user.id, study.id);
     if (!r.ok) back("error", r.message);
-    else msg = r.created === 0 ? "El agente no encontró base suficiente para proponer cambios." : `El agente dejó ${r.created} propuesta(s) pendiente(s) de su revisión${r.discarded ? ` (${r.discarded} descartada(s) por no cumplir el contrato)` : ""}.`;
+    else msg = r.created === 0 ? (r.discarded ? `El agente respondió, pero ${r.discarded} propuesta(s) se descartaron por no cumplir el contrato (o su respuesta llegó incompleta). Vuelva a intentarlo.` : "El agente no encontró base suficiente para proponer cambios.") : `El agente dejó ${r.created} propuesta(s) pendiente(s) de su revisión${r.discarded ? ` (${r.discarded} descartada(s) por no cumplir el contrato)` : ""}.`;
   } catch (e) {
     if ((e as { digest?: string })?.digest?.startsWith("NEXT_REDIRECT")) throw e;
     back("error", "No se pudo ejecutar el agente.");
