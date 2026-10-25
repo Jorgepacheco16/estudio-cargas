@@ -16,6 +16,7 @@ function describe(kind: string, change: Record<string, unknown>): string {
   return "";
 }
 
+export const metadata = { title: "Agente de IA" };
 export default async function Agente({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   const sp = await searchParams;
   const user = await getUser();

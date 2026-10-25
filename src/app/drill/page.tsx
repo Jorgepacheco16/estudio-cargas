@@ -6,6 +6,7 @@ import { LEVEL_ES, METRIC_ES, PRESETS, PRESET_ES, drillRows, type DrillFilters, 
 const LEVELS: LevelKey[] = ["study", "area", "position", "activity"];
 const q = (o: Record<string, string | undefined>) => Object.entries(o).filter(([, v]) => v).map(([k, v]) => `${k}=${encodeURIComponent(v!)}`).join("&");
 
+export const metadata = { title: "Drill-down: Carga por áreas" };
 export default async function Drill({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   const sp = await searchParams;
   const { analysis, mode, label } = await loadAnalysis(parseMode(sp.modo));

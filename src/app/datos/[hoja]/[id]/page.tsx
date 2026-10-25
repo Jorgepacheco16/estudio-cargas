@@ -21,7 +21,7 @@ export default async function Editar({ params }: { params: Promise<{ hoja: strin
   const p = formProps(def!, found!.row);
   return (
     <main>
-      <div className="head"><div><h1>Editar registro · Hoja {def!.id} {def!.short}</h1><div className="sub">Al guardar, la hoja de Google se actualiza con estos valores.</div></div></div>
+      <div className="head"><div><h1>Editar registro · {def!.short}</h1><div className="sub">Al guardar, la hoja de Google se actualiza con estos valores.</div></div></div>
       <EntryForm key={found!.row.version} hoja={def!.id} recId={id} version={found!.row.version} {...p} lookups={lookups} canWrite={study!.role !== "viewer"} />
     </main>
   );

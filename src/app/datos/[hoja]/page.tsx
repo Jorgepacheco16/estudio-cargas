@@ -24,7 +24,7 @@ export default async function Hoja({ params, searchParams }: { params: Promise<{
   return (
     <main>
       <div className="head">
-        <div><h1>Hoja {def!.id} · {def!.short}</h1><div className="sub">{def!.title}</div></div>
+        <div><h1>{def!.short}</h1><div className="sub">{def!.title}</div></div>
         <div className="tools">{canWrite && <Link className="btn solid" href={`/datos/${def!.id}/nuevo`}>Nuevo registro</Link>}<Link className="btn" href="/datos">Todas las hojas</Link></div>
       </div>
       {sp.ok && <div className="banner" style={{ background: "var(--blue-soft)", color: "var(--blue)" }}>{sp.ok}</div>}

@@ -5,7 +5,7 @@ import { Nav } from "@/components/Nav";
 import { UserBadge } from "@/components/UserBadge";
 
 export const metadata: Metadata = {
-  title: "Estudio de Actividades y Cargas Laborales",
+  title: { default: "Estudio de Actividades y Cargas Laborales", template: "%s · Estudio de cargas" },
   description: "Estudio de actividades, cargas laborales y rediseño de cargos",
 };
 

@@ -22,7 +22,7 @@ const SHORT_TEXT = new Set(["code", "name", "area", "site", "position", "regiona
 const REQUIRED: Record<EntryId, string[]> = {
   "2": ["area", "site", "position"], "3": ["code", "area", "site", "position", "name"], "5": ["code"], "6": ["code"], "7": ["code"], "8": ["code"], "9": ["area", "position"], "10": ["code", "action"],
 };
-const SHORT_TITLE: Record<EntryId, string> = { "2": "Cargos y dotación", "3": "Actividades", "5": "Medibilidad", "6": "Pertinencia", "7": "Riesgos", "8": "Oportunidades", "9": "Rediseño de cargos", "10": "Plan de acción" };
+const SHORT_TITLE: Record<EntryId, string> = { "2": "Cargos y dotación", "3": "Actividades", "5": "Medibilidad", "6": "Pertinencia", "7": "Riesgos", "8": "Oportunidades", "9": "Rediseño", "10": "Plan de acción" };
 /** Campos de la lista (tabla) de cada hoja, además de los calculados. */
 const LIST_FIELDS: Record<EntryId, string[]> = {
   "2": ["area", "site", "position", "headcount", "weeklyHours"], "3": ["code", "area", "position", "name"], "5": ["code"], "6": ["code"], "7": ["code"], "8": ["code", "type"], "9": ["area", "position"], "10": ["code", "action"],
@@ -42,6 +42,9 @@ function controlOf(id: EntryId, field: string, kind: unknown): { control: Contro
   return { control: SHORT_TEXT.has(field) ? "text" : "textarea" };
 }
 
+/** «INVENTARIO DETALLADO DE ACTIVIDADES» → «Inventario detallado de actividades» (sin el identificador de la hoja del libro). */
+const sentence = (s: string) => { const t = s.toLowerCase(); return t.charAt(0).toUpperCase() + t.slice(1); };
+
 function build(id: EntryId): EntryDef {
   const adapter = adapterById(id)!;
   const cat = SHEET_FIELDS[id];
@@ -51,7 +54,7 @@ function build(id: EntryId): EntryDef {
     return [{ col, field, header: c.header, hint: c.hint, group: c.group, ...controlOf(id, field, kind), required: REQUIRED[id].includes(field) }];
   }).sort((x, y) => cat.columns.findIndex((c) => c.col === x.col) - cat.columns.findIndex((c) => c.col === y.col));
   const computed: EntryComputed[] = cat.columns.filter((c) => !c.input).map((c) => ({ col: c.col, header: c.header, format: "text" as const }));
-  return { id, adapter, sheetName: cat.sheetName, title: cat.title, note: cat.note, short: SHORT_TITLE[id], fields, computed, listFields: LIST_FIELDS[id] };
+  return { id, adapter, sheetName: cat.sheetName, title: sentence(cat.title.replace(/^HOJA \d+ · /i, "")), note: cat.note, short: SHORT_TITLE[id], fields, computed, listFields: LIST_FIELDS[id] };
 }
 
 let cache: Map<EntryId, EntryDef> | null = null;

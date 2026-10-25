@@ -8,6 +8,7 @@ import { connectAction, previewAction, syncAction } from "./actions";
 const MODE: Record<string, string> = { off: "Apagada", push: "La app alimenta la hoja (recomendado)", pull: "Solo hoja → app", bidirectional: "Bidireccional" };
 const when = (d: Date | null) => (d ? d.toLocaleString("es-CO", { timeZone: "America/Bogota", dateStyle: "short", timeStyle: "short" }) : "—");
 
+export const metadata = { title: "Integraciones" };
 export default async function Integraciones({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   const user = await getUser();
   if (!user) redirect("/login");

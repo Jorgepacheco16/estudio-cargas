@@ -99,7 +99,7 @@ export function agenteTable(rows: ProposalRow[] = []): Table {
 export function calculoTable(a: Analysis): Table {
   const occ = (x: Analysis["activities"][number]) => a.positions.find((p) => p.dataKind === x.dataKind && p.area === x.area && p.site === x.site && p.position === x.position)?.occupants ?? 0;
   return {
-    name: "Cálculo de tiempos (4a)",
+    name: "Cálculo de tiempos",
     columns: [{ key: "kind", header: "Tipo de dato", width: 12 }, { key: "code", header: "Código", width: 14 }, { key: "area", header: "Área", width: 26 }, { key: "site", header: "Sede", width: 18 }, { key: "position", header: "Cargo", width: 28 }, { key: "status", header: "Estado de captura", width: 44 },
       ...CALC_4A.map((c) => ({ key: c.col, header: c.header, fmt: c.fmt, width: 18 }))],
     rows: a.activities.map((x) => ({ kind: KIND(x.dataKind), code: x.code, area: x.area, site: x.site, position: x.position, status: x.status, ...Object.fromEntries(CALC_4A.map((c) => [c.col, r2x(calcValue(x, c.key, occ(x)))])) })),
@@ -134,12 +134,12 @@ export function drillTable(a: Analysis, config: string, level: LevelKey, filters
 export interface ViewQuery { area?: string; position?: string; config?: string; level?: string; site?: string; code?: string; alert?: string }
 export function tablesFor(view: View, a: Analysis, d: Dashboard, proposals: ProposalRow[] = [], q: ViewQuery = {}, mode: Mode = "all", reservePct = 0.1): { title: string; tables: Table[] } {
   switch (view) {
-    case "tablero": return { title: "Tablero ejecutivo", tables: [...dashboardTables(d).slice(0, 1), cargosTable(a), ...dashboardTables(d).slice(1)] };
+    case "tablero": return { title: "Inicio", tables: [...dashboardTables(d).slice(0, 1), cargosTable(a), ...dashboardTables(d).slice(1)] };
     case "cargos": return { title: "Cargos y dotación", tables: [cargosTable(a)] };
-    case "actividades": return { title: "Inventario de actividades", tables: [actividadesTable(a)] };
+    case "actividades": return { title: "Actividades", tables: [actividadesTable(a)] };
     case "areas": return { title: "Áreas", tables: [areasTable(a)] };
-    case "calculo": return { title: "Cálculo de tiempos (hoja 4a)", tables: [calculoTable(a)] };
-    case "sedes": return { title: "Comparador de sedes", tables: [sedesTable(a, q.area ?? "", q.position ?? "", mode, reservePct)] };
+    case "calculo": return { title: "Cálculo de tiempos", tables: [calculoTable(a)] };
+    case "sedes": return { title: "Comparador sedes", tables: [sedesTable(a, q.area ?? "", q.position ?? "", mode, reservePct)] };
     case "drill": { const lv = (["study", "area", "position", "activity"] as const).find((x) => x === q.level) ?? "study"; return { title: "Drill-down", tables: [drillTable(a, q.config ?? "carga-por-area", lv, { area: q.area, site: q.site, position: q.position, alertOnly: (q.alert as DrillFilters["alertOnly"]) ?? "", ...(q.code ? { code: q.code } : {}) } as DrillFilters)] }; }
     case "agente": return { title: "Agente de IA", tables: [agenteTable(proposals)] };
   }

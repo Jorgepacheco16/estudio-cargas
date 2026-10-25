@@ -2,6 +2,7 @@ import { loadAnalysis, parseMode } from "@/data/source";
 import { CargosTable } from "@/components/CargosTable";
 import { ExportButtons, ModeForm } from "@/components/Tools";
 
+export const metadata = { title: "Cargos y dotación" };
 export default async function Cargos({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const { analysis: a, mode, label } = await loadAnalysis(parseMode((await searchParams).modo));
   return (

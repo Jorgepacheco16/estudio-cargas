@@ -8,6 +8,7 @@ import { googleGateway } from "@/server/sheets/gateway";
 import { read4a } from "@/server/sheets/read4a";
 import { listConnections } from "@/server/sheets/sync";
 
+export const metadata = { title: "Cálculo de tiempos" };
 export default async function Calculo({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   const sp = await searchParams;
   const loaded = await loadAnalysis(parseMode(sp.modo));
@@ -30,13 +31,13 @@ export default async function Calculo({ searchParams }: { searchParams: Promise<
   return (
     <main>
       <div className="head">
-        <div><h1>Cálculo de tiempos por actividad</h1><div className="sub">{loaded.label} · hoja 4a del Excel: horas por semana de cada actividad según los datos de la hoja 3</div></div>
+        <div><h1>Cálculo de tiempos</h1><div className="sub">{loaded.label} · horas por semana de cada actividad según los datos de Actividades</div></div>
         <div className="tools"><ModeForm mode={mode} /><ExportButtons view="calculo" mode={mode} /></div>
       </div>
 
       {hasSheet && (
         <section className="card" aria-label="Comparación con la hoja de Google">
-          <h2>Comparación con la hoja «4a_Calculo_tiempos» de Google</h2>
+          <h2>Comparación con el cálculo de tiempos de la hoja de Google</h2>
           <p className="note">La aplicación calcula con su propio motor. Aquí se lee, sin modificar nada, lo que calculó la hoja de Google y se compara actividad por actividad y columna por columna.</p>
           <Link className="btn" href={`/calculo?${qs}&comparar=1`} style={{ marginTop: 8 }}>Comparar ahora con la hoja de Google</Link>
           {cmpError && <div className="banner" style={{ marginTop: 12, background: "var(--red-soft)", color: "var(--red-dark)" }}>{cmpError}</div>}
@@ -54,7 +55,7 @@ export default async function Calculo({ searchParams }: { searchParams: Promise<
         {a.activities.length === 0 ? <div className="empty">Aún no hay actividades en este modo.</div> : (
           <div className="tbl-wrap" tabIndex={0} role="region" aria-label="Tabla desplazable">
             <table style={{ minWidth: 1900 }}>
-              <thead><tr><th>Código</th><th>Cargo · sede</th><th>Estado de captura</th>{cmp && <th>Hoja de Google</th>}{CALC_4A.map((c) => <th key={c.col} className="num" title={`Columna ${c.col} de la hoja 4a`}>{c.header}</th>)}</tr></thead>
+              <thead><tr><th>Código</th><th>Cargo · sede</th><th>Estado de captura</th>{cmp && <th>Hoja de Google</th>}{CALC_4A.map((c) => <th key={c.col} className="num" title={`Columna ${c.col} del libro de Google`}>{c.header}</th>)}</tr></thead>
               <tbody>{a.activities.map((x) => {
                 const diff = bad.get(x.code.toLowerCase());
                 return (
@@ -69,7 +70,7 @@ export default async function Calculo({ searchParams }: { searchParams: Promise<
             </table>
           </div>
         )}
-        <p className="note">Una actividad incompleta muestra «—» y no suma carga hasta completar sus datos. Las columnas llevan los mismos encabezados que la hoja 4a del libro.</p>
+        <p className="note">Una actividad incompleta muestra «—» y no suma carga hasta completar sus datos. Las columnas llevan los mismos encabezados que el libro de Google.</p>
       </section>
     </main>
   );

@@ -8,6 +8,7 @@ import { SHEETS, listRows, optionsOf, toFormValue } from "@/server/capture";
 import { listAreas } from "@/server/studies";
 import { addAreaAction, removeAreaAction } from "../actions";
 
+export const metadata = { title: "Parámetros" };
 export default async function Parametros({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   const sp = await searchParams;
   const user = await getUser();
@@ -22,7 +23,7 @@ export default async function Parametros({ searchParams }: { searchParams: Promi
   const initial = Object.fromEntries(def.fields.map((f) => [f.key, row ? toFormValue(f, row[f.key]) : ""]));
   return (
     <main>
-      <div className="head"><div><h1>Parámetros y áreas</h1><div className="sub">Hoja «Parametros» del libro · {study!.name}</div></div><div className="tools"><Link className="btn" href="/datos">Todas las hojas</Link></div></div>
+      <div className="head"><div><h1>Parámetros</h1><div className="sub">Supuestos, pesos, umbrales y lista de áreas · {study!.name}</div></div><div className="tools"><Link className="btn" href="/datos">Todas las hojas</Link></div></div>
       {sp.ok && <div className="banner" style={{ background: "var(--blue-soft)", color: "var(--blue)" }}>{sp.ok}</div>}
       {sp.error && <div className="banner" style={{ background: "var(--red-soft)", color: "var(--red-dark)" }}>{sp.error}</div>}
       <section className="card">

@@ -1,12 +1,13 @@
 import { loadAnalysis, parseMode } from "@/data/source";
 import { ExportButtons, ModeForm, fmt } from "@/components/Tools";
 
+export const metadata = { title: "Actividades" };
 export default async function Actividades({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const { analysis: a, mode, label } = await loadAnalysis(parseMode((await searchParams).modo));
   return (
     <main>
       <div className="head">
-        <div><h1>Inventario de actividades</h1><div className="sub">{label} · {a.activities.length} actividades</div></div>
+        <div><h1>Actividades</h1><div className="sub">{label} · {a.activities.length} actividades</div></div>
         <div className="tools"><ModeForm mode={mode} /><ExportButtons view="actividades" mode={mode} /></div>
       </div>
       <section className="card">

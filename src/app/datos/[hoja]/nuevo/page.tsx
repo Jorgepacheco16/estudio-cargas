@@ -19,7 +19,7 @@ export default async function Nuevo({ params }: { params: Promise<{ hoja: string
   const p = formProps(def!);
   return (
     <main>
-      <div className="head"><div><h1>Nuevo registro · Hoja {def!.id} {def!.short}</h1><div className="sub">Los campos con * son obligatorios. Lo que deje vacío se guarda vacío.</div></div></div>
+      <div className="head"><div><h1>Nuevo registro · {def!.short}</h1><div className="sub">Los campos con * son obligatorios. Lo que deje vacío se guarda vacío.</div></div></div>
       <EntryForm hoja={def!.id} {...p} lookups={lookups} canWrite={study!.role !== "viewer"} />
     </main>
   );

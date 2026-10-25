@@ -17,6 +17,7 @@ function ShareList({ title, rows, total }: { title: string; rows: Share[]; total
   );
 }
 
+export const metadata = { title: "Inicio" };
 export default async function Tablero({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const { analysis: a, dashboard: d, params, thresholds, mode, label } = await loadAnalysis(parseMode((await searchParams).modo));
   const k = d.indicators;
@@ -26,7 +27,7 @@ export default async function Tablero({ searchParams }: { searchParams: Promise<
     <main>
       <div className="head">
         <div>
-          <h1>Tablero ejecutivo</h1>
+          <h1>Inicio</h1>
           <div className="sub">{label} · escenario {params.scenario} · reserva {fmtPct(params.reservePct)}</div>
         </div>
         <div className="tools"><ModeForm mode={mode} /><ExportButtons view="tablero" mode={mode} /></div>
