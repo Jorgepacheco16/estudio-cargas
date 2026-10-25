@@ -42,3 +42,7 @@ En **Historia y desviaciones** hay tres vistas.
 - Las pantallas de lectura se actualizan solas cada 45 segundos mientras la pestaña esté visible y usted no esté escribiendo.
 ## 10. Cálculo de tiempos (hoja 4a)
 La pestaña **Cálculo de tiempos (4a)** muestra, para cada actividad, las mismas columnas calculadas de la hoja «4a_Calculo_tiempos» del libro (ejecuciones por semana, horas por ejecución, escenarios base/alto/bajo/mínimo/máximo, ocupantes, multiplicador, horas totales y por cargo, no planificadas, reprocesos, esperas y horas por mes). Una actividad incompleta muestra «—» y no suma. Si el estudio está conectado a una hoja de Google, el botón **Comparar ahora con la hoja de Google** lee, sin modificar nada, lo que calculó esa hoja y marca actividad por actividad si es igual o difiere. Se exporta a Excel, CSV y PDF.
+
+### Validar la cobertura de funciones de un cargo
+
+Al terminar de ingresar las actividades de un cargo, compruebe que no quedó ninguna función del perfil sin actividad: en **Cargos y dotación › Editar** (junto a «Funciones formalmente asignadas (perfil)») pulse **Validar cobertura de funciones**, o elija el cargo en **Agente de IA › Validar cobertura de un cargo**. Cada función aparece como Cubierta, Parcialmente cubierta (con lo que falta) o Sin cobertura (alerta), y se listan aparte las actividades que no se relacionaron con ninguna función. Es una ayuda de la IA: verifique el resultado antes de decidir. No cambia ningún dato; hay un tope de 20 validaciones por día.

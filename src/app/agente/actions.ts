@@ -6,6 +6,7 @@ import { getUser } from "@/lib/supabase/server";
 import { activeStudyId } from "@/data/source";
 import { decideProposal, runAgent } from "@/server/agent";
 import { rateLimit } from "@/lib/ratelimit";
+import { validateCoverage, type CoverageOutcome } from "@/server/coverage";
 
 const back = (kind: "ok" | "error", msg: string): never => redirect(`/agente?${kind}=${encodeURIComponent(msg)}`);
 
@@ -31,6 +32,18 @@ export async function runAgentAction() {
     back("error", "No se pudo ejecutar el agente.");
   }
   back("ok", msg);
+}
+
+/** Validación de cobertura de funciones de UN cargo. La usan el botón del detalle del cargo y el bloque del Agente de IA: es la misma función. */
+export async function validateCoverageAction(positionId: string): Promise<CoverageOutcome> {
+  const user = await getUser();
+  if (!user) return { ok: false, code: "forbidden", message: "Su sesión terminó. Vuelva a ingresar." };
+  const study = await activeStudyId(user.id);
+  if (!study) return { ok: false, code: "not_found", message: "Cree o seleccione un estudio primero." };
+  if (study.role === "viewer") return { ok: false, code: "forbidden", message: "Su rol es de solo lectura: no puede ejecutar el agente." };
+  if (!z.string().uuid().safeParse(positionId).success) return { ok: false, code: "not_found", message: "Cargo inválido." };
+  try { return await validateCoverage(getDb(), user.id, study.id, positionId); }
+  catch { return { ok: false, code: "error", message: "No se pudo validar la cobertura. Puede reintentar." }; }
 }
 
 export async function decideAction(fd: FormData) {

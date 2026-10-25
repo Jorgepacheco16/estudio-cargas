@@ -2,6 +2,7 @@
 import { useActionState } from "react";
 import Link from "next/link";
 import { saveEntryAction, type FormState } from "@/app/entrada/actions";
+import { CoveragePanel } from "@/components/CoveragePanel";
 
 export interface FormField { col: string; header: string; hint: string; group: string; control: string; options: string[]; required: boolean }
 export interface FormComputed { col: string; header: string; value: string }
@@ -14,8 +15,8 @@ const spanOf = (f: FormField): "full" | "two" | "one" => {
   return "one";
 };
 
-export function EntryForm({ hoja, base, recId, version, fields, computed, initial, lookups, canWrite }: {
-  hoja: string; base: string; recId?: string; version?: number; fields: FormField[]; computed: FormComputed[]; initial: Record<string, string>; lookups: Lookups; canWrite: boolean;
+export function EntryForm({ hoja, base, recId, version, fields, computed, initial, lookups, canWrite, coverage }: {
+  coverage?: { cargoId: string; afterCol: string }; hoja: string; base: string; recId?: string; version?: number; fields: FormField[]; computed: FormComputed[]; initial: Record<string, string>; lookups: Lookups; canWrite: boolean;
 }) {
   const [state, action, pending] = useActionState<FormState, FormData>(saveEntryAction, { errors: [], values: initial });
   const val = (col: string) => state.values[col] ?? "";
@@ -59,6 +60,13 @@ export function EntryForm({ hoja, base, recId, version, fields, computed, initia
               );
             })}
           </div>
+          {coverage && fields.some((f) => f.group === g && f.col === coverage.afterCol) && (
+            <div className="coverage-box">
+              <h3>Cobertura de las funciones del perfil</h3>
+              <p className="note" style={{ marginTop: 0 }}>Al terminar de ingresar las actividades de este cargo, pida a la IA que compruebe que ninguna función del perfil quedó sin actividad.</p>
+              <CoveragePanel cargoId={coverage.cargoId} />
+            </div>
+          )}
         </section>
       ))}
       <datalist id="dl_sites">{lookups.sites.map((s) => <option key={s} value={s} />)}</datalist>

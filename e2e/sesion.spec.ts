@@ -223,6 +223,17 @@ test("integraciones y agente cargan para el propietario", async () => {
   await expect(page.getByRole("heading", { name: "Ejecutar análisis" })).toBeVisible();
 });
 
+test("detalle del cargo: «Validar cobertura de funciones» avisa con claridad (sin llamar a la IA) cuando el perfil no tiene funciones; el Agente de IA ofrece el mismo bloque", async () => {
+  await open("/cargos");
+  await page.locator("tr", { hasText: "Cajero E2E" }).last().getByRole("link", { name: "Editar" }).click(); await settle();
+  await page.getByRole("button", { name: "Validar cobertura de funciones" }).click();
+  await banner(/no tiene funciones registradas/);
+  await open("/agente");
+  await expect(page.getByRole("heading", { name: "Validar cobertura de un cargo" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Validar cobertura de funciones" })).toBeVisible();
+  await expect(page.getByText("A la IA se envía únicamente el texto de las funciones")).toBeVisible();
+});
+
 test("cerrar sesión devuelve al ingreso y protege las páginas de captura", async () => {
   await open("/");
   await page.getByRole("button", { name: "Salir" }).click();

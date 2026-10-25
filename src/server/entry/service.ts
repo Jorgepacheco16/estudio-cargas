@@ -24,7 +24,7 @@ import { entryDef, type EntryDef, type EntryId } from "./defs";
 
 type Cells = Record<string, string | number | null>;
 export type ComputedValue = string | number | null;
-export interface EntryRow { id: string; version: number; cells: Cells; computed: Record<string, ComputedValue> }
+export interface EntryRow { id: string; version: number; positionId?: string; cells: Cells; computed: Record<string, ComputedValue> }
 
 /* ───────── Contexto para los valores calculados ───────── */
 interface Context {
@@ -124,7 +124,7 @@ export async function listEntries(db: Db, sub: string, studyId: string, id: Entr
   return withRls(db, { sub }, async (tx) => {
     const ctx = await loadContext(tx, studyId);
     const items = await def.adapter.all(tx, studyId);
-    return { def, rows: items.map((it) => ({ id: it.rec.id, version: it.rec.version, cells: cellsOf(def.adapter, it.rec, it.extras), computed: computedFor(def, it.rec, it.extras, ctx) })) };
+    return { def, rows: items.map((it) => ({ id: it.rec.id, version: it.rec.version, positionId: (it.rec as { positionId?: string }).positionId, cells: cellsOf(def.adapter, it.rec, it.extras), computed: computedFor(def, it.rec, it.extras, ctx) })) };
   });
 }
 

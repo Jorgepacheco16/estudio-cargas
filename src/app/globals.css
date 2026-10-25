@@ -260,3 +260,9 @@ details.adv > .adv-body > .card { box-shadow: none; border: 0; padding: 0; margi
 .calc-grid dt { font-size: .8125rem; color: var(--muted); }
 .calc-grid dd { margin: 2px 0 0; font-weight: 600; font-variant-numeric: tabular-nums; }
 .form-actions { position: sticky; bottom: 0; z-index: 5; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 16px 0; background: linear-gradient(to bottom, transparent, var(--bg) 35%); }
+/* ───── Validación de cobertura de funciones ───── */
+.coverage-box { margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--line); }
+.coverage-box h3, .coverage-result h3 { margin: 0 0 8px; font-size: 1rem; font-weight: 600; }
+.coverage-bar { display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-end; margin-top: 8px; }
+.coverage-result { margin-top: 16px; }
+.coverage-summary { margin: 0 0 16px; font-size: 1.0625rem; }

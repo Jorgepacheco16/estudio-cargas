@@ -3,7 +3,7 @@
  * de una persona, en una transacción con auditoría. A la API salen únicamente resúmenes seudonimizados (§14.3).
  */
 import Anthropic from "@anthropic-ai/sdk";
-import { and, desc, eq, gte, max, sql } from "drizzle-orm";
+import { and, desc, eq, gte, max, ne, sql } from "drizzle-orm";
 import { withRls, type Db, type Tx } from "../db/client";
 import { activities, agentProposals, agentRuns, areas, auditLog, positions, sites, studyParameters } from "../db/schema";
 import { screenProposals, SYSTEM_PROMPT, TUNABLE, type StudyDigest, type TunableKey } from "../domain/agent";
@@ -97,7 +97,7 @@ export async function runAgent(db: Db, sub: string, studyId: string, trigger = "
   if (propose === proposeWithRetry && !process.env.ANTHROPIC_API_KEY) return { ok: false, message: "El agente no está configurado (falta ANTHROPIC_API_KEY)." };
   const startOfDay = new Date(); startOfDay.setUTCHours(0, 0, 0, 0);
   const prep = await withRls(db, { sub }, async (tx) => {
-    const [{ n }] = await tx.select({ n: sql<number>`count(*)::int` }).from(agentRuns).where(and(eq(agentRuns.studyId, studyId), gte(agentRuns.createdAt, startOfDay)));
+    const [{ n }] = await tx.select({ n: sql<number>`count(*)::int` }).from(agentRuns).where(and(eq(agentRuns.studyId, studyId), ne(agentRuns.trigger, "coverage"), gte(agentRuns.createdAt, startOfDay))); // las validaciones de cobertura tienen su propio límite
     if (n >= AGENT_DAILY_LIMIT) return null;
     const digest = await buildDigest(tx, studyId);
     const [run] = await tx.insert(agentRuns).values({ studyId, trigger, model: agentModel() }).returning({ id: agentRuns.id });

@@ -1,4 +1,6 @@
 import { Purpose } from "@/components/Purpose";
+import { CoveragePanel } from "@/components/CoveragePanel";
+import { COVERAGE_DAILY_LIMIT, listCoverageCargos } from "@/server/coverage";
 import { redirect } from "next/navigation";
 import { getDb } from "@/db/server";
 import { getUser } from "@/lib/supabase/server";
@@ -17,6 +19,7 @@ function describe(kind: string, change: Record<string, unknown>): string {
   return "";
 }
 
+export const maxDuration = 60; // la validación de cobertura llama a la IA desde esta pantalla
 export const metadata = { title: "Agente de IA" };
 export default async function Agente({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   const sp = await searchParams;
@@ -24,6 +27,7 @@ export default async function Agente({ searchParams }: { searchParams: Promise<R
   if (!user) redirect("/login");
   const study = await activeStudyId(user.id);
   const proposals = study ? await listProposals(getDb(), user.id, study.id) : [];
+  const cargos = study ? await listCoverageCargos(getDb(), user.id, study.id) : [];
   const configured = Boolean(process.env.ANTHROPIC_API_KEY);
   const canWrite = !!study && study.role !== "viewer";
   const blocked = !configured ? "El agente no está configurado (falta ANTHROPIC_API_KEY)." : !canWrite ? "Su rol es de solo lectura." : null;
@@ -49,6 +53,13 @@ export default async function Agente({ searchParams }: { searchParams: Promise<R
               {configured ? `Modelo: ${agentModel()} · tope de ${AGENT_DAILY_LIMIT} ejecuciones por día y estudio.` : "Agente sin configurar: falta ANTHROPIC_API_KEY."}{" "}
               Al agente solo llegan resúmenes seudonimizados (cifras, estados de captura, códigos e identificadores internos); nunca nombres, correos ni textos libres. Cada propuesta cita su evidencia.
             </p>
+          </section>
+
+          <section className="card" aria-label="Validar cobertura de un cargo">
+            <h2>Validar cobertura de un cargo</h2>
+            <p className="note" style={{ marginTop: 0 }}>Compara las funciones formalmente asignadas al cargo (su perfil) con las actividades creadas para ese mismo cargo y avisa si alguna función no tiene actividad. Úsela al terminar de ingresar las actividades. Solo lee: no cambia ningún dato.</p>
+            {cargos.length === 0 ? <div className="empty">Aún no hay cargos. Regístrelos en Cargos y dotación.</div> : <CoveragePanel options={cargos} />}
+            <p className="note">A la IA se envía únicamente el texto de las funciones del perfil y el código, nombre y descripción de las actividades de ese cargo; nunca nombres de personas ni documentos. Se valida un cargo concreto (área, sede y nombre), sin unir cargos de otras sedes. Tope de {COVERAGE_DAILY_LIMIT} validaciones por día y estudio.</p>
           </section>
 
           <section className="card">

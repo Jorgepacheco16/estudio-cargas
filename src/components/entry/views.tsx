@@ -100,7 +100,7 @@ export async function EntryEdit({ hoja, id }: { hoja: EntryId; id: string }) {
   return (
     <main>
       <div className="head"><div><h1>Editar registro · {def.short}</h1><div className="sub">Al guardar, la hoja de Google se actualiza con estos valores.</div></div><div className="tools"><Link className="btn" href={basePath(hoja)}>← Volver a {def.short}</Link></div></div>
-      <EntryForm key={found!.row.version} hoja={def.id} base={basePath(hoja)} recId={id} version={found!.row.version} {...formProps(def, found!.row)} lookups={lookups} canWrite={study!.role !== "viewer"} />
+      <EntryForm key={found!.row.version} hoja={def.id} base={basePath(hoja)} coverage={hoja === "2" && found!.row.positionId ? { cargoId: found!.row.positionId, afterCol: "J" } : undefined} recId={id} version={found!.row.version} {...formProps(def, found!.row)} lookups={lookups} canWrite={study!.role !== "viewer"} />
     </main>
   );
 }
