@@ -7,14 +7,14 @@ import { ADAPTERS, cellsOf, sameValue, toCell } from "../src/server/sheets/adapt
 import { readRowFrom } from "../src/server/import/parse";
 import { Report } from "../src/server/import/normalize";
 import { activityFields } from "../src/server/import/rowmaps";
-import { colToIndex } from "../src/domain/sheetmap";
+import { SYNCED_SHEETS, colToIndex } from "../src/domain/sheetmap";
 import { looksLikeFormula } from "../src/domain/cellguard";
 import { sheetChangeEvent, type SheetChangeEvent } from "../src/domain/contracts";
 import { check, summary, URL_ADMIN, URL_APP } from "./helpers";
 import { FakeSheet } from "./fakesheet";
 
 /** Fase 8: sincronización hoja ↔ app contra PostgreSQL real (RLS, versiones, auditoría). Solo la API de Google es una hoja en memoria. */
-const TABS = { "3_Actividades": 51, "5_Medibilidad": 26, "6_Pertinencia": 26, "7_Riesgos": 26, "8_Oportunidades": 29, "10_Plan_accion": 26 };
+const TABS = { Parametros: 8, "2_Caracterizacion": 24, "9_Rediseno": 31, "3_Actividades": 51, "5_Medibilidad": 26, "6_Pertinencia": 26, "7_Riesgos": 26, "8_Oportunidades": 29, "10_Plan_accion": 26 };
 const mk = (sheet: string, row: number, rows = 1): SheetChangeEvent => ({ eventId: randomUUID(), spreadsheetId: SID, sheetName: sheet, kind: "edit", range: { row, col: 1, rows, cols: 1 }, values: [], editedAt: new Date().toISOString() });
 const SID = `test-${randomUUID()}`;
 const DATE46000 = new Date((46000 - 25569) * 86400000).toISOString().slice(0, 10);
@@ -178,6 +178,17 @@ async function main() {
       if (again.appended !== 0) throw new Error("duplicó filas al repetir");
     });
 
+    await check("Espejo completo (D-62): la hoja 2 recibe la dotación, «Parametros» recibe supuestos y áreas, las fórmulas no se tocan y las casillas de entrada quedan protegidas", async () => {
+      sheet.set("2_Caracterizacion", "R", 7, "=FORMULA_CAPACIDAD"); sheet.set("Parametros", "C", 6, "=52/12");
+      await pushAll(app.db, conn, sheet);
+      const g = (c: string, r: number) => sheet.cell("2_Caracterizacion", c, r);
+      if (g("B", 7) !== "Cajas" || g("C", 7) !== "Sede Norte" || g("E", 7) !== "Cajero" || g("F", 7) !== 2 || g("K", 7) !== 42) throw new Error(JSON.stringify([g("B", 7), g("C", 7), g("E", 7), g("F", 7), g("K", 7)]));
+      if (!g("Y", 7)) throw new Error("la fila de la hoja 2 no quedó vinculada a la app");
+      if (g("R", 7) !== "=FORMULA_CAPACIDAD" || sheet.cell("Parametros", "C", 6) !== "=52/12") throw new Error("se escribió sobre una fórmula");
+      if (sheet.cell("Parametros", "C", 5) !== 6 || !(await sheet.read("'Parametros'!E5:E40")).some((r) => r[0] === "Cajas")) throw new Error(`parámetros: ${sheet.cell("Parametros", "C", 5)}`);
+      const prot = sheet.protections.get("2_Caracterizacion") ?? [];
+      if (!prot.length || prot.some((r) => /^(P|Q|R|S|T|U|V)\d/.test(r))) throw new Error(`protección: ${JSON.stringify(prot)}`);
+    });
     await check("Reconciliación: recupera una edición cuyo evento se perdió y no duplica nada al repetirse", async () => {
       const rows = await sheet.read("'3_Actividades'!B7:B30");
       const r = rows.findIndex((x) => x[0] === "T-2") + 7;
@@ -190,7 +201,7 @@ async function main() {
       const c3b = second.find((x) => x.sheet === "3_Actividades")!.counts;
       if (c3b.updated + c3b.created !== 0) throw new Error(`la segunda pasada cambió datos: ${JSON.stringify(c3b)}`);
       const sn = await syncNow(app.db, conn, sheet);
-      if (sn.pull.length !== 6 || sn.push.length !== 6) throw new Error("syncNow incompleto");
+      if (sn.pull.length !== ADAPTERS.length || sn.push.length !== SYNCED_SHEETS.length + 1) throw new Error(`syncNow incompleto: pull ${sn.pull.length}, push ${sn.push.length}`);
     });
 
     await check("Vista previa: cuenta lo que pasaría sin escribir nada en la hoja ni en la base", async () => {

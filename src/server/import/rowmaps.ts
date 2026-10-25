@@ -60,3 +60,15 @@ export const suitFields = (r: Row) => forward(SUIT_MAP, r);
 export const riskFields = (r: Row) => forward(RISK_MAP, r);
 export const oppFields = (r: Row) => forward(OPP_MAP, r);
 export const planFields = (r: Row) => forward(PLAN_MAP, r);
+
+/** Hoja 2 (una fila = una entrada de dotación). El cargo, la sede y sus textos (jefe, objetivo, funciones, regional) se guardan aparte. */
+export const STAFF_MAP: FieldMap = {
+  headcount: ["headcount", "n"], employeeCode: ["employeeCode", "s"], weeklyHours: ["weeklyHours", "ns"], surveyDate: ["surveyDate", "s"], surveyor: ["surveyor", "s"], infoSource: ["infoSource", "s"], notes: ["notes", "s"],
+};
+/** Hoja 9 (rediseño de cargo). El tipo de dato, el área y el cargo actual son la clave y se resuelven aparte. */
+export const REDESIGN_MAP: FieldMap = {
+  currentObjective: ["objective", "s"], currentFunctions: ["functions", "s"], keptActivities: ["kept", "s"], modifiedActivities: ["modified", "s"], removedActivities: ["removed", "s"],
+  transferredActivities: ["transferred", "s"], receivingPositionName: ["receiving", "s"], newResponsibilities: ["newResp", "s"], limitsAndAuthority: ["limits", "s"], requiredCompetencies: ["competencies", "s"],
+  trainingNeeds: ["training", "s"], performanceIndicators: ["indicators", "s"], reportingLines: ["reporting", "s"], hoursOutPerWeek: ["hoursOut", "ns"], hoursInPerWeek: ["hoursIn", "ns"],
+  hoursRecoveredPerWeek: ["hoursRecovered", "ns"], justification: ["justification", "s"], expectedBenefits: ["benefits", "s"], risksAndConditions: ["risks", "s"], approvalStatus: ["approval", "s"],
+};

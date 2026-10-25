@@ -24,7 +24,7 @@ function prefixed(gw: SheetGateway): SheetGateway {
   const fix = (r: string) => r.replace(/^'([^']+)'!/, (_, n: string) => `'${P}${n}'!`);
   return {
     read: (r) => gw.read(fix(r)), write: (u) => gw.write(u.map((x) => ({ ...x, range: fix(x.range) }))),
-    columnCount: (s) => gw.columnCount(P + s), appendHiddenColumns: (s, c) => gw.appendHiddenColumns(P + s, c), title: () => gw.title(),
+    columnCount: (s) => gw.columnCount(P + s), appendHiddenColumns: (s, c) => gw.appendHiddenColumns(P + s, c), title: () => gw.title(), protect: (s, r, d) => gw.protect(P + s, r, d),
   };
 }
 

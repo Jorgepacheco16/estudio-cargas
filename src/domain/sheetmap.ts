@@ -1,16 +1,21 @@
 /** Hojas de Google Sheets que se sincronizan y utilidades de columnas. Los contratos del evento y del mapeo están en contracts.ts; la firma, en server/webhook.ts. */
 
-export type SyncTarget = "activities" | "5" | "6" | "7" | "8" | "10";
-export interface SyncedSheet { sheetName: string; headerRow: number; firstDataRow: number; keyColumn: string; target: SyncTarget }
+export type SyncTarget = "2" | "activities" | "5" | "6" | "7" | "8" | "9" | "10";
+export interface SyncedSheet { sheetName: string; headerRow: number; firstDataRow: number; lastDataRow: number; keyColumn: string; target: SyncTarget }
 
-/** Clave natural en la columna B (código), datos desde la fila 7. Las hojas 2 y 9 tienen clave compuesta (área/sede/cargo) y quedan fuera de esta versión (D-37); 4a, 4b y 11 son calculadas y la guía no lleva datos. */
+/**
+ * Hojas de captura (datos desde la fila 7). 3, 5, 6, 7, 8 y 10 tienen el código en la columna B. Las hojas 2 y 9 tienen clave compuesta
+ * (tipo, área, sede, cargo): se espejan por el identificador interno de cada fila. 4a, 4b, 2b y 11 son calculadas y la guía no lleva datos.
+ */
 export const SYNCED_SHEETS: SyncedSheet[] = [
-  { sheetName: "3_Actividades", headerRow: 6, firstDataRow: 7, keyColumn: "B", target: "activities" },
-  { sheetName: "5_Medibilidad", headerRow: 6, firstDataRow: 7, keyColumn: "B", target: "5" },
-  { sheetName: "6_Pertinencia", headerRow: 6, firstDataRow: 7, keyColumn: "B", target: "6" },
-  { sheetName: "7_Riesgos", headerRow: 6, firstDataRow: 7, keyColumn: "B", target: "7" },
-  { sheetName: "8_Oportunidades", headerRow: 6, firstDataRow: 7, keyColumn: "B", target: "8" },
-  { sheetName: "10_Plan_accion", headerRow: 6, firstDataRow: 7, keyColumn: "B", target: "10" },
+  { sheetName: "2_Caracterizacion", headerRow: 6, firstDataRow: 7, lastDataRow: 206, keyColumn: "E", target: "2" },
+  { sheetName: "3_Actividades", headerRow: 6, firstDataRow: 7, lastDataRow: 406, keyColumn: "B", target: "activities" },
+  { sheetName: "5_Medibilidad", headerRow: 6, firstDataRow: 7, lastDataRow: 406, keyColumn: "B", target: "5" },
+  { sheetName: "6_Pertinencia", headerRow: 6, firstDataRow: 7, lastDataRow: 406, keyColumn: "B", target: "6" },
+  { sheetName: "7_Riesgos", headerRow: 6, firstDataRow: 7, lastDataRow: 406, keyColumn: "B", target: "7" },
+  { sheetName: "8_Oportunidades", headerRow: 6, firstDataRow: 7, lastDataRow: 106, keyColumn: "B", target: "8" },
+  { sheetName: "9_Rediseno", headerRow: 6, firstDataRow: 7, lastDataRow: 66, keyColumn: "C", target: "9" },
+  { sheetName: "10_Plan_accion", headerRow: 6, firstDataRow: 7, lastDataRow: 106, keyColumn: "B", target: "10" },
 ];
 export const syncedSheet = (name: string) => SYNCED_SHEETS.find((s) => s.sheetName === name);
 

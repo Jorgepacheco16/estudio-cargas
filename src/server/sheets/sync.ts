@@ -15,13 +15,15 @@ import { colToIndex, indexToCol, INTERNAL_HEADERS } from "../../domain/sheetmap"
 import { key, Report } from "../import/normalize";
 import { readRowFrom } from "../import/parse";
 import { ADAPTERS, adapterFor, cellsOf, lastInputCol, sameValue, type Adapter, type Ctx, type Rec } from "./adapters";
+import { ensureInternal, findInternal, q, type Conn } from "./internal";
+export { ensureInternal, findInternal } from "./internal";
 import { googleGateway, type CellValue, type SheetGateway } from "./gateway";
 
-export interface Conn { id: string; studyId: string; actorId: string; spreadsheetId: string; mode: string }
+export type { Conn } from "./internal";
 export type Result = "created" | "updated" | "linked" | "unchanged" | "conflict" | "rejected" | "skipped";
 export interface RowOutcome { row: number; code: string; result: Result; message?: string; rec?: Rec; appCells?: Record<string, string | number>; autofixes?: number }
 
-const q = (sheet: string) => `'${sheet}'`;
+
 const MAX_ROWS = 2000;
 
 /* ───────── Conexiones ───────── */
@@ -50,23 +52,6 @@ export async function recentEvents(db: Db, sub: string, studyId: string) {
 }
 export async function openIssues(db: Db, sub: string, studyId: string) {
   return withRls(db, { sub }, (tx) => tx.select().from(validationIssues).where(and(eq(validationIssues.studyId, studyId), eq(validationIssues.status, "open"))).limit(100));
-}
-
-/* ───────── Columnas internas (id y versión de cada fila) ───────── */
-export async function findInternal(gw: SheetGateway, a: Adapter): Promise<{ idCol: string; verCol: string } | null> {
-  const s = a.sheet, n = await gw.columnCount(s.sheetName);
-  const header = ((await gw.read(`${q(s.sheetName)}!A${s.headerRow}:${indexToCol(n)}${s.headerRow}`))[0] ?? []) as unknown[];
-  const [i, v] = [header.indexOf(INTERNAL_HEADERS.id), header.indexOf(INTERNAL_HEADERS.version)];
-  return i >= 0 && v >= 0 ? { idCol: indexToCol(i + 1), verCol: indexToCol(v + 1) } : null;
-}
-export async function ensureInternal(gw: SheetGateway, a: Adapter): Promise<{ idCol: string; verCol: string }> {
-  const found = await findInternal(gw, a);
-  if (found) return found;
-  const s = a.sheet, n = await gw.columnCount(s.sheetName);
-  await gw.appendHiddenColumns(s.sheetName, 2);
-  const [idCol, verCol] = [indexToCol(n + 1), indexToCol(n + 2)];
-  await gw.write([{ range: `${q(s.sheetName)}!${idCol}${s.headerRow}:${verCol}${s.headerRow}`, values: [[INTERNAL_HEADERS.id, INTERNAL_HEADERS.version]] }]);
-  return { idCol, verCol };
 }
 
 /* ───────── Hoja → app ───────── */
@@ -249,40 +234,9 @@ export async function handleEvent(db: Db, ev: SheetChangeEvent, gw: SheetGateway
   }
 }
 
-/* ───────── App → hoja ───────── */
-export interface PushStats { sheet: string; appended: number; refreshed: number; unlinked: number; unchanged: number; formulaLike: number }
-
-export async function pushAll(db: Db, conn: Conn, gw: SheetGateway, dryRun = false): Promise<PushStats[]> {
-  const stats: PushStats[] = [];
-  for (const a of ADAPTERS) {
-    const s = a.sheet, internal = dryRun ? (await findInternal(gw, a)) ?? { idCol: "", verCol: "" } : await ensureInternal(gw, a);
-    const app = await withRls(db, { sub: conn.actorId }, (tx) => a.all(tx, conn.studyId));
-    const keys = await gw.read(`${q(s.sheetName)}!${s.keyColumn}${s.firstDataRow}:${s.keyColumn}${MAX_ROWS}`);
-    const links = keys.length && internal.idCol ? await gw.read(`${q(s.sheetName)}!${internal.idCol}${s.firstDataRow}:${internal.verCol}${s.firstDataRow + keys.length - 1}`) : [];
-    const rowOf = new Map<string, number>();
-    keys.forEach((k, i) => { const c = asText((k as unknown[])[0]); if (c) rowOf.set(key(c), s.firstDataRow + i); });
-    const st: PushStats = { sheet: s.sheetName, appended: 0, refreshed: 0, unlinked: 0, unchanged: 0, formulaLike: 0 };
-    const updates: { range: string; values: CellValue[][] }[] = [];
-    let next = s.firstDataRow + keys.length;
-    const write = (row: number, rec: Rec, extras: Record<string, unknown>) => {
-      for (const [col, v] of Object.entries(cellsOf(a, rec, extras))) {
-        if (typeof v === "string" && looksLikeFormula(v)) st.formulaLike++; // se escribe como texto (RAW) y se cuenta
-        updates.push({ range: `${q(s.sheetName)}!${col}${row}`, values: [[v]] });
-      }
-      updates.push({ range: `${q(s.sheetName)}!${internal.idCol}${row}:${internal.verCol}${row}`, values: [[rec.id, rec.version]] });
-    };
-    for (const it of app) {
-      const row = rowOf.get(key(it.code));
-      if (row === undefined) { write(next++, it.rec, it.extras); st.appended++; continue; }
-      const link = (links[row - s.firstDataRow] ?? []) as unknown[];
-      if (!asText(link[0])) { st.unlinked++; continue; } // sin vincular: la reconciliación decide (vincula si es idéntica, avisa si difiere)
-      if (Number(link[1]) < it.rec.version) { write(row, it.rec, it.extras); st.refreshed++; } else st.unchanged++;
-    }
-    if (!dryRun) await gw.write(updates);
-    stats.push(st);
-  }
-  return stats;
-}
+/* ───────── App → hoja: ver mirror.ts ───────── */
+export { pushAll, pushSheet, mirrorParameters, type PushStats } from "./mirror";
+import { pushAll } from "./mirror";
 
 /* ───────── Reconciliación (lectura periódica) ───────── */
 export interface ReconcileStats { sheet: string; counts: Record<Result, number>; autofixes: number }

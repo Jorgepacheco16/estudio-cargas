@@ -11,6 +11,8 @@ export interface SheetGateway {
   /** Agrega columnas al final de la pestaña y las oculta. */
   appendHiddenColumns(sheetName: string, count: number): Promise<void>;
   title(): Promise<string>;
+  /** Marca como «protegidos con aviso» los rangos indicados (A1, sin el nombre de la pestaña): quien edite a mano ve la advertencia, pero no se bloquea. Reemplaza los protegidos antes por la app. */
+  protect(sheetName: string, ranges: string[], description: string): Promise<void>;
 }
 
 export function googleGateway(spreadsheetId: string): SheetGateway {
@@ -32,5 +34,21 @@ export function googleGateway(spreadsheetId: string): SheetGateway {
       ] } });
     },
     async title() { const r = await sheetsClient().spreadsheets.get({ spreadsheetId, fields: "properties.title" }); return r.data.properties?.title ?? ""; },
+    async protect(sheetName, ranges, description) {
+      const r = await sheetsClient().spreadsheets.get({ spreadsheetId, fields: "sheets(properties(sheetId,title,gridProperties),protectedRanges(protectedRangeId,description))" });
+      const s = r.data.sheets?.find((x) => x.properties?.title === sheetName);
+      if (!s?.properties || s.properties.sheetId === undefined || s.properties.sheetId === null) throw new Error(`La hoja '${sheetName}' no existe en el archivo`);
+      const sheetId = s.properties.sheetId;
+      const grid = (a1: string) => {
+        const m = a1.match(/^([A-Z]+)(\d+):([A-Z]+)(\d+)$/)!;
+        const idx = (c: string) => c.split("").reduce((n, ch) => n * 26 + ch.charCodeAt(0) - 64, 0);
+        return { sheetId, startRowIndex: Number(m[2]) - 1, endRowIndex: Number(m[4]), startColumnIndex: idx(m[1]) - 1, endColumnIndex: idx(m[3]) };
+      };
+      const requests = [
+        ...(s.protectedRanges ?? []).filter((p) => p.description?.startsWith(description)).map((p) => ({ deleteProtectedRange: { protectedRangeId: p.protectedRangeId! } })),
+        ...ranges.map((a1) => ({ addProtectedRange: { protectedRange: { range: grid(a1), description, warningOnly: true } } })),
+      ];
+      if (requests.length) await sheetsClient().spreadsheets.batchUpdate({ spreadsheetId, requestBody: { requests } });
+    },
   };
 }

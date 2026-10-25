@@ -7,16 +7,16 @@ import { and, eq, getTableColumns, sql } from "drizzle-orm";
 import type { PgTable } from "drizzle-orm/pg-core";
 import type { Tx } from "../../db/client";
 import {
-  actionItems, activities, areas, improvementOpportunities, measurabilityAssessments, positions, riskAssessments, sites, suitabilityAssessments,
+  actionItems, activities, areas, improvementOpportunities, measurabilityAssessments, positions, redesignProposals, riskAssessments, sites, staffingEntries, suitabilityAssessments,
 } from "../../db/schema";
 import { indexToCol, type SyncTarget, type SyncedSheet, SYNCED_SHEETS } from "../../domain/sheetmap";
 import { labelOf } from "../../domain/calculators";
 import { LABELS } from "../../domain/labels";
 import { key, type Report } from "../import/normalize";
 import {
-  ACTIVITY_MAP, MEAS_MAP, OPP_MAP, PLAN_MAP, RISK_MAP, SUIT_MAP, activityFields, measFields, oppFields, planFields, riskFields, suitFields, type FieldMap,
+  ACTIVITY_MAP, MEAS_MAP, OPP_MAP, PLAN_MAP, REDESIGN_MAP, RISK_MAP, STAFF_MAP, SUIT_MAP, activityFields, forward, measFields, oppFields, planFields, riskFields, suitFields, type FieldMap,
 } from "../import/rowmaps";
-import { ACTIVITY, MEAS, OPP, PLAN, RISK, SUIT, SHEETS, type Row, type Spec } from "../import/parse";
+import { ACTIVITY, MEAS, OPP, PLAN, REDESIGN, RISK, STAFF, SUIT, SHEETS, type Row, type Spec } from "../import/parse";
 
 export type Rec = Record<string, unknown> & { id: string; version: number };
 export interface Ctx { tx: Tx; studyId: string; rep: Report; sheet: string; rowNo: number }
@@ -26,6 +26,8 @@ export interface Adapter {
   sheet: SyncedSheet; spec: Spec; map: FieldMap; entity: string; table: PgTable;
   /** Registro existente para el código de la fila (null si no existe). */
   find(c: Ctx, code: string): Promise<Rec | null>;
+  /** Registro existente según la clave natural de la fila completa (hojas sin código: 9 usa tipo + área + cargo). Si falta, se usa el código. */
+  findRow?(c: Ctx, r: Row): Promise<Rec | null>;
   /** Valores a guardar, resolviendo referencias; si falta algo imprescindible devuelve un error legible. */
   build(c: Ctx, r: Row, existing: Rec | null): Promise<Built>;
   /** Todos los registros del estudio con las columnas auxiliares (nombres de área, cargo, etc.) para escribirlos en la hoja. */
@@ -162,6 +164,63 @@ const planAdapter: Adapter = {
   },
 };
 
+/* ───────── Hoja 2 · Caracterización (una fila = una entrada de dotación) ───────── */
+const staffAdapter: Adapter = {
+  sheet: SHEET("2"), spec: STAFF, map: STAFF_MAP, entity: "staffing", table: staffingEntries,
+  find: async () => null, // sin código: cada captura es una entrada nueva; se edita por identificador
+  async build(c, r) {
+    const [area, site, name] = [r.s("area"), r.s("site"), r.s("position")];
+    if (!area || !site || !name) return { error: `Falta ${[!area && "el área", !site && "la sede", !name && "el cargo"].filter(Boolean).join(", ")}` };
+    const kind = kindOf(c, r);
+    const [a] = await c.tx.select({ id: areas.id }).from(areas).where(and(eq(areas.studyId, c.studyId), sql`${norm(areas.name)} = lower(btrim(${area}))`));
+    if (!a) return { error: `El área «${area.slice(0, 50)}» no está en la lista del estudio (agréguela en Parámetros)` };
+    await c.tx.insert(sites).values({ studyId: c.studyId, name: site }).onConflictDoNothing();
+    const [s] = await c.tx.select({ id: sites.id }).from(sites).where(and(eq(sites.studyId, c.studyId), sql`${norm(sites.name)} = lower(btrim(${site}))`));
+    if (r.s("regional")) await c.tx.update(sites).set({ regional: r.s("regional") }).where(eq(sites.id, s.id));
+    const [p] = await c.tx.select({ id: positions.id }).from(positions).where(and(eq(positions.studyId, c.studyId), eq(positions.areaId, a.id), eq(positions.siteId, s.id), eq(positions.dataKind, kind), sql`${norm(positions.name)} = lower(btrim(${name}))`));
+    const texts = { boss: r.s("boss"), objective: r.s("objective"), formalFunctions: r.s("functions"), autoCreated: false };
+    const positionId = p ? (await c.tx.update(positions).set(texts).where(eq(positions.id, p.id)).returning({ id: positions.id }))[0].id : (await c.tx.insert(positions).values({ studyId: c.studyId, areaId: a.id, siteId: s.id, name, dataKind: kind, ...texts }).returning({ id: positions.id }))[0].id;
+    return { values: { positionId, ...forward(STAFF_MAP, r) } };
+  },
+  async all(tx, studyId) {
+    const rows = await tx.select({ e: staffingEntries, kind: positions.dataKind, name: positions.name, boss: positions.boss, objective: positions.objective, functions: positions.formalFunctions, area: areas.name, site: sites.name, regional: sites.regional })
+      .from(staffingEntries).innerJoin(positions, eq(positions.id, staffingEntries.positionId)).innerJoin(areas, eq(areas.id, positions.areaId)).innerJoin(sites, eq(sites.id, positions.siteId))
+      .where(eq(staffingEntries.studyId, studyId)).orderBy(areas.name, sites.name, positions.name, staffingEntries.createdAt);
+    return rows.map((x) => ({ code: x.e.id, rec: x.e as unknown as Rec, extras: { kind: x.kind, area: x.area, site: x.site, regional: x.regional, position: x.name, boss: x.boss, objective: x.objective, functions: x.functions } }));
+  },
+};
+
+/* ───────── Hoja 9 · Rediseño de cargo (clave: tipo de dato + área + cargo actual) ───────── */
+const redesignAdapter: Adapter = {
+  sheet: SHEET("9"), spec: REDESIGN, map: REDESIGN_MAP, entity: "redesign", table: redesignProposals,
+  find: async () => null,
+  async findRow(c, r) {
+    const [area, pos] = [r.s("area"), r.s("position")];
+    if (!area || !pos) return null;
+    const [a] = await c.tx.select({ id: areas.id }).from(areas).where(and(eq(areas.studyId, c.studyId), sql`${norm(areas.name)} = lower(btrim(${area}))`));
+    if (!a) return null;
+    const [x] = await c.tx.select().from(redesignProposals).where(and(eq(redesignProposals.studyId, c.studyId), eq(redesignProposals.dataKind, kindOf(c, r)), eq(redesignProposals.areaId, a.id), sql`${norm(redesignProposals.currentPositionName)} = lower(btrim(${pos}))`));
+    return (x as Rec | undefined) ?? null;
+  },
+  async build(c, r) {
+    const [area, pos] = [r.s("area"), r.s("position")];
+    if (!area || !pos) return { error: `Falta ${[!area && "el área", !pos && "el cargo actual"].filter(Boolean).join(" y ")}` };
+    const areaId = await areaIdOf(c, area);
+    if (!areaId) return { error: `El área «${area.slice(0, 50)}» no está en la lista del estudio` };
+    const v = forward(REDESIGN_MAP, r);
+    if (!v.approvalStatus) delete v.approvalStatus; // columna NOT NULL con valor por defecto: en blanco no se envía
+    return { values: { dataKind: kindOf(c, r), areaId, currentPositionName: pos, ...v } };
+  },
+  async all(tx, studyId) {
+    const ars = new Map((await tx.select({ id: areas.id, name: areas.name }).from(areas).where(eq(areas.studyId, studyId))).map((a) => [a.id, a.name]));
+    const rows = await tx.select().from(redesignProposals).where(eq(redesignProposals.studyId, studyId)).orderBy(redesignProposals.createdAt);
+    return rows.map((x) => ({ code: x.id, rec: x as unknown as Rec, extras: { kind: x.dataKind, area: ars.get(x.areaId) ?? null, position: x.currentPositionName } }));
+  },
+};
+
+/** Hojas que la app espeja hacia Google (todas las de captura), en el orden del libro. */
+export const MIRROR_ADAPTERS: Adapter[] = [];
+
 export const ADAPTERS: Adapter[] = [
   activitiesAdapter,
   assessment("5", measurabilityAssessments, MEAS, MEAS_MAP, measFields, "measurability"),
@@ -170,6 +229,9 @@ export const ADAPTERS: Adapter[] = [
   opportunitiesAdapter, planAdapter,
 ];
 export const adapterFor = (sheetName: string) => ADAPTERS.find((a) => a.sheet.sheetName === sheetName);
+MIRROR_ADAPTERS.push(staffAdapter, ...ADAPTERS.filter((a) => a.sheet.target === "activities" || ["5", "6", "7", "8"].includes(a.sheet.target)), redesignAdapter, ...ADAPTERS.filter((a) => a.sheet.target === "10"));
+/** Adaptador por identificador de hoja de captura («2», «3», «5»…«10»). */
+export const adapterById = (id: string) => MIRROR_ADAPTERS.find((a) => (id === "3" ? a.sheet.target === "activities" : a.sheet.target === id));
 
 /** Última columna de entrada de la hoja (para leer de A hasta ahí). */
 export const lastInputCol = (a: Adapter) => Math.max(...Object.values(a.spec).map(([col]) => col.split("").reduce((n, ch) => n * 26 + ch.charCodeAt(0) - 64, 0)));
@@ -195,7 +257,7 @@ export function cellsOf(a: Adapter, rec: Record<string, unknown>, extras: Record
   for (const [field, [col, kind]] of Object.entries(a.spec)) {
     const db = fieldToDb.get(field);
     const v = db !== undefined ? rec[db] : extras[field];
-    out[col] = toCell(kind, field === "kind" ? (typeof v === "string" ? labelOf("L_TipoDato", v) : v) : v);
+    out[col] = toCell(kind, v);
   }
   return out;
 }

@@ -1,13 +1,12 @@
 /**
- * Captura de las hojas 5–10 y de los parámetros (Fase 3). Una definición declarativa por hoja alimenta el formulario,
- * la validación y el guardado. Todo pasa por withRls(); los campos vacíos se guardan vacíos (no se inventan valores).
+ * Formulario de los PARÁMETROS del estudio (hoja «Parametros» del libro + umbrales propios de la app). Las hojas de captura 2, 3, 5 a 10 viven en
+ * server/entry (D-62). Una definición declarativa alimenta el formulario, la validación y el guardado. Todo pasa por withRls(); los campos vacíos se
+ * guardan vacíos (no se inventan valores). «Semanas por mes» NO es editable: en el libro es una fórmula (52/12).
  */
 import { and, eq, getTableColumns } from "drizzle-orm";
 import type { PgTable } from "drizzle-orm/pg-core";
 import { withRls, type Db } from "../db/client";
-import {
-  actionItems, auditLog, improvementOpportunities, measurabilityAssessments, redesignProposals, riskAssessments, studyParameters, suitabilityAssessments,
-} from "../db/schema";
+import { auditLog, studyParameters } from "../db/schema";
 import { LABELS } from "../domain/labels";
 
 export type FieldKind = "text" | "longtext" | "bool" | "scale" | "int" | "num" | "pct" | "date" | "list" | "activity" | "area";
@@ -19,55 +18,10 @@ const T = (key: string, label: string, o: Partial<Field> = {}): Field => ({ key,
 const B = (key: string, label: string): Field => ({ key, label, kind: "bool" });
 const S = (key: string, label: string, hint = "1 a 5"): Field => ({ key, label, kind: "scale", hint });
 const N = (key: string, label: string, o: Partial<Field> = {}): Field => ({ key, label, kind: "num", ...o });
-const DK = (): Field => L("dataKind", "Tipo de dato", "L_TipoDato", { notNull: true });
-const AC = (): Field => ({ key: "activityId", label: "Actividad", kind: "activity", required: true });
 
 export const SHEETS: SheetDef[] = [
-  { id: "5", title: "5 · Medibilidad", table: measurabilityAssessments, keyCols: ["activityId"], idCol: "id", entity: "measurability", fields: [
-    AC(), L("directMeasurement", "¿Se puede medir directamente?", "L_SiParcialNo"), B("hasIndicators", "¿Tiene indicadores?"), L("hasHistory", "¿Hay histórico?", "L_SiParcialNo"),
-    B("hasTimeStandard", "¿Tiene tiempo estándar?"), L("sourceReliability", "Confiabilidad de la fuente", "L_AMB"), L("externalDependency", "Dependencia externa", "L_AMB"),
-    L("resultVerifiable", "¿Resultado verificable?", "L_SiParcialNo"), L("recommendedUnit", "Unidad recomendada", "L_Unidad"), L("proposedIndicator", "Indicador propuesto", "L_Indicador"),
-    T("qualitativeCriterion", "Criterio cualitativo"),
-  ] },
-  { id: "6", title: "6 · Pertinencia", table: suitabilityAssessments, keyCols: ["activityId"], idCol: "id", entity: "suitability", fields: [
-    AC(), L("correspondence", "Correspondencia con el cargo", "L_Corresp"), T("technicalKnowledge", "Conocimientos técnicos"), T("training", "Formación"), T("experience", "Experiencia"),
-    T("technicalCompetencies", "Competencias técnicas"), T("behavioralCompetencies", "Competencias conductuales"), T("authorizations", "Autorizaciones"), L("autonomy", "Autonomía", "L_Autonomia"),
-    L("compatibility", "Compatibilidad", "L_Compat"), T("currentCompetencies", "Competencias actuales"), T("gaps", "Brechas"), L("trainingPossible", "¿Se cierra con formación?", "L_SiParcialNo"),
-    L("reassignmentPossible", "¿Reasignación posible?", "L_Reasig"), B("specializationNeeded", "¿Requiere especialización?"), L("situation", "Situación", "L_Situacion"),
-    B("sensitiveResponsibility", "¿Responsabilidad sensible?"), B("separationEvaluated", "¿Separación de funciones evaluada?"),
-  ] },
-  { id: "7", title: "7 · Riesgos", table: riskAssessments, keyCols: ["activityId"], idCol: "id", entity: "risk", fields: [
-    AC(), T("risk", "Riesgo"), T("consequences", "Consecuencias"), S("impactOperational", "Impacto operativo"), S("impactEconomic", "Impacto económico"), S("impactLabor", "Impacto laboral"),
-    S("impactLegal", "Impacto legal"), S("impactService", "Impacto en servicio"), S("probability", "Probabilidad"), T("controls", "Controles"), T("evidence", "Evidencia"), T("dependencies", "Dependencias"),
-    { key: "peopleWhoCanExecute", label: "Personas que la saben ejecutar", kind: "int", max: 1000 }, T("duplications", "Duplicidades"), B("functionIncompatibility", "¿Incompatibilidad de funciones?"),
-  ] },
-  { id: "8", title: "8 · Oportunidades", table: improvementOpportunities, keyCols: ["code"], idCol: "id", entity: "opportunity", fields: [
-    DK(), { key: "code", label: "Código", kind: "text", required: true, max: 40 }, L("type", "Tipo de oportunidad", "L_TipoOport"), L("findingClass", "Clase de hallazgo", "L_Hallazgo"), T("problem", "Problema"),
-    { key: "relatedActivityId", label: "Actividad relacionada", kind: "activity" }, T("evidence", "Evidencia"), T("probableCause", "Causa probable"), T("proposal", "Propuesta"),
-    { key: "areaId", label: "Área", kind: "area" }, { key: "positionName", label: "Cargo", kind: "text", max: 160 }, T("expectedBenefit", "Beneficio esperado"),
-    N("recoverableHoursPerWeek", "Horas recuperables por semana"), T("impactAssumptions", "Supuestos del impacto"), T("implementationRisks", "Riesgos de implementación"),
-    S("impactScore", "Impacto"), S("easeScore", "Facilidad"), S("effortScore", "Esfuerzo"), S("costScore", "Costo"), S("riskScore", "Riesgo"),
-    { key: "owner", label: "Responsable", kind: "text", max: 160 }, { key: "dueDate", label: "Fecha límite", kind: "date" }, { key: "followUpIndicator", label: "Indicador de seguimiento", kind: "text", max: 300 },
-    L("validationStatus", "Estado de validación", "L_EstadoValid"),
-  ] },
-  { id: "9", title: "9 · Rediseño", table: redesignProposals, keyCols: ["dataKind", "areaId", "currentPositionName"], idCol: "id", entity: "redesign", fields: [
-    DK(), { key: "areaId", label: "Área", kind: "area", required: true }, { key: "currentPositionName", label: "Cargo actual", kind: "text", required: true, max: 160 },
-    T("currentObjective", "Objetivo actual"), T("currentFunctions", "Funciones actuales"), T("keptActivities", "Actividades que se mantienen"), T("modifiedActivities", "Actividades modificadas"),
-    T("removedActivities", "Actividades eliminadas"), T("transferredActivities", "Actividades trasladadas"), { key: "receivingPositionName", label: "Cargo que recibe", kind: "text", max: 160 },
-    T("newResponsibilities", "Nuevas responsabilidades"), T("limitsAndAuthority", "Límites y autoridad"), T("requiredCompetencies", "Competencias requeridas"), T("trainingNeeds", "Necesidades de formación"),
-    T("performanceIndicators", "Indicadores de desempeño"), T("reportingLines", "Líneas de reporte"), N("hoursOutPerWeek", "Horas que salen (h/sem)"), N("hoursInPerWeek", "Horas que entran (h/sem)"),
-    N("hoursRecoveredPerWeek", "Horas recuperadas (h/sem)"), T("justification", "Justificación"), T("expectedBenefits", "Beneficios esperados"), T("risksAndConditions", "Riesgos y condiciones"),
-    L("approvalStatus", "Estado de aprobación", "L_Aprob", { notNull: true }),
-  ] },
-  { id: "10", title: "10 · Plan de acción", table: actionItems, keyCols: ["code"], idCol: "id", entity: "action", fields: [
-    DK(), { key: "code", label: "Código", kind: "text", required: true, max: 40 }, T("finding", "Hallazgo"), { key: "action", label: "Acción", kind: "longtext", required: true },
-    { key: "areaId", label: "Área", kind: "area" }, { key: "positionName", label: "Cargo", kind: "text", max: 160 }, T("resources", "Recursos"), N("estimatedCost", "Costo estimado (COP)"),
-    L("priority", "Prioridad", "L_AMB"), L("initiativeType", "Tipo de iniciativa", "L_TipoIniciativa"), { key: "startDate", label: "Inicio", kind: "date" }, { key: "endDate", label: "Fin", kind: "date" },
-    T("dependencies", "Dependencias"), T("risks", "Riesgos"), { key: "resultIndicator", label: "Indicador de resultado", kind: "text", max: 300 }, N("target", "Meta"),
-    L("status", "Estado", "L_EstadoPlan"), N("actualResult", "Resultado real"),
-  ] },
   { id: "param", title: "Parámetros", table: studyParameters, keyCols: [], idCol: "studyId", entity: "parameters", fields: [
-    N("workDaysPerWeek", "Días laborales por semana", { notNull: true, max: 7 }), N("weeksPerMonth", "Semanas por mes", { notNull: true, max: 6 }),
+    N("workDaysPerWeek", "Días laborales por semana", { notNull: true, max: 7 }),
     { key: "weeksPerYear", label: "Semanas por año", kind: "int", notNull: true, max: 53 }, { key: "reservePct", label: "Reserva de capacidad (%)", kind: "pct", notNull: true },
     { key: "overloadThreshold", label: "Umbral de sobrecarga (%)", kind: "pct", notNull: true }, { key: "lowLoadThreshold", label: "Umbral de carga baja (%)", kind: "pct", notNull: true },
     N("hourlyCostCop", "Costo por hora (COP)", { max: 1e9 }), L("scenario", "Escenario", "L_Escenario", { notNull: true }),

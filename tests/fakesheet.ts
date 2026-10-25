@@ -47,4 +47,6 @@ export class FakeSheet implements SheetGateway {
   async columnCount(sheetName: string) { return this.cols.get(sheetName)!; }
   async appendHiddenColumns(sheetName: string, count: number) { this.cols.set(sheetName, this.cols.get(sheetName)! + count); this.hidden.set(sheetName, (this.hidden.get(sheetName) ?? 0) + count); }
   async title() { return "hoja de prueba"; }
+  protections = new Map<string, string[]>();
+  async protect(sheetName: string, ranges: string[]) { this.protections.set(sheetName, ranges); }
 }

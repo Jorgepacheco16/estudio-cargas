@@ -20,7 +20,7 @@ export const SHEETS = {
   opp: "8_Oportunidades", redesign: "9_Rediseno", plan: "10_Plan_accion", params: "Parametros", calc: "4a_Calculo_tiempos",
 } as const;
 
-const STAFF: Spec = {
+export const STAFF: Spec = {
   kind: ["A", { label: "L_TipoDato" }], area: ["B", "text"], site: ["C", "text"], regional: ["D", "text"], position: ["E", "text"], headcount: ["F", { int: [0, 500] }], employeeCode: ["G", "text"],
   boss: ["H", "text"], objective: ["I", "text"], functions: ["J", "text"], weeklyHours: ["K", { range: [0, 84] }], surveyDate: ["L", "date"], surveyor: ["M", "text"],
   infoSource: ["N", { label: "L_FuenteInfo" }], notes: ["O", "text"],
@@ -55,7 +55,7 @@ export const OPP: Spec = {
   cause: ["H", "text"], proposal: ["I", "text"], area: ["J", "text"], position: ["K", "text"], benefit: ["L", "text"], hours: ["M", { range: [0, 1e6] }], assumptions: ["O", "text"], risks: ["P", "text"],
   impact: ["Q", "scale"], ease: ["R", "scale"], effort: ["S", "scale"], cost: ["T", "scale"], riskScore: ["U", "scale"], owner: ["V", "text"], due: ["W", "date"], indicator: ["X", "text"], validation: ["Y", { label: "L_EstadoValid" }],
 };
-const REDESIGN: Spec = {
+export const REDESIGN: Spec = {
   kind: ["A", { label: "L_TipoDato" }], area: ["B", "text"], position: ["C", "text"], objective: ["D", "text"], functions: ["E", "text"], kept: ["F", "text"], modified: ["G", "text"], removed: ["H", "text"],
   transferred: ["I", "text"], receiving: ["J", "text"], newResp: ["K", "text"], limits: ["L", "text"], competencies: ["M", "text"], training: ["N", "text"], indicators: ["O", "text"], reporting: ["P", "text"],
   hoursOut: ["T", { range: [0, 1e6] }], hoursIn: ["U", { range: [0, 1e6] }], hoursRecovered: ["V", { range: [0, 1e6] }], justification: ["Z", "text"], benefits: ["AA", "text"], risks: ["AB", "text"], approval: ["AC", { label: "L_Aprob" }],

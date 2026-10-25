@@ -1,11 +1,11 @@
-"use server";
+﻿"use server";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { getDb } from "@/db/server";
 import { createClient, getUser } from "@/lib/supabase/server";
 import { activeStudyId } from "@/data/source";
-import { addActivity, addPosition, createStudy, listStudies, updateActivityTime } from "@/server/studies";
+import { createStudy, listStudies } from "@/server/studies";
 
 const back = (kind: "ok" | "error", msg: string): never => redirect(`/estudio?${kind === "ok" ? "ok" : "error"}=${encodeURIComponent(msg)}`);
 
@@ -60,46 +60,4 @@ export async function selectStudyAction(fd: FormData) {
   redirect("/estudio");
 }
 
-const positionSchema = z.object({
-  area: z.string().min(1, "Elija un área"), site: z.string().trim().min(1, "Indique la sede").max(120), position: z.string().trim().min(1, "Indique el cargo").max(160),
-  dataKind: z.enum(["real", "demo"]), headcount: num("Cantidad", 0, 500), weeklyHours: num("Jornada semanal", 0, 84),
-});
 
-export async function addPositionAction(fd: FormData) {
-  const user = await session();
-  try {
-    const study = await activeStudyId(user.id); if (!study) throw new Error("Cree o seleccione un estudio primero");
-    const i = positionSchema.parse(Object.fromEntries(fd));
-    await addPosition(getDb(), user.id, study.id, { ...i, headcount: i.headcount === null ? null : Math.round(i.headcount) });
-  } catch (e) { back("error", safeMessage(e)); }
-  back("ok", "Cargo y dotación guardados.");
-}
-
-const activitySchema = z.object({
-  code: z.string().trim().min(1, "Indique el código").max(40), name: z.string().trim().min(1, "Indique el nombre").max(300), positionId: z.string().uuid("Elija un cargo"),
-  dataKind: z.enum(["real", "demo"]), calcMode: opt(["per_event", "per_unit"]), scope: opt(["per_employee", "position_total"]),
-  executions: num("Ejecuciones", 0, 100000), period: opt(["day", "week", "fortnight", "month", "quarter", "year"]),
-  unitsPerExecution: num("Unidades", 0, 1e7), timeAvgMin: num("Tiempo promedio", 0, 100000), planning: opt(["planned", "unplanned"]),
-});
-
-export async function addActivityAction(fd: FormData) {
-  const user = await session();
-  try {
-    const study = await activeStudyId(user.id); if (!study) throw new Error("Cree o seleccione un estudio primero");
-    await addActivity(getDb(), user.id, study.id, activitySchema.parse(Object.fromEntries(fd)));
-  } catch (e) { back("error", safeMessage(e)); }
-  back("ok", "Actividad guardada. Si faltan datos, se muestra su estado de captura.");
-}
-
-const timeSchema = z.object({ id: z.string().uuid(), version: z.coerce.number().int().min(1), timeAvgMin: num("Tiempo promedio", 0, 100000) });
-
-export async function updateTimeAction(fd: FormData) {
-  const user = await session();
-  let saved = false;
-  try {
-    const i = timeSchema.parse(Object.fromEntries(fd));
-    saved = await updateActivityTime(getDb(), user.id, i.id, i.version, i.timeAvgMin);
-  } catch (e) { back("error", safeMessage(e)); }
-  if (!saved) back("error", "Conflicto (409): otra persona modificó esta actividad. Recargue y vuelva a intentar.");
-  back("ok", "Tiempo actualizado; los resultados se recalcularon.");
-}

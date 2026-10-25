@@ -34,65 +34,80 @@ test("la sesión se reconoce y el estudio se crea con sus 14 áreas", async () =
   await page.getByLabel("Nuevo estudio").fill("Estudio E2E");
   await page.getByRole("button", { name: "Crear estudio" }).click();
   await banner("Estudio creado con sus 14 áreas");
-  await expect(sec("Cargo y dotación").locator("select[name=area] option")).toHaveCount(14);
+  await open("/datos/parametros");
+  await expect(page.getByRole("heading", { name: "Áreas (14)" })).toBeVisible();
 });
 
-test("se registra un cargo con su dotación", async () => {
-  const s = sec("Cargo y dotación");
-  await s.locator("select[name=area]").selectOption({ label: "Cajas" });
-  await s.locator("input[name=site]").fill("Sede E2E");
-  await s.locator("input[name=position]").fill("Cajero E2E");
-  await s.locator("input[name=headcount]").fill("2");
-  await s.locator("input[name=weeklyHours]").fill("42");
-  await s.getByRole("button", { name: "Guardar cargo" }).click();
-  await banner("Cargo y dotación guardados");
+const nuevo = async (hoja: string) => { await open(`/datos/${hoja}/nuevo`); };
+const guardar = () => page.getByRole("button", { name: "Guardar", exact: true }).click();
+
+test("se registra un cargo con su dotación desde la app (hoja 2) y la capacidad sale calculada, no editable", async () => {
+  await nuevo("2");
+  await page.locator("select[name=c_A]").selectOption("REAL");
+  await page.locator("select[name=c_B]").selectOption({ label: "Cajas" });
+  await page.locator("input[name=c_C]").fill("Sede E2E");
+  await page.locator("input[name=c_E]").fill("Cajero E2E");
+  await page.locator("input[name=c_F]").fill("2");
+  await page.locator("input[name=c_K]").fill("42");
+  await expect(page.getByRole("heading", { name: "Calculado por la hoja (no editable)" })).toBeVisible();
+  await expect(page.locator("input[name=c_R], input[name=c_V]")).toHaveCount(0); // las columnas con fórmula no tienen campo
+  await guardar();
+  await banner("Registro creado");
+  await expect(page.locator("tr", { hasText: "Cajero E2E" })).toContainText("OK");
 });
 
-test("se registra una actividad completa y se calcula su carga; editar el tiempo la recalcula", async () => {
-  const s = sec("Nueva actividad");
-  await s.locator("input[name=code]").fill("E2E-1");
-  await s.locator("input[name=name]").fill("Arqueo de prueba");
-  await s.locator("select[name=positionId]").selectOption({ label: "Cajero E2E · Sede E2E (Cajas)" });
-  await s.locator("select[name=calcMode]").selectOption("per_event");
-  await s.locator("select[name=scope]").selectOption("per_employee");
-  await s.locator("input[name=executions]").fill("4");
-  await s.locator("select[name=period]").selectOption("day");
-  await s.locator("input[name=timeAvgMin]").fill("5");
-  await s.getByRole("button", { name: "Guardar actividad" }).click();
-  await banner("Actividad guardada");
-  const row = page.locator("tr", { hasText: "E2E-1" });
-  await expect(row).toContainText("OK");
-  await expect(row).toContainText("4,00"); // 4/día × 6 días × 5 min ÷ 60 × 2 ocupantes
-  await row.getByLabel("Tiempo promedio de E2E-1").fill("10");
-  await row.getByRole("button", { name: "Guardar" }).click();
-  await banner("Tiempo actualizado");
+test("se registra una actividad completa (hoja 3) y se calcula su carga; editar el tiempo la recalcula", async () => {
+  await nuevo("3");
+  await page.locator("select[name=c_A]").selectOption("REAL");
+  await page.locator("input[name=c_B]").fill("E2E-1");
+  await page.locator("select[name=c_D]").selectOption({ label: "Cajas" });
+  await page.locator("input[name=c_E]").fill("Sede E2E");
+  await page.locator("input[name=c_F]").fill("Cajero E2E");
+  await page.locator("input[name=c_H]").fill("Arqueo de prueba");
+  await page.locator("select[name=c_O]").selectOption({ label: "Por evento" });
+  await page.locator("input[name=c_P]").fill("4");
+  await page.locator("select[name=c_Q]").selectOption({ label: "Día" });
+  await page.locator("select[name=c_R]").selectOption({ label: "Por colaborador" });
+  await page.locator("input[name=c_T]").fill("5");
+  await guardar();
+  await banner("Registro creado");
+  await open("/calculo?modo=real");
+  await expect(page.locator("tr", { hasText: "E2E-1" })).toContainText("4,00"); // 4/día × 6 días × 5 min ÷ 60 × 2 ocupantes
+  await open("/datos/3");
+  await page.locator("tr", { hasText: "E2E-1" }).getByRole("link", { name: "Editar" }).click(); await settle();
+  await page.locator("input[name=c_T]").fill("10");
+  await guardar();
+  await banner("Registro actualizado");
+  await open("/calculo?modo=real");
   await expect(page.locator("tr", { hasText: "E2E-1" })).toContainText("8,00");
 });
 
 test("una actividad con código repetido se rechaza con un mensaje claro", async () => {
-  const s = sec("Nueva actividad");
-  await s.locator("input[name=code]").fill("E2E-1");
-  await s.locator("input[name=name]").fill("Repetida");
-  await s.locator("select[name=positionId]").selectOption({ label: "Cajero E2E · Sede E2E (Cajas)" });
-  await s.getByRole("button", { name: "Guardar actividad" }).click();
-  await banner("Ya existe un registro con ese código");
+  await nuevo("3");
+  await page.locator("input[name=c_B]").fill("E2E-1");
+  await page.locator("select[name=c_D]").selectOption({ label: "Cajas" });
+  await page.locator("input[name=c_E]").fill("Sede E2E");
+  await page.locator("input[name=c_F]").fill("Cajero E2E");
+  await page.locator("input[name=c_H]").fill("Repetida");
+  await guardar();
+  await banner("Ya existe un registro con esa clave");
 });
 
 test("409 por versión desactualizada: dos pestañas editan la misma actividad y la segunda recibe el conflicto sin pisar a la primera", async () => {
   const other = await page.context().newPage();
   try {
-    await open("/estudio");                 // esta pestaña queda con la versión vista
-    await other.goto("/estudio"); await other.waitForLoadState("networkidle"); await other.waitForTimeout(1000);
-    const row2 = other.locator("tr", { hasText: "E2E-1" });
-    await row2.getByLabel("Tiempo promedio de E2E-1").fill("10");
-    await row2.getByRole("button", { name: "Guardar" }).click();
-    await expect(other.locator(".banner").filter({ hasText: "Tiempo actualizado" })).toBeVisible();   // la otra pestaña guarda primero: sube la versión
-    const row = page.locator("tr", { hasText: "E2E-1" });
-    await row.getByLabel("Tiempo promedio de E2E-1").fill("77");
-    await row.getByRole("button", { name: "Guardar" }).click();
+    await open("/datos/3");
+    await page.locator("tr", { hasText: "E2E-1" }).getByRole("link", { name: "Editar" }).click(); await settle();
+    const url = page.url();                  // esta pestaña queda con la versión vista
+    await other.goto(url); await other.waitForLoadState("networkidle"); await other.waitForTimeout(1000);
+    await other.locator("input[name=c_T]").fill("10");
+    await other.getByRole("button", { name: "Guardar", exact: true }).click();
+    await expect(other.locator(".banner").filter({ hasText: "Registro actualizado" })).toBeVisible();   // la otra pestaña guarda primero: sube la versión
+    await page.locator("input[name=c_T]").fill("77");
+    await guardar();
     await banner("Conflicto (409)");
-    await open("/estudio");
-    await expect(page.locator("tr", { hasText: "E2E-1" }).getByLabel("Tiempo promedio de E2E-1")).toHaveValue("10"); // el 77 no se guardó
+    await page.goto(url); await settle();
+    await expect(page.locator("input[name=c_T]")).toHaveValue("10"); // el 77 no se guardó
   } finally { await other.close(); }
 });
 
@@ -103,7 +118,7 @@ test("un usuario de solo lectura (viewer) ve los datos pero no puede modificar n
   try {
     await signInCookies(viewer, ctx, baseURL!);
     const p = await ctx.newPage();
-    for (const [ruta, boton] of [["/estudio", "Guardar cargo"], ["/captura?hoja=7", "Guardar"]] as const) {
+    for (const [ruta, boton] of [["/datos/2/nuevo", "Guardar"], ["/datos/7/nuevo", "Guardar"]] as const) {
       await p.goto(ruta); await p.waitForLoadState("networkidle");
       await expect(p.getByText("Su rol es de solo lectura")).toBeVisible();
       await expect(p.getByRole("button", { name: boton }).first()).toBeDisabled();
@@ -126,28 +141,27 @@ test("el tablero en modo REAL refleja la actividad registrada", async () => {
   await expect(page.getByLabel("Carga por cargo", { exact: true })).toContainText("Cajero E2E");
 });
 
-test("hoja 7: se captura el riesgo y se muestra la criticidad calculada con las reglas del Excel", async () => {
-  await open("/captura?hoja=7");
-  const form = page.locator("form", { has: page.locator("input[name=hoja][value='7']") });
-  await form.locator("select[name=activityId]").selectOption({ label: "E2E-1" });
-  await form.locator("input[name=impactLegal]").fill("5");
-  await form.locator("input[name=probability]").fill("3");
-  await form.locator("input[name=peopleWhoCanExecute]").fill("1");
-  await form.getByRole("button", { name: "Guardar" }).click();
+test("hoja 7: se captura el riesgo desde la app y se muestra la criticidad calculada con las reglas del Excel (no editable)", async () => {
+  await nuevo("7");
+  await page.locator("select[name=c_B]").selectOption("E2E-1");
+  await page.locator("input[name=c_K]").fill("5");
+  await page.locator("input[name=c_M]").fill("3");
+  await page.locator("input[name=c_Q]").fill("1");
+  await guardar();
   await banner("Registro creado");
-  await expect(page.locator("tr", { hasText: "E2E-1" })).toContainText("Criticidad Crítica");
+  await expect(page.locator("tr", { hasText: "E2E-1" })).toContainText("Crítica");
   await expect(page.locator("tr", { hasText: "E2E-1" })).toContainText("Requiere respaldo prioritario");
 });
 
 test("un valor inválido al editar un registro se rechaza (escala 1 a 5) y el dato no cambia", async () => {
-  await open("/captura?hoja=7");
+  await open("/datos/7");
   await page.locator("tr", { hasText: "E2E-1" }).getByRole("link", { name: "Editar" }).click();
   await settle();
-  const form = page.locator("form", { has: page.locator("input[name=hoja][value='7']") });
-  await form.locator("input[name=impactLegal]").fill("9");
-  await form.getByRole("button", { name: "Guardar" }).click();
-  await banner("Impacto legal: escriba un entero entre 1 y 5");
-  await expect(page.locator("tr", { hasText: "E2E-1" })).toContainText("Criticidad Crítica"); // el registro anterior sigue igual
+  await page.locator("input[name=c_K]").fill("9");
+  await guardar();
+  await banner(/fuera de 1–5/);
+  await open("/datos/7");
+  await expect(page.locator("tr", { hasText: "E2E-1" })).toContainText("Crítica"); // el registro anterior sigue igual
 });
 test("la exportación a Excel con sesión trae los datos del estudio", async () => {
   await open("/cargos?modo=real");

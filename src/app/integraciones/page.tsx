@@ -5,7 +5,7 @@ import { activeStudyId } from "@/data/source";
 import { listConnections, openIssues, recentEvents } from "@/server/sheets/sync";
 import { connectAction, previewAction, syncAction } from "./actions";
 
-const MODE: Record<string, string> = { off: "Apagada", push: "Solo app → hoja", pull: "Solo hoja → app", bidirectional: "Bidireccional" };
+const MODE: Record<string, string> = { off: "Apagada", push: "La app alimenta la hoja (recomendado)", pull: "Solo hoja → app", bidirectional: "Bidireccional" };
 const when = (d: Date | null) => (d ? d.toLocaleString("es-CO", { timeZone: "America/Bogota", dateStyle: "short", timeStyle: "short" }) : "—");
 
 export default async function Integraciones({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
@@ -52,15 +52,15 @@ export default async function Integraciones({ searchParams }: { searchParams: Pr
             </ol>
             <form action={connectAction} style={{ display: "flex", gap: 8, alignItems: "flex-end", flexWrap: "wrap", marginTop: 8 }}>
               <label className="f" style={{ flex: "1 1 320px" }}>Dirección de la hoja<input name="sheet" required placeholder="https://docs.google.com/spreadsheets/d/…" /></label>
-              <label className="f">Modo<select name="mode" defaultValue="bidirectional"><option value="bidirectional">Bidireccional</option><option value="pull">Solo hoja → app</option><option value="push">Solo app → hoja</option><option value="off">Apagada</option></select></label>
+              <label className="f">Modo<select name="mode" defaultValue="push"><option value="push">La app alimenta la hoja (recomendado)</option><option value="bidirectional">Bidireccional (heredado)</option><option value="pull">Solo hoja → app (heredado)</option><option value="off">Apagada</option></select></label>
               <button className="btn solid" type="submit" disabled={!isOwner}>Conectar</button>
             </form>
             {!isOwner && <p className="note">Solo el propietario del estudio puede conectar o cambiar la hoja.</p>}
           </section>
 
           <section className="card">
-            <h2>Cambios en vivo (Apps Script)</h2>
-            <p className="note">Para que las ediciones en la hoja lleguen a la aplicación en segundos: abra la hoja → Extensiones → Apps Script, pegue el código descargado, defina la propiedad <b>WEBHOOK_SECRET</b> (el mismo valor de SHEETS_WEBHOOK_SECRET del servidor) y cree los activadores <b>onEditInstalled</b> (al editar) y <b>onChangeInstalled</b> (al cambiar). Sin esto la aplicación igual se actualiza con «Sincronizar ahora» y con la reconciliación diaria.</p>
+            <h2>Cambios en vivo desde la hoja (Apps Script, solo modos heredados)</h2>
+            <p className="note">Con el modo «La app alimenta la hoja» NO se necesita: los datos se capturan en la app (Datos de entrada) y se escriben solos en la hoja; lo que se edite a mano en las casillas de entrada de la hoja se vuelve a sobrescribir con el valor de la app. Solo para los modos heredados: para que las ediciones en la hoja lleguen a la aplicación en segundos: abra la hoja → Extensiones → Apps Script, pegue el código descargado, defina la propiedad <b>WEBHOOK_SECRET</b> (el mismo valor de SHEETS_WEBHOOK_SECRET del servidor) y cree los activadores <b>onEditInstalled</b> (al editar) y <b>onChangeInstalled</b> (al cambiar). Sin esto la aplicación igual se actualiza con «Sincronizar ahora» y con la reconciliación diaria.</p>
             <a className="btn" href="/api/sheets/script" download>Descargar Code.gs</a>
           </section>
 
