@@ -141,7 +141,7 @@ export default async function Historia({ searchParams }: { searchParams: Promise
           {ms.length === 0 ? <div className="empty">Sin mediciones.</div> : <div className="tbl-wrap" tabIndex={0} role="region" aria-label="Tabla desplazable"><table>
             <thead><tr><th>Fecha</th><th>Actividad</th><th className="num">Unidades</th><th className="num">Horas-persona</th><th>Método</th><th>Observador</th><th /></tr></thead>
             <tbody>{ms.map((m) => <tr key={m.id}><td>{when(m.observedAt)}</td><td>{code.get(m.activityId)}</td><td className="num">{nf(m.unitsProcessed === null ? null : Number(m.unitsProcessed))}</td><td className="num">{nf(Number(m.personHours))}</td><td>{optionsOf("L_Fuente").find((o) => o.code === m.method)?.label}</td><td>{m.observer ?? ""}</td>
-              <td><form action={deleteMeasurementAction}><input type="hidden" name="id" value={m.id} /><button className="btn" type="submit" disabled={!canWrite}>Eliminar</button></form></td></tr>)}</tbody>
+              <td><form action={deleteMeasurementAction}><input type="hidden" name="id" value={m.id} /><button className="btn danger" type="submit" disabled={!canWrite}>Eliminar</button></form></td></tr>)}</tbody>
           </table></div>}
         </section>
       </main>
@@ -171,7 +171,7 @@ export default async function Historia({ searchParams }: { searchParams: Promise
                   <form action={deviationStatusAction} style={{ display: "inline-flex", gap: 6, flexWrap: "wrap" }}>
                     <input type="hidden" name="id" value={d.id} />
                     {d.status !== "acknowledged" && <button className="btn" name="status" value="acknowledged" type="submit" disabled={!canWrite}>Reconocer</button>}
-                    {d.status !== "dismissed" && <button className="btn" name="status" value="dismissed" type="submit" disabled={!canWrite}>Descartar</button>}
+                    {d.status !== "dismissed" && <button className="btn danger" name="status" value="dismissed" type="submit" disabled={!canWrite}>Descartar</button>}
                     {d.status !== "open" && <button className="btn" name="status" value="open" type="submit" disabled={!canWrite}>Reabrir</button>}
                   </form>{" "}
                   <form action={explainAction} style={{ display: "inline" }}><input type="hidden" name="id" value={d.id} /><button className="btn" type="submit" disabled={!canWrite || !configured}>Explicar con IA</button></form>

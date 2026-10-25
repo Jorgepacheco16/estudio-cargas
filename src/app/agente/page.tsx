@@ -68,7 +68,7 @@ export default async function Agente({ searchParams }: { searchParams: Promise<R
                               <form action={decideAction} style={{ display: "inline-flex", gap: 6 }}>
                                 <input type="hidden" name="id" value={p.id} />
                                 <button className="btn solid" name="decision" value="approve" type="submit" disabled={!canWrite}>Aprobar</button>
-                                <button className="btn" name="decision" value="reject" type="submit" disabled={!canWrite}>Rechazar</button>
+                                <button className="btn danger" name="decision" value="reject" type="submit" disabled={!canWrite}>Rechazar</button>
                               </form>
                             )}
                           </td>

@@ -41,7 +41,7 @@ export default async function Hoja({ params, searchParams }: { params: Promise<{
                   {def!.computed.map((c) => { const v = r.computed[c.col]; return <td key={c.col} className="muted">{v === null || v === undefined || v === "" ? "—" : typeof v === "number" ? v.toLocaleString("es-CO", { maximumFractionDigits: 4 }) : String(v)}</td>; })}
                   <td style={{ whiteSpace: "nowrap" }}>
                     <Link className="btn" href={`/datos/${def!.id}/${r.id}`}>{canWrite ? "Editar" : "Ver"}</Link>{" "}
-                    {canWrite && <form action={deleteEntryAction} style={{ display: "inline" }}><input type="hidden" name="hoja" value={def!.id} /><input type="hidden" name="recId" value={r.id} /><button className="btn" type="submit">Eliminar</button></form>}
+                    {canWrite && <form action={deleteEntryAction} style={{ display: "inline" }}><input type="hidden" name="hoja" value={def!.id} /><input type="hidden" name="recId" value={r.id} /><button className="btn danger" type="submit">Eliminar</button></form>}
                   </td>
                 </tr>
               ))}</tbody>

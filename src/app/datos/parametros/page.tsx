@@ -37,7 +37,7 @@ export default async function Parametros({ searchParams }: { searchParams: Promi
           {areas.map((a) => (
             <li key={a.id} style={{ display: "flex", gap: 8, alignItems: "center" }}>
               <span>{a.name}</span>
-              {canWrite && <form action={removeAreaAction}><input type="hidden" name="name" value={a.name} /><button className="btn" type="submit" aria-label={`Quitar ${a.name}`}>Quitar</button></form>}
+              {canWrite && <form action={removeAreaAction}><input type="hidden" name="name" value={a.name} /><button className="btn danger" type="submit" aria-label={`Quitar ${a.name}`}>Quitar</button></form>}
             </li>
           ))}
         </ul>
