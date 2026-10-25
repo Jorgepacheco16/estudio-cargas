@@ -1,3 +1,4 @@
+import { Purpose } from "@/components/Purpose";
 import { loadAnalysis, parseMode } from "@/data/source";
 import { ExportButtons, ModeForm, fmt } from "@/components/Tools";
 import { EntrySection } from "@/components/entry/views";
@@ -9,7 +10,7 @@ export default async function Actividades({ searchParams }: { searchParams: Prom
   return (
     <main>
       <div className="head">
-        <div><h1>Actividades</h1><div className="sub">{label} · {a.activities.length} actividades</div></div>
+        <div><h1>Actividades</h1><Purpose k="actividades" /><div className="sub">{label} · {a.activities.length} actividades</div></div>
         <div className="tools"><ModeForm mode={mode} /><ExportButtons view="actividades" mode={mode} /></div>
       </div>
       <section className="card">

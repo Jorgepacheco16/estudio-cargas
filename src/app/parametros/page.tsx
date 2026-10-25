@@ -1,3 +1,4 @@
+import { Purpose } from "@/components/Purpose";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getDb } from "@/db/server";
@@ -23,7 +24,7 @@ export default async function Parametros({ searchParams }: { searchParams: Promi
   const initial = Object.fromEntries(def.fields.map((f) => [f.key, row ? toFormValue(f, row[f.key]) : ""]));
   return (
     <main>
-      <div className="head"><div><h1>Parámetros</h1><div className="sub">Supuestos, pesos, umbrales y lista de áreas · {study!.name}</div></div></div>
+      <div className="head"><div><h1>Parámetros</h1><Purpose k="parametros" /><div className="sub">Supuestos, pesos, umbrales y lista de áreas · {study!.name}</div></div></div>
       {sp.ok && <div className="banner" style={{ background: "var(--blue-soft)", color: "var(--blue)" }}>{sp.ok}</div>}
       {sp.error && <div className="banner" style={{ background: "var(--red-soft)", color: "var(--red-dark)" }}>{sp.error}</div>}
       <section className="card">

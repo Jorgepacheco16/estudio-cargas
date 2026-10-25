@@ -192,3 +192,25 @@ tbody tr:hover { background: var(--blue-soft); }
   .card { box-shadow: none; break-inside: avoid; }
   th { background: var(--blue) !important; color: #fff !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 }
+
+/* ───── Claridad: propósito, ayudas, calculado vs editable, detalle avanzado ───── */
+.lead { margin: 6px 0 0; max-width: 70ch; color: var(--ink); font-size: .9375rem; }
+.help { display: inline-flex; align-items: center; gap: 3px; border-bottom: 1px dotted var(--blue); cursor: help; color: inherit; }
+.help-i { display: inline-flex; align-items: center; justify-content: center; width: 16px; height: 16px; border-radius: 50%; background: var(--blue); color: #fff; font-size: .6875rem; font-weight: 700; font-style: italic; }
+.help:focus-visible { outline: 3px solid var(--blue); outline-offset: 2px; border-radius: 4px; }
+td.calc { background: color-mix(in srgb, var(--blue-soft) 45%, transparent); color: var(--muted); }
+th.calc { background: var(--blue-dark); }
+details.adv { border: 1px solid var(--line); border-radius: var(--radius); background: var(--card); box-shadow: var(--shadow); margin-top: 16px; }
+details.adv > summary { cursor: pointer; padding: 14px 20px; font-weight: 700; list-style: none; display: flex; align-items: center; gap: 8px; min-height: 48px; }
+details.adv > summary::-webkit-details-marker { display: none; }
+details.adv > summary::before { content: "▸"; color: var(--blue); transition: transform .15s; }
+details.adv[open] > summary::before { transform: rotate(90deg); }
+details.adv > summary:focus-visible { outline: 3px solid var(--blue); outline-offset: -3px; border-radius: var(--radius); }
+details.adv > .adv-body { padding: 0 20px 20px; }
+details.adv > .adv-body > .card { box-shadow: none; border: 0; padding: 0; margin-top: 0; }
+/* El color nunca va solo: cada estado lleva su símbolo */
+.pill.ok::before { content: "✔ "; }
+.pill.overload::before { content: "▲ "; }
+.pill.low::before { content: "● "; }
+.pill.nodata::before { content: "○ "; }
+.loading { padding: 48px 0; text-align: center; color: var(--muted); }

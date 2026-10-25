@@ -1,3 +1,4 @@
+import { Purpose } from "@/components/Purpose";
 import { loadAnalysis, parseMode } from "@/data/source";
 import { CargosTable } from "@/components/CargosTable";
 import { ExportButtons, ModeForm } from "@/components/Tools";
@@ -10,7 +11,7 @@ export default async function Cargos({ searchParams }: { searchParams: Promise<R
   return (
     <main>
       <div className="head">
-        <div><h1>Cargos y dotación</h1><div className="sub">{label} · {a.positions.length} cargo-sede</div></div>
+        <div><h1>Cargos y dotación</h1><Purpose k="cargos" /><div className="sub">{label} · {a.positions.length} cargo-sede</div></div>
         <div className="tools"><ModeForm mode={mode} /><ExportButtons view="cargos" mode={mode} /></div>
       </div>
       <section className="card"><CargosTable rows={a.positions} /></section>

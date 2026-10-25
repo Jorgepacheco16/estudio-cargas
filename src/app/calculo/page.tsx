@@ -1,3 +1,4 @@
+import { Purpose } from "@/components/Purpose";
 import Link from "next/link";
 import { getDb } from "@/db/server";
 import { getUser } from "@/lib/supabase/server";
@@ -31,12 +32,12 @@ export default async function Calculo({ searchParams }: { searchParams: Promise<
   return (
     <main>
       <div className="head">
-        <div><h1>Cálculo de tiempos</h1><div className="sub">{loaded.label} · horas por semana de cada actividad según los datos de Actividades</div></div>
+        <div><h1>Cálculo de tiempos</h1><Purpose k="calculo" /><div className="sub">{loaded.label} · horas por semana de cada actividad según los datos de Actividades</div></div>
         <div className="tools"><ModeForm mode={mode} /><ExportButtons view="calculo" mode={mode} /></div>
       </div>
 
       {hasSheet && (
-        <section className="card" aria-label="Comparación con la hoja de Google">
+        <details className="adv" open={sp.comparar === "1"}><summary>Detalle avanzado: comparar con la hoja de Google</summary><div className="adv-body"><section className="card" aria-label="Comparación con la hoja de Google">
           <h2>Comparación con el cálculo de tiempos de la hoja de Google</h2>
           <p className="note">La aplicación calcula con su propio motor. Aquí se lee, sin modificar nada, lo que calculó la hoja de Google y se compara actividad por actividad y columna por columna.</p>
           <Link className="btn" href={`/calculo?${qs}&comparar=1`} style={{ marginTop: 8 }}>Comparar ahora con la hoja de Google</Link>
@@ -48,7 +49,7 @@ export default async function Calculo({ searchParams }: { searchParams: Promise<
                 : `${cmp.same} de ${cmp.compared} coinciden · ${cmp.diffs.length} con diferencias (marcadas abajo) · ${cmp.missingInSheet.length} no están en la hoja de Google.`}
             </div>
           )}
-        </section>
+        </section></div></details>
       )}
 
       <section className="card" aria-label="Cálculo por actividad">

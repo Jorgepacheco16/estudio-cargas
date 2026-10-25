@@ -1,3 +1,4 @@
+import { Purpose } from "@/components/Purpose";
 import { redirect } from "next/navigation";
 import { getDb } from "@/db/server";
 import { getUser } from "@/lib/supabase/server";
@@ -21,7 +22,7 @@ export default async function Estudio({ searchParams }: { searchParams: Promise<
   return (
     <main>
       <div className="head">
-        <div><h1>Estudio</h1><div className="sub">Sesión: {user!.email ?? "usuario"}{active ? ` · ${active.name} (${ROLE[active.role] ?? active.role})` : ""}</div></div>
+        <div><h1>Estudio</h1><Purpose k="estudio" /><div className="sub">Sesión: {user!.email ?? "usuario"}{active ? ` · ${active.name} (${ROLE[active.role] ?? active.role})` : ""}</div></div>
       </div>
       {sp.ok && <div className="banner" style={{ background: "var(--blue-soft)", color: "var(--blue)" }}>{sp.ok}</div>}
       {sp.error && <div className="banner" style={{ background: "var(--red-soft)", color: "var(--red-dark)" }}>{sp.error}</div>}

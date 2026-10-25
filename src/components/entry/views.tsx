@@ -57,11 +57,11 @@ export async function EntrySection({ hoja, sp }: { hoja: EntryId; sp: Record<str
         ) : (
           <div className="tbl-wrap" tabIndex={0} role="region" aria-label="Tabla desplazable">
             <table>
-              <thead><tr>{listCols.map((c) => <th key={c.col}>{c.header}</th>)}{def.computed.map((c) => <th key={c.col} title="Calculado por la hoja (no editable)">{c.header} 🔒</th>)}<th>Acciones</th></tr></thead>
+              <thead><tr>{listCols.map((c) => <th key={c.col}>{c.header}</th>)}{def.computed.map((c) => <th key={c.col} className="calc" title="Calculado por la hoja (no editable)">{c.header} 🔒</th>)}<th>Acciones</th></tr></thead>
               <tbody>{rows.map((r) => (
                 <tr key={r.id}>
                   {listCols.map((c) => <td key={c.col}>{inputValue(def, c.field, r.cells[c.col])}</td>)}
-                  {def.computed.map((c) => { const v = r.computed[c.col]; return <td key={c.col} className="muted">{v === null || v === undefined || v === "" ? "—" : typeof v === "number" ? v.toLocaleString("es-CO", { maximumFractionDigits: 4 }) : String(v)}</td>; })}
+                  {def.computed.map((c) => { const v = r.computed[c.col]; return <td key={c.col} className="calc">{v === null || v === undefined || v === "" ? "—" : typeof v === "number" ? v.toLocaleString("es-CO", { maximumFractionDigits: 4 }) : String(v)}</td>; })}
                   <td style={{ whiteSpace: "nowrap" }}>
                     <Link className="btn" href={`${base}/${r.id}`}>{canWrite ? "Editar" : "Ver"}</Link>{" "}
                     {canWrite && <form action={deleteEntryAction} style={{ display: "inline" }}><input type="hidden" name="hoja" value={def.id} /><input type="hidden" name="recId" value={r.id} /><button className="btn danger" type="submit">Eliminar</button></form>}

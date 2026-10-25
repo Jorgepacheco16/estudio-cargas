@@ -1,3 +1,4 @@
+import { Purpose } from "@/components/Purpose";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getDb } from "@/db/server";
@@ -24,7 +25,7 @@ export default async function Historia({ searchParams }: { searchParams: Promise
   const vista = VISTAS.some(([v]) => v === sp.vista) ? sp.vista! : "linea";
   const study = await activeStudyId(user!.id);
   const tabs = <div className="tabs" role="tablist" aria-label="Vistas">{VISTAS.map(([v, l]) => <Link key={v} href={`/historia?vista=${v}`} role="tab" aria-selected={v === vista} className={v === vista ? "on" : ""}>{l}</Link>)}</div>;
-  const head = <div className="head"><div><h1>Historia y desviaciones</h1><div className="sub">{study ? study.name : "Sin estudio"} · propuesta fuera del Excel original; los umbrales son provisionales hasta que el responsable los decida</div></div></div>;
+  const head = <div className="head"><div><h1>Historia y desviaciones</h1><Purpose k="historia" /><div className="sub">{study ? study.name : "Sin estudio"} · propuesta fuera del Excel original; los umbrales son provisionales hasta que el responsable los decida</div></div></div>;
   if (!study) return <main>{head}{tabs}<div className="empty">Cree o seleccione un estudio en la sección Estudio.</div></main>;
   const canWrite = study.role !== "viewer";
   const db = getDb();

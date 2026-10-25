@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { Help } from "@/components/Purpose";
 import { EntrySection } from "@/components/entry/views";
 import { DIAGNOSTICO_SLUG } from "@/lib/entry-routes";
 import { SECCIONES } from "@/lib/diagnostico";
@@ -15,7 +16,7 @@ export default async function Seccion({ params, searchParams }: { params: Promis
   if (!id || !info) notFound();
   return (
     <main>
-      <div className="head"><div><h1>{info!.titulo}</h1><div className="sub">{info!.proposito}</div></div></div>
+      <div className="head"><div><h1>{info!.titulo}{info!.ayuda && <> <Help text={info!.ayuda} /></>}</h1><div className="sub">{info!.proposito}</div></div></div>
       <EntrySection hoja={id as EntryId} sp={await searchParams} />
     </main>
   );

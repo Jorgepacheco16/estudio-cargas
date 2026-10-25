@@ -1,3 +1,4 @@
+import { Purpose } from "@/components/Purpose";
 import Link from "next/link";
 import { loadAnalysis, parseMode } from "@/data/source";
 import { ExportButtons, ModeForm, fmt, fmtPct } from "@/components/Tools";
@@ -29,7 +30,7 @@ export default async function Drill({ searchParams }: { searchParams: Promise<Re
   return (
     <main>
       <div className="head">
-        <div><h1>Drill-down: {PRESET_ES[config]}</h1><div className="sub">{label} · Estudio → Área → Cargo → Actividad: haga clic para bajar un nivel</div></div>
+        <div><h1>Drill-down: {PRESET_ES[config]}</h1><Purpose k="drill" /><div className="sub">{label} · Estudio → Área → Cargo → Actividad: haga clic para bajar un nivel</div></div>
         <div className="tools"><ModeForm mode={mode} /><ExportButtons view="drill" mode={mode} extra={extra} /></div>
       </div>
       <section className="card">
