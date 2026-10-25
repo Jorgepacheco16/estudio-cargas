@@ -6,6 +6,8 @@ import { drillConfig } from "../src/domain/contracts";
 import { tablesFor } from "../src/lib/tables";
 import { buildDashboard } from "../src/domain/dashboard";
 import type { ActivityInput, StaffingInput } from "../src/domain/engine";
+import { CALC_4A, calcValue, compare4a } from "../src/domain/calc4a";
+import { occupantsOf } from "../src/domain/engine";
 import { check, summary } from "./helpers";
 
 /** Drill-down (§15.2) y comparador de sedes (hoja 2b) sobre los datos de la prueba dorada v1 (resultados idénticos al Excel). */
@@ -99,6 +101,21 @@ async function main() {
     if (comparablePositions(similar, "real")[0].sites !== 3) throw new Error("el selector debe listar primero el cargo con más sedes");
     const und = compareSites(similar, "Cajas", "Cajero", "real", 0.1, new Map([["real|cajas|sur|cajero", 2]]));
     if (und.rows.find((r) => r.site === "Sur")?.undocumented !== 2 || und.rows.find((r) => r.site === "Norte")?.undocumented !== 0) throw new Error("no documentadas");
+  });
+
+  await check("Hoja 4a en pantalla: 19 columnas con los encabezados del libro; la comparación detecta diferencias y actividades ausentes", () => {
+    if (CALC_4A.length !== 19 || new Set(CALC_4A.map((c) => c.col)).size !== 19) throw new Error("columnas");
+    const occ = (row: (typeof a.activities)[number]) => occupantsOf(fx.positions as StaffingInput[], (fx.activities as ActivityInput[]).find((x) => x.code === row.code)!);
+    // La «hoja de Google» simulada se arma con los mismos valores del motor: debe coincidir al 100 %.
+    const sheet = new Map(a.activities.map((x) => [x.code.toLowerCase(), { status: x.status, v: Object.fromEntries(CALC_4A.map((c) => [c.col, calcValue(x, c.key, occ(x))])) as Record<string, number | null> }]));
+    const ok = compare4a(a.activities, occ, sheet);
+    if (ok.same !== a.activities.length || ok.diffs.length || ok.missingInSheet.length) throw new Error(JSON.stringify(ok));
+    // Se altera un valor, se vacía una actividad y se quita otra: la comparación debe señalar exactamente eso.
+    const complete = a.activities.filter((x) => x.complete);
+    const first = sheet.get(complete[0].code.toLowerCase())!; first.v.AY = (first.v.AY ?? 0) + 0.5;
+    sheet.delete(complete[1].code.toLowerCase());
+    const bad = compare4a(a.activities, occ, sheet);
+    if (bad.diffs.length !== 1 || bad.diffs[0].code !== complete[0].code || !bad.diffs[0].fields.includes("Horas/sem TOTALES de la actividad en la sede") || bad.missingInSheet.join() !== complete[1].code) throw new Error(JSON.stringify(bad));
   });
 
   await check("Exportables: el drill-down y el comparador exportan lo mismo que muestran", () => {

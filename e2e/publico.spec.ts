@@ -78,7 +78,7 @@ test("sin desbordamiento horizontal y con tema oscuro legible", async ({ page })
   expect(bg).not.toBe("rgb(244, 246, 251)");
 });
 
-for (const ruta of ["/?modo=demo", "/login", "/cargos?modo=demo", "/actividades?modo=demo", "/sedes?modo=demo", "/drill?modo=demo&level=area&area=Cajas"]) {
+for (const ruta of ["/?modo=demo", "/login", "/cargos?modo=demo", "/actividades?modo=demo", "/sedes?modo=demo", "/calculo?modo=demo", "/drill?modo=demo&level=area&area=Cajas"]) {
   test(`accesibilidad (axe, sin fallas serias ni críticas): ${ruta}`, async ({ page }) => {
     await page.goto(ruta);
     const r = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa"]).analyze();
@@ -115,4 +115,11 @@ test("la política de contenido usa un código distinto por petición, sin 'unsa
   const h = (await request.get("/login")).headers();
   expect(h["cross-origin-opener-policy"]).toBe("same-origin");
   expect(h["cross-origin-resource-policy"]).toBe("same-origin");
+});
+test("la pestaña de la hoja 4a muestra las columnas calculadas con los encabezados del libro y se exporta", async ({ page }) => {
+  await page.goto("/calculo?modo=demo");
+  await expect(page.getByRole("heading", { name: "Cálculo de tiempos por actividad" })).toBeVisible();
+  for (const h of ["Ejecuciones por semana", "Horas/sem TOTALES de la actividad en la sede", "Horas/mes equivalentes"]) await expect(page.getByRole("columnheader", { name: h })).toBeVisible();
+  const [d] = await Promise.all([page.waitForEvent("download"), page.getByRole("link", { name: "Exportar Excel" }).click()]);
+  expect(d.suggestedFilename()).toMatch(/calculo.*\.xlsx$/);
 });
