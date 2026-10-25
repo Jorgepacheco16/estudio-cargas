@@ -1,0 +1,3037 @@
+{
+ "demo": {
+  "kpis": {
+   "activities": 15,
+   "complete": 14,
+   "hours": 284.11474359,
+   "capacity": 567,
+   "pct": 0.501084204,
+   "alerts": 3,
+   "overload": 1,
+   "low": 2
+  },
+  "positions": [
+   {
+    "dataKind": "demo",
+    "area": "Cajas",
+    "site": "Sede Demo 1",
+    "position": "Cargo Demo A (ficticio)",
+    "occupants": 6,
+    "capacity": 226.8,
+    "hours": 144.11474359,
+    "pct": 0.635426559,
+    "activities": 5,
+    "complete": 5,
+    "reading": "Dentro del rango",
+    "level": "ok"
+   },
+   {
+    "dataKind": "demo",
+    "area": "Cajas",
+    "site": "Sede Demo 1",
+    "position": "Cargo Demo B (ficticio)",
+    "occupants": 1,
+    "capacity": 37.8,
+    "hours": 41,
+    "pct": 1.084656085,
+    "activities": 5,
+    "complete": 5,
+    "reading": "ALERTA: carga superior a la capacidad. Revise datos, solapamientos, horas extra y distribución",
+    "level": "overload"
+   },
+   {
+    "dataKind": "demo",
+    "area": "Cajas",
+    "site": "Sede Demo 2",
+    "position": "Cargo Demo A (ficticio)",
+    "occupants": 4,
+    "capacity": 151.2,
+    "hours": 78,
+    "pct": 0.515873016,
+    "activities": 2,
+    "complete": 2,
+    "reading": "Dentro del rango",
+    "level": "ok"
+   },
+   {
+    "dataKind": "demo",
+    "area": "Carnes - Operaciones",
+    "site": "Sede Demo 1",
+    "position": "Cargo Demo C (ficticio)",
+    "occupants": 3,
+    "capacity": 113.4,
+    "hours": 18,
+    "pct": 0.158730159,
+    "activities": 2,
+    "complete": 1,
+    "reading": "VALIDAR: carga baja. Verifique que el inventario esté completo; no implica personal sobrante · Hay actividades con datos incompletos",
+    "level": "low"
+   },
+   {
+    "dataKind": "demo",
+    "area": "Carnes - Operaciones",
+    "site": "Sede Demo 1",
+    "position": "Cargo Demo D (ficticio)",
+    "occupants": 1,
+    "capacity": 37.8,
+    "hours": 3,
+    "pct": 0.079365079,
+    "activities": 1,
+    "complete": 1,
+    "reading": "VALIDAR: carga baja. Verifique que el inventario esté completo; no implica personal sobrante",
+    "level": "low"
+   }
+  ],
+  "activities": [
+   {
+    "code": "DEMO-001",
+    "dataKind": "demo",
+    "area": "Cajas",
+    "site": "Sede Demo 1",
+    "position": "Cargo Demo A (ficticio)",
+    "secondaryPosition": null,
+    "status": "OK",
+    "complete": true,
+    "hoursWeek": 98.4,
+    "hoursMonth": 426.4,
+    "result": {
+     "status": "OK",
+     "execPerWeek": 240,
+     "hoursPerExec": 0.068333333,
+     "hsBase": 16.4,
+     "hsHigh": 21.32,
+     "hsLow": 13.12,
+     "hsMin": 12.4,
+     "hsMax": 24.4,
+     "hsSel": 16.4,
+     "mult": 6,
+     "hTotal": 98.4,
+     "hPrimary": 98.4,
+     "hSecondary": 0,
+     "hUnplanned": 0,
+     "hRework": 2.4,
+     "hWait": 0,
+     "hHighTotal": 127.92,
+     "hLowTotal": 78.72,
+     "hMonth": 426.4
+    }
+   },
+   {
+    "code": "DEMO-002",
+    "dataKind": "demo",
+    "area": "Cajas",
+    "site": "Sede Demo 1",
+    "position": "Cargo Demo A (ficticio)",
+    "secondaryPosition": null,
+    "status": "OK",
+    "complete": true,
+    "hoursWeek": 36,
+    "hoursMonth": 156,
+    "result": {
+     "status": "OK",
+     "execPerWeek": 18,
+     "hoursPerExec": 0.333333333,
+     "hsBase": 6,
+     "hsHigh": 6,
+     "hsLow": 6,
+     "hsMin": 6,
+     "hsMax": 6,
+     "hsSel": 6,
+     "mult": 6,
+     "hTotal": 36,
+     "hPrimary": 36,
+     "hSecondary": 0,
+     "hUnplanned": 0,
+     "hRework": 0,
+     "hWait": 0,
+     "hHighTotal": 36,
+     "hLowTotal": 36,
+     "hMonth": 156
+    }
+   },
+   {
+    "code": "DEMO-003",
+    "dataKind": "demo",
+    "area": "Cajas",
+    "site": "Sede Demo 1",
+    "position": "Cargo Demo A (ficticio)",
+    "secondaryPosition": null,
+    "status": "OK",
+    "complete": true,
+    "hoursWeek": 3,
+    "hoursMonth": 13,
+    "result": {
+     "status": "OK",
+     "execPerWeek": 1,
+     "hoursPerExec": 3,
+     "hsBase": 3,
+     "hsHigh": 3,
+     "hsLow": 3,
+     "hsMin": 3,
+     "hsMax": 3,
+     "hsSel": 3,
+     "mult": 1,
+     "hTotal": 3,
+     "hPrimary": 3,
+     "hSecondary": 0,
+     "hUnplanned": 0,
+     "hRework": 0,
+     "hWait": 0,
+     "hHighTotal": 3,
+     "hLowTotal": 3,
+     "hMonth": 13
+    }
+   },
+   {
+    "code": "DEMO-004",
+    "dataKind": "demo",
+    "area": "Cajas",
+    "site": "Sede Demo 1",
+    "position": "Cargo Demo A (ficticio)",
+    "secondaryPosition": null,
+    "status": "OK",
+    "complete": true,
+    "hoursWeek": 0.923076923,
+    "hoursMonth": 4,
+    "result": {
+     "status": "OK",
+     "execPerWeek": 0.230769231,
+     "hoursPerExec": 4,
+     "hsBase": 0.923076923,
+     "hsHigh": 0.923076923,
+     "hsLow": 0.923076923,
+     "hsMin": 0.923076923,
+     "hsMax": 0.923076923,
+     "hsSel": 0.923076923,
+     "mult": 1,
+     "hTotal": 0.923076923,
+     "hPrimary": 0.923076923,
+     "hSecondary": 0,
+     "hUnplanned": 0,
+     "hRework": 0,
+     "hWait": 0,
+     "hHighTotal": 0.923076923,
+     "hLowTotal": 0.923076923,
+     "hMonth": 4
+    }
+   },
+   {
+    "code": "DEMO-005",
+    "dataKind": "demo",
+    "area": "Cajas",
+    "site": "Sede Demo 1",
+    "position": "Cargo Demo A (ficticio)",
+    "secondaryPosition": null,
+    "status": "OK",
+    "complete": true,
+    "hoursWeek": 1.791666667,
+    "hoursMonth": 7.763888889,
+    "result": {
+     "status": "OK",
+     "execPerWeek": 5,
+     "hoursPerExec": 0.358333333,
+     "hsBase": 1.791666667,
+     "hsHigh": 1.791666667,
+     "hsLow": 1.791666667,
+     "hsMin": 1.791666667,
+     "hsMax": 1.791666667,
+     "hsSel": 1.791666667,
+     "mult": 1,
+     "hTotal": 1.791666667,
+     "hPrimary": 1.791666667,
+     "hSecondary": 0,
+     "hUnplanned": 1.791666667,
+     "hRework": 0.125,
+     "hWait": 0,
+     "hHighTotal": 1.791666667,
+     "hLowTotal": 1.791666667,
+     "hMonth": 7.763888889
+    }
+   },
+   {
+    "code": "DEMO-006",
+    "dataKind": "demo",
+    "area": "Cajas",
+    "site": "Sede Demo 1",
+    "position": "Cargo Demo B (ficticio)",
+    "secondaryPosition": null,
+    "status": "OK",
+    "complete": true,
+    "hoursWeek": 17.5,
+    "hoursMonth": 75.833333333,
+    "result": {
+     "status": "OK",
+     "execPerWeek": 210,
+     "hoursPerExec": 0.083333333,
+     "hsBase": 17.5,
+     "hsHigh": 17.5,
+     "hsLow": 17.5,
+     "hsMin": 17.5,
+     "hsMax": 17.5,
+     "hsSel": 17.5,
+     "mult": 1,
+     "hTotal": 17.5,
+     "hPrimary": 17.5,
+     "hSecondary": 0,
+     "hUnplanned": 0,
+     "hRework": 0,
+     "hWait": 0,
+     "hHighTotal": 17.5,
+     "hLowTotal": 17.5,
+     "hMonth": 75.833333333
+    }
+   },
+   {
+    "code": "DEMO-007",
+    "dataKind": "demo",
+    "area": "Cajas",
+    "site": "Sede Demo 1",
+    "position": "Cargo Demo B (ficticio)",
+    "secondaryPosition": null,
+    "status": "OK",
+    "complete": true,
+    "hoursWeek": 6,
+    "hoursMonth": 26,
+    "result": {
+     "status": "OK",
+     "execPerWeek": 12,
+     "hoursPerExec": 0.5,
+     "hsBase": 6,
+     "hsHigh": 6,
+     "hsLow": 6,
+     "hsMin": 6,
+     "hsMax": 6,
+     "hsSel": 6,
+     "mult": 1,
+     "hTotal": 6,
+     "hPrimary": 6,
+     "hSecondary": 0,
+     "hUnplanned": 0,
+     "hRework": 0,
+     "hWait": 0,
+     "hHighTotal": 6,
+     "hLowTotal": 6,
+     "hMonth": 26
+    }
+   },
+   {
+    "code": "DEMO-008",
+    "dataKind": "demo",
+    "area": "Cajas",
+    "site": "Sede Demo 1",
+    "position": "Cargo Demo B (ficticio)",
+    "secondaryPosition": null,
+    "status": "OK",
+    "complete": true,
+    "hoursWeek": 12,
+    "hoursMonth": 52,
+    "result": {
+     "status": "OK",
+     "execPerWeek": 6,
+     "hoursPerExec": 2,
+     "hsBase": 12,
+     "hsHigh": 12,
+     "hsLow": 12,
+     "hsMin": 12,
+     "hsMax": 12,
+     "hsSel": 12,
+     "mult": 1,
+     "hTotal": 12,
+     "hPrimary": 12,
+     "hSecondary": 0,
+     "hUnplanned": 0,
+     "hRework": 0,
+     "hWait": 3,
+     "hHighTotal": 12,
+     "hLowTotal": 12,
+     "hMonth": 52
+    }
+   },
+   {
+    "code": "DEMO-009",
+    "dataKind": "demo",
+    "area": "Cajas",
+    "site": "Sede Demo 1",
+    "position": "Cargo Demo B (ficticio)",
+    "secondaryPosition": "Cargo Demo A (ficticio)",
+    "status": "OK",
+    "complete": true,
+    "hoursWeek": 8,
+    "hoursMonth": 34.666666667,
+    "result": {
+     "status": "OK",
+     "execPerWeek": 4,
+     "hoursPerExec": 2,
+     "hsBase": 8,
+     "hsHigh": 8,
+     "hsLow": 8,
+     "hsMin": 8,
+     "hsMax": 8,
+     "hsSel": 8,
+     "mult": 1,
+     "hTotal": 8,
+     "hPrimary": 4,
+     "hSecondary": 4,
+     "hUnplanned": 0,
+     "hRework": 0,
+     "hWait": 0,
+     "hHighTotal": 8,
+     "hLowTotal": 8,
+     "hMonth": 34.666666667
+    }
+   },
+   {
+    "code": "DEMO-010",
+    "dataKind": "demo",
+    "area": "Cajas",
+    "site": "Sede Demo 1",
+    "position": "Cargo Demo B (ficticio)",
+    "secondaryPosition": null,
+    "status": "OK",
+    "complete": true,
+    "hoursWeek": 1.5,
+    "hoursMonth": 6.5,
+    "result": {
+     "status": "OK",
+     "execPerWeek": 6,
+     "hoursPerExec": 0.25,
+     "hsBase": 1.5,
+     "hsHigh": 1.5,
+     "hsLow": 1.5,
+     "hsMin": 1.5,
+     "hsMax": 1.5,
+     "hsSel": 1.5,
+     "mult": 1,
+     "hTotal": 1.5,
+     "hPrimary": 1.5,
+     "hSecondary": 0,
+     "hUnplanned": 0,
+     "hRework": 0,
+     "hWait": 0,
+     "hHighTotal": 1.5,
+     "hLowTotal": 1.5,
+     "hMonth": 6.5
+    }
+   },
+   {
+    "code": "DEMO-011",
+    "dataKind": "demo",
+    "area": "Carnes - Operaciones",
+    "site": "Sede Demo 1",
+    "position": "Cargo Demo C (ficticio)",
+    "secondaryPosition": null,
+    "status": "OK",
+    "complete": true,
+    "hoursWeek": 18,
+    "hoursMonth": 78,
+    "result": {
+     "status": "OK",
+     "execPerWeek": 60,
+     "hoursPerExec": 0.1,
+     "hsBase": 6,
+     "hsHigh": 6,
+     "hsLow": 6,
+     "hsMin": 6,
+     "hsMax": 6,
+     "hsSel": 6,
+     "mult": 3,
+     "hTotal": 18,
+     "hPrimary": 18,
+     "hSecondary": 0,
+     "hUnplanned": 0,
+     "hRework": 0,
+     "hWait": 0,
+     "hHighTotal": 18,
+     "hLowTotal": 18,
+     "hMonth": 78
+    }
+   },
+   {
+    "code": "DEMO-012",
+    "dataKind": "demo",
+    "area": "Carnes - Operaciones",
+    "site": "Sede Demo 1",
+    "position": "Cargo Demo D (ficticio)",
+    "secondaryPosition": null,
+    "status": "OK",
+    "complete": true,
+    "hoursWeek": 3,
+    "hoursMonth": 13,
+    "result": {
+     "status": "OK",
+     "execPerWeek": 3,
+     "hoursPerExec": 1,
+     "hsBase": 3,
+     "hsHigh": 3,
+     "hsLow": 3,
+     "hsMin": 3,
+     "hsMax": 3,
+     "hsSel": 3,
+     "mult": 1,
+     "hTotal": 3,
+     "hPrimary": 3,
+     "hSecondary": 0,
+     "hUnplanned": 0,
+     "hRework": 0,
+     "hWait": 0,
+     "hHighTotal": 3,
+     "hLowTotal": 3,
+     "hMonth": 13
+    }
+   },
+   {
+    "code": "DEMO-013",
+    "dataKind": "demo",
+    "area": "Cajas",
+    "site": "Sede Demo 2",
+    "position": "Cargo Demo A (ficticio)",
+    "secondaryPosition": null,
+    "status": "OK",
+    "complete": true,
+    "hoursWeek": 60,
+    "hoursMonth": 260,
+    "result": {
+     "status": "OK",
+     "execPerWeek": 180,
+     "hoursPerExec": 0.083333333,
+     "hsBase": 15,
+     "hsHigh": 15,
+     "hsLow": 15,
+     "hsMin": 15,
+     "hsMax": 15,
+     "hsSel": 15,
+     "mult": 4,
+     "hTotal": 60,
+     "hPrimary": 60,
+     "hSecondary": 0,
+     "hUnplanned": 0,
+     "hRework": 0,
+     "hWait": 0,
+     "hHighTotal": 60,
+     "hLowTotal": 60,
+     "hMonth": 260
+    }
+   },
+   {
+    "code": "DEMO-014",
+    "dataKind": "demo",
+    "area": "Cajas",
+    "site": "Sede Demo 2",
+    "position": "Cargo Demo A (ficticio)",
+    "secondaryPosition": null,
+    "status": "OK",
+    "complete": true,
+    "hoursWeek": 18,
+    "hoursMonth": 78,
+    "result": {
+     "status": "OK",
+     "execPerWeek": 18,
+     "hoursPerExec": 0.25,
+     "hsBase": 4.5,
+     "hsHigh": 4.5,
+     "hsLow": 4.5,
+     "hsMin": 4.5,
+     "hsMax": 4.5,
+     "hsSel": 4.5,
+     "mult": 4,
+     "hTotal": 18,
+     "hPrimary": 18,
+     "hSecondary": 0,
+     "hUnplanned": 0,
+     "hRework": 0,
+     "hWait": 0,
+     "hHighTotal": 18,
+     "hLowTotal": 18,
+     "hMonth": 78
+    }
+   },
+   {
+    "code": "DEMO-015",
+    "dataKind": "demo",
+    "area": "Carnes - Operaciones",
+    "site": "Sede Demo 1",
+    "position": "Cargo Demo C (ficticio)",
+    "secondaryPosition": null,
+    "status": "Falta tiempo promedio",
+    "complete": false,
+    "hoursWeek": null,
+    "hoursMonth": null,
+    "result": {
+     "status": "MISSING_TIME"
+    }
+   }
+  ],
+  "dashboard": {
+   "modeBanner": "ATENCIÓN: se muestran datos DEMO (ficticios). No son resultados del estudio. Cambie a REAL para ver su información.",
+   "assumptionsBanner": "Supuestos de capacidad SIN validar (hoja Parametros): los porcentajes de capacidad son referenciales.",
+   "indicators": {
+    "areasWithInfo": "2 de 14",
+    "activities": 15,
+    "completePct": 0.933333333,
+    "hours": 284.11474359,
+    "capacity": 567,
+    "capacityPct": 0.501084204,
+    "overload": 1,
+    "lowLoad": 2,
+    "verifiablePct": 0,
+    "opportunities": 0,
+    "recoverableHours": 0,
+    "criticalNoBackup": 0
+   },
+   "areas": [
+    {
+     "area": "Administración punto de venta",
+     "activities": 0,
+     "complete": 0,
+     "hours": null,
+     "capacity": null,
+     "pct": null,
+     "reading": "Sin información registrada"
+    },
+    {
+     "area": "Cajas",
+     "activities": 12,
+     "complete": 12,
+     "hours": 263.11474359,
+     "capacity": 415.8,
+     "pct": 0.632791591,
+     "reading": "Dentro del rango"
+    },
+    {
+     "area": "Carnes - Operaciones",
+     "activities": 3,
+     "complete": 2,
+     "hours": 21,
+     "capacity": 151.2,
+     "pct": 0.138888889,
+     "reading": "VALIDAR: carga baja. Verifique que el inventario esté completo; no implica personal sobrante · Hay actividades con datos incompletos"
+    },
+    {
+     "area": "Domicilios",
+     "activities": 0,
+     "complete": 0,
+     "hours": null,
+     "capacity": null,
+     "pct": null,
+     "reading": "Sin información registrada"
+    },
+    {
+     "area": "Fruver - Operaciones",
+     "activities": 0,
+     "complete": 0,
+     "hours": null,
+     "capacity": null,
+     "pct": null,
+     "reading": "Sin información registrada"
+    },
+    {
+     "area": "Inventarios",
+     "activities": 0,
+     "complete": 0,
+     "hours": null,
+     "capacity": null,
+     "pct": null,
+     "reading": "Sin información registrada"
+    },
+    {
+     "area": "OPL - Operaciones",
+     "activities": 0,
+     "complete": 0,
+     "hours": null,
+     "capacity": null,
+     "pct": null,
+     "reading": "Sin información registrada"
+    },
+    {
+     "area": "Panadería - Operaciones",
+     "activities": 0,
+     "complete": 0,
+     "hours": null,
+     "capacity": null,
+     "pct": null,
+     "reading": "Sin información registrada"
+    },
+    {
+     "area": "PLS",
+     "activities": 0,
+     "complete": 0,
+     "hours": null,
+     "capacity": null,
+     "pct": null,
+     "reading": "Sin información registrada"
+    },
+    {
+     "area": "Recibo y almacenamiento - Operaciones",
+     "activities": 0,
+     "complete": 0,
+     "hours": null,
+     "capacity": null,
+     "pct": null,
+     "reading": "Sin información registrada"
+    },
+    {
+     "area": "Riesgos y prevención de pérdidas - Operaciones",
+     "activities": 0,
+     "complete": 0,
+     "hours": null,
+     "capacity": null,
+     "pct": null,
+     "reading": "Sin información registrada"
+    },
+    {
+     "area": "SAC - Operaciones",
+     "activities": 0,
+     "complete": 0,
+     "hours": null,
+     "capacity": null,
+     "pct": null,
+     "reading": "Sin información registrada"
+    },
+    {
+     "area": "Servicio al cliente PDV",
+     "activities": 0,
+     "complete": 0,
+     "hours": null,
+     "capacity": null,
+     "pct": null,
+     "reading": "Sin información registrada"
+    },
+    {
+     "area": "Supervisión de cajas y tesorería",
+     "activities": 0,
+     "complete": 0,
+     "hours": null,
+     "capacity": null,
+     "pct": null,
+     "reading": "Sin información registrada"
+    }
+   ],
+   "byValue": [
+    {
+     "label": "Agrega valor directo",
+     "hours": 0,
+     "pct": 0
+    },
+    {
+     "label": "Necesaria sin agregar valor directo",
+     "hours": 0,
+     "pct": 0
+    },
+    {
+     "label": "Podría ser prescindible",
+     "hours": 0,
+     "pct": 0
+    },
+    {
+     "label": "Sin clasificar",
+     "hours": 284.11474359,
+     "pct": 1
+    }
+   ],
+   "byType": [
+    {
+     "label": "Operativa",
+     "hours": 0,
+     "pct": 0
+    },
+    {
+     "label": "Administrativa",
+     "hours": 0,
+     "pct": 0
+    },
+    {
+     "label": "De control",
+     "hours": 0,
+     "pct": 0
+    },
+    {
+     "label": "De coordinación",
+     "hours": 0,
+     "pct": 0
+    },
+    {
+     "label": "De servicio",
+     "hours": 0,
+     "pct": 0
+    },
+    {
+     "label": "De soporte",
+     "hours": 0,
+     "pct": 0
+    },
+    {
+     "label": "Eventual",
+     "hours": 0,
+     "pct": 0
+    }
+   ],
+   "byPotential": [
+    {
+     "label": "Automatización",
+     "hours": 0,
+     "pct": 0
+    },
+    {
+     "label": "Estandarización",
+     "hours": 0,
+     "pct": 0
+    },
+    {
+     "label": "Simplificación",
+     "hours": 0,
+     "pct": 0
+    }
+   ],
+   "top10": [
+    {
+     "name": "",
+     "code": "DEMO-001",
+     "area": "Cajas",
+     "position": "Cargo Demo A (ficticio)",
+     "site": "Sede Demo 1",
+     "hours": 98.4,
+     "pct": 0.346338943
+    },
+    {
+     "name": "",
+     "code": "DEMO-013",
+     "area": "Cajas",
+     "position": "Cargo Demo A (ficticio)",
+     "site": "Sede Demo 2",
+     "hours": 60,
+     "pct": 0.211182282
+    },
+    {
+     "name": "",
+     "code": "DEMO-002",
+     "area": "Cajas",
+     "position": "Cargo Demo A (ficticio)",
+     "site": "Sede Demo 1",
+     "hours": 36,
+     "pct": 0.126709369
+    },
+    {
+     "name": "",
+     "code": "DEMO-014",
+     "area": "Cajas",
+     "position": "Cargo Demo A (ficticio)",
+     "site": "Sede Demo 2",
+     "hours": 18,
+     "pct": 0.063354685
+    },
+    {
+     "name": "",
+     "code": "DEMO-011",
+     "area": "Carnes - Operaciones",
+     "position": "Cargo Demo C (ficticio)",
+     "site": "Sede Demo 1",
+     "hours": 18,
+     "pct": 0.063354685
+    },
+    {
+     "name": "",
+     "code": "DEMO-006",
+     "area": "Cajas",
+     "position": "Cargo Demo B (ficticio)",
+     "site": "Sede Demo 1",
+     "hours": 17.5,
+     "pct": 0.061594832
+    },
+    {
+     "name": "",
+     "code": "DEMO-008",
+     "area": "Cajas",
+     "position": "Cargo Demo B (ficticio)",
+     "site": "Sede Demo 1",
+     "hours": 12,
+     "pct": 0.042236456
+    },
+    {
+     "name": "",
+     "code": "DEMO-009",
+     "area": "Cajas",
+     "position": "Cargo Demo B (ficticio)",
+     "site": "Sede Demo 1",
+     "hours": 8,
+     "pct": 0.028157638
+    },
+    {
+     "name": "",
+     "code": "DEMO-007",
+     "area": "Cajas",
+     "position": "Cargo Demo B (ficticio)",
+     "site": "Sede Demo 1",
+     "hours": 6,
+     "pct": 0.021118228
+    },
+    {
+     "name": "",
+     "code": "DEMO-012",
+     "area": "Carnes - Operaciones",
+     "position": "Cargo Demo D (ficticio)",
+     "site": "Sede Demo 1",
+     "hours": 3,
+     "pct": 0.010559114
+    }
+   ],
+   "coverage": [
+    {
+     "label": "Actividades con datos completos",
+     "value": "93%",
+     "note": "1 actividad(es) incompletas: vea el estado de captura de cada actividad."
+    },
+    {
+     "label": "Confianza ALTA en la estimación",
+     "value": "0",
+     "note": "Meta del estudio: respaldar con datos de confianza alta las actividades de mayor peso."
+    },
+    {
+     "label": "Confianza MEDIA",
+     "value": "0",
+     "note": ""
+    },
+    {
+     "label": "Confianza BAJA",
+     "value": "0",
+     "note": ""
+    },
+    {
+     "label": "Actividades con fuente verificable",
+     "value": "0%",
+     "note": ""
+    },
+    {
+     "label": "Medibilidad evaluada (hoja 5)",
+     "value": "0",
+     "note": "Faltan 15 actividades por evaluar."
+    },
+    {
+     "label": "…con baja medibilidad",
+     "value": "0",
+     "note": ""
+    },
+    {
+     "label": "Pertinencia evaluada (hoja 6)",
+     "value": "0",
+     "note": ""
+    },
+    {
+     "label": "…situación 1 (capacitar) / 2 (no corresponde) / 3 (especialización) / 4 (simplificar o automatizar)",
+     "value": "0 / 0 / 0 / 0",
+     "note": ""
+    },
+    {
+     "label": "Riesgos evaluados (hoja 7)",
+     "value": "0",
+     "note": ""
+    },
+    {
+     "label": "…criticidad crítica o alta",
+     "value": "0",
+     "note": ""
+    },
+    {
+     "label": "…requieren respaldo prioritario",
+     "value": "0",
+     "note": ""
+    }
+   ],
+   "opportunities": [
+    {
+     "label": "Hallazgo confirmado",
+     "value": "0"
+    },
+    {
+     "label": "Hipótesis",
+     "value": "0"
+    },
+    {
+     "label": "Recomendación pendiente de validación",
+     "value": "0"
+    },
+    {
+     "label": "Tiempo recuperable (h/sem) — solo confirmado",
+     "value": "0,0"
+    },
+    {
+     "label": "Impacto económico anual estimado (COP)",
+     "value": "Defina costo/hora"
+    },
+    {
+     "label": "Acciones con plazo vencido",
+     "value": "0"
+    }
+   ],
+   "conclusions": [
+    "COBERTURA: 15 actividades registradas en 2 de 14 áreas. El análisis es PRELIMINAR: faltan áreas por levantar.",
+    "CARGA: 1 cargo(s) superan la capacidad disponible. Antes de concluir sobrecarga, revise datos, solapamientos, horas extraordinarias y distribución de actividades.",
+    "CARGA BAJA: 2 cargo(s) con carga inventariada inferior al 50% de su capacidad. Valide que el inventario esté completo; no es evidencia de personal sobrante.",
+    "CALIDAD DE DATOS: 1 actividad(es) con datos incompletos; no se incluyen en las cargas hasta completarlas.",
+    "AUTOMATIZACIÓN: no hay actividades con potencial alto registradas.",
+    "RIESGOS: aún no hay actividades con riesgo evaluado (hoja 7).",
+    "OPORTUNIDADES: aún no hay oportunidades registradas (hoja 8).",
+    "SUPUESTOS: los supuestos de capacidad (reserva, días laborales) no han sido validados; los porcentajes de capacidad son referenciales.",
+    "MODO: se están mostrando datos DEMO (ficticios o mezclados con datos reales). Cambie el modo a REAL para ver solo la información del estudio."
+   ]
+  },
+  "calc4a": [
+   {
+    "code": "DEMO-001",
+    "kind": "demo",
+    "v": [
+     240,
+     0.068333333,
+     16.4,
+     21.32,
+     13.12,
+     12.4,
+     24.4,
+     16.4,
+     6,
+     6,
+     98.4,
+     98.4,
+     0,
+     0,
+     2.4,
+     0,
+     127.92,
+     78.72,
+     426.4
+    ]
+   },
+   {
+    "code": "DEMO-002",
+    "kind": "demo",
+    "v": [
+     18,
+     0.333333333,
+     6,
+     6,
+     6,
+     6,
+     6,
+     6,
+     6,
+     6,
+     36,
+     36,
+     0,
+     0,
+     0,
+     0,
+     36,
+     36,
+     156
+    ]
+   },
+   {
+    "code": "DEMO-003",
+    "kind": "demo",
+    "v": [
+     1,
+     3,
+     3,
+     3,
+     3,
+     3,
+     3,
+     3,
+     6,
+     1,
+     3,
+     3,
+     0,
+     0,
+     0,
+     0,
+     3,
+     3,
+     13
+    ]
+   },
+   {
+    "code": "DEMO-004",
+    "kind": "demo",
+    "v": [
+     0.230769231,
+     4,
+     0.923076923,
+     0.923076923,
+     0.923076923,
+     0.923076923,
+     0.923076923,
+     0.923076923,
+     6,
+     1,
+     0.923076923,
+     0.923076923,
+     0,
+     0,
+     0,
+     0,
+     0.923076923,
+     0.923076923,
+     4
+    ]
+   },
+   {
+    "code": "DEMO-005",
+    "kind": "demo",
+    "v": [
+     5,
+     0.358333333,
+     1.791666667,
+     1.791666667,
+     1.791666667,
+     1.791666667,
+     1.791666667,
+     1.791666667,
+     6,
+     1,
+     1.791666667,
+     1.791666667,
+     0,
+     1.791666667,
+     0.125,
+     0,
+     1.791666667,
+     1.791666667,
+     7.763888889
+    ]
+   },
+   {
+    "code": "DEMO-006",
+    "kind": "demo",
+    "v": [
+     210,
+     0.083333333,
+     17.5,
+     17.5,
+     17.5,
+     17.5,
+     17.5,
+     17.5,
+     1,
+     1,
+     17.5,
+     17.5,
+     0,
+     0,
+     0,
+     0,
+     17.5,
+     17.5,
+     75.833333333
+    ]
+   },
+   {
+    "code": "DEMO-007",
+    "kind": "demo",
+    "v": [
+     12,
+     0.5,
+     6,
+     6,
+     6,
+     6,
+     6,
+     6,
+     1,
+     1,
+     6,
+     6,
+     0,
+     0,
+     0,
+     0,
+     6,
+     6,
+     26
+    ]
+   },
+   {
+    "code": "DEMO-008",
+    "kind": "demo",
+    "v": [
+     6,
+     2,
+     12,
+     12,
+     12,
+     12,
+     12,
+     12,
+     1,
+     1,
+     12,
+     12,
+     0,
+     0,
+     0,
+     3,
+     12,
+     12,
+     52
+    ]
+   },
+   {
+    "code": "DEMO-009",
+    "kind": "demo",
+    "v": [
+     4,
+     2,
+     8,
+     8,
+     8,
+     8,
+     8,
+     8,
+     1,
+     1,
+     8,
+     4,
+     4,
+     0,
+     0,
+     0,
+     8,
+     8,
+     34.666666667
+    ]
+   },
+   {
+    "code": "DEMO-010",
+    "kind": "demo",
+    "v": [
+     6,
+     0.25,
+     1.5,
+     1.5,
+     1.5,
+     1.5,
+     1.5,
+     1.5,
+     1,
+     1,
+     1.5,
+     1.5,
+     0,
+     0,
+     0,
+     0,
+     1.5,
+     1.5,
+     6.5
+    ]
+   },
+   {
+    "code": "DEMO-011",
+    "kind": "demo",
+    "v": [
+     60,
+     0.1,
+     6,
+     6,
+     6,
+     6,
+     6,
+     6,
+     3,
+     3,
+     18,
+     18,
+     0,
+     0,
+     0,
+     0,
+     18,
+     18,
+     78
+    ]
+   },
+   {
+    "code": "DEMO-012",
+    "kind": "demo",
+    "v": [
+     3,
+     1,
+     3,
+     3,
+     3,
+     3,
+     3,
+     3,
+     1,
+     1,
+     3,
+     3,
+     0,
+     0,
+     0,
+     0,
+     3,
+     3,
+     13
+    ]
+   },
+   {
+    "code": "DEMO-013",
+    "kind": "demo",
+    "v": [
+     180,
+     0.083333333,
+     15,
+     15,
+     15,
+     15,
+     15,
+     15,
+     4,
+     4,
+     60,
+     60,
+     0,
+     0,
+     0,
+     0,
+     60,
+     60,
+     260
+    ]
+   },
+   {
+    "code": "DEMO-014",
+    "kind": "demo",
+    "v": [
+     18,
+     0.25,
+     4.5,
+     4.5,
+     4.5,
+     4.5,
+     4.5,
+     4.5,
+     4,
+     4,
+     18,
+     18,
+     0,
+     0,
+     0,
+     0,
+     18,
+     18,
+     78
+    ]
+   },
+   {
+    "code": "DEMO-015",
+    "kind": "demo",
+    "v": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     3,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ]
+   }
+  ]
+ },
+ "real": {
+  "kpis": {
+   "activities": 0,
+   "complete": 0,
+   "hours": 0,
+   "capacity": 0,
+   "pct": null,
+   "alerts": 0,
+   "overload": 0,
+   "low": 0
+  },
+  "positions": [],
+  "activities": [],
+  "dashboard": {
+   "modeBanner": "Mostrando solo datos REALES del estudio.",
+   "assumptionsBanner": "Supuestos de capacidad SIN validar (hoja Parametros): los porcentajes de capacidad son referenciales.",
+   "indicators": {
+    "areasWithInfo": "0 de 14",
+    "activities": 0,
+    "completePct": null,
+    "hours": 0,
+    "capacity": 0,
+    "capacityPct": null,
+    "overload": 0,
+    "lowLoad": 0,
+    "verifiablePct": null,
+    "opportunities": 0,
+    "recoverableHours": 0,
+    "criticalNoBackup": 0
+   },
+   "areas": [
+    {
+     "area": "Administración punto de venta",
+     "activities": 0,
+     "complete": 0,
+     "hours": null,
+     "capacity": null,
+     "pct": null,
+     "reading": "Sin información registrada"
+    },
+    {
+     "area": "Cajas",
+     "activities": 0,
+     "complete": 0,
+     "hours": null,
+     "capacity": null,
+     "pct": null,
+     "reading": "Sin información registrada"
+    },
+    {
+     "area": "Carnes - Operaciones",
+     "activities": 0,
+     "complete": 0,
+     "hours": null,
+     "capacity": null,
+     "pct": null,
+     "reading": "Sin información registrada"
+    },
+    {
+     "area": "Domicilios",
+     "activities": 0,
+     "complete": 0,
+     "hours": null,
+     "capacity": null,
+     "pct": null,
+     "reading": "Sin información registrada"
+    },
+    {
+     "area": "Fruver - Operaciones",
+     "activities": 0,
+     "complete": 0,
+     "hours": null,
+     "capacity": null,
+     "pct": null,
+     "reading": "Sin información registrada"
+    },
+    {
+     "area": "Inventarios",
+     "activities": 0,
+     "complete": 0,
+     "hours": null,
+     "capacity": null,
+     "pct": null,
+     "reading": "Sin información registrada"
+    },
+    {
+     "area": "OPL - Operaciones",
+     "activities": 0,
+     "complete": 0,
+     "hours": null,
+     "capacity": null,
+     "pct": null,
+     "reading": "Sin información registrada"
+    },
+    {
+     "area": "Panadería - Operaciones",
+     "activities": 0,
+     "complete": 0,
+     "hours": null,
+     "capacity": null,
+     "pct": null,
+     "reading": "Sin información registrada"
+    },
+    {
+     "area": "PLS",
+     "activities": 0,
+     "complete": 0,
+     "hours": null,
+     "capacity": null,
+     "pct": null,
+     "reading": "Sin información registrada"
+    },
+    {
+     "area": "Recibo y almacenamiento - Operaciones",
+     "activities": 0,
+     "complete": 0,
+     "hours": null,
+     "capacity": null,
+     "pct": null,
+     "reading": "Sin información registrada"
+    },
+    {
+     "area": "Riesgos y prevención de pérdidas - Operaciones",
+     "activities": 0,
+     "complete": 0,
+     "hours": null,
+     "capacity": null,
+     "pct": null,
+     "reading": "Sin información registrada"
+    },
+    {
+     "area": "SAC - Operaciones",
+     "activities": 0,
+     "complete": 0,
+     "hours": null,
+     "capacity": null,
+     "pct": null,
+     "reading": "Sin información registrada"
+    },
+    {
+     "area": "Servicio al cliente PDV",
+     "activities": 0,
+     "complete": 0,
+     "hours": null,
+     "capacity": null,
+     "pct": null,
+     "reading": "Sin información registrada"
+    },
+    {
+     "area": "Supervisión de cajas y tesorería",
+     "activities": 0,
+     "complete": 0,
+     "hours": null,
+     "capacity": null,
+     "pct": null,
+     "reading": "Sin información registrada"
+    }
+   ],
+   "byValue": [
+    {
+     "label": "Agrega valor directo",
+     "hours": 0,
+     "pct": null
+    },
+    {
+     "label": "Necesaria sin agregar valor directo",
+     "hours": 0,
+     "pct": null
+    },
+    {
+     "label": "Podría ser prescindible",
+     "hours": 0,
+     "pct": null
+    },
+    {
+     "label": "Sin clasificar",
+     "hours": 0,
+     "pct": null
+    }
+   ],
+   "byType": [
+    {
+     "label": "Operativa",
+     "hours": 0,
+     "pct": null
+    },
+    {
+     "label": "Administrativa",
+     "hours": 0,
+     "pct": null
+    },
+    {
+     "label": "De control",
+     "hours": 0,
+     "pct": null
+    },
+    {
+     "label": "De coordinación",
+     "hours": 0,
+     "pct": null
+    },
+    {
+     "label": "De servicio",
+     "hours": 0,
+     "pct": null
+    },
+    {
+     "label": "De soporte",
+     "hours": 0,
+     "pct": null
+    },
+    {
+     "label": "Eventual",
+     "hours": 0,
+     "pct": null
+    }
+   ],
+   "byPotential": [
+    {
+     "label": "Automatización",
+     "hours": 0,
+     "pct": null
+    },
+    {
+     "label": "Estandarización",
+     "hours": 0,
+     "pct": null
+    },
+    {
+     "label": "Simplificación",
+     "hours": 0,
+     "pct": null
+    }
+   ],
+   "top10": [],
+   "coverage": [
+    {
+     "label": "Actividades con datos completos",
+     "value": "—",
+     "note": "Sin actividades registradas."
+    },
+    {
+     "label": "Confianza ALTA en la estimación",
+     "value": "0",
+     "note": "Meta del estudio: respaldar con datos de confianza alta las actividades de mayor peso."
+    },
+    {
+     "label": "Confianza MEDIA",
+     "value": "0",
+     "note": ""
+    },
+    {
+     "label": "Confianza BAJA",
+     "value": "0",
+     "note": ""
+    },
+    {
+     "label": "Actividades con fuente verificable",
+     "value": "—",
+     "note": ""
+    },
+    {
+     "label": "Medibilidad evaluada (hoja 5)",
+     "value": "0",
+     "note": ""
+    },
+    {
+     "label": "…con baja medibilidad",
+     "value": "0",
+     "note": ""
+    },
+    {
+     "label": "Pertinencia evaluada (hoja 6)",
+     "value": "0",
+     "note": ""
+    },
+    {
+     "label": "…situación 1 (capacitar) / 2 (no corresponde) / 3 (especialización) / 4 (simplificar o automatizar)",
+     "value": "0 / 0 / 0 / 0",
+     "note": ""
+    },
+    {
+     "label": "Riesgos evaluados (hoja 7)",
+     "value": "0",
+     "note": ""
+    },
+    {
+     "label": "…criticidad crítica o alta",
+     "value": "0",
+     "note": ""
+    },
+    {
+     "label": "…requieren respaldo prioritario",
+     "value": "0",
+     "note": ""
+    }
+   ],
+   "opportunities": [
+    {
+     "label": "Hallazgo confirmado",
+     "value": "0"
+    },
+    {
+     "label": "Hipótesis",
+     "value": "0"
+    },
+    {
+     "label": "Recomendación pendiente de validación",
+     "value": "0"
+    },
+    {
+     "label": "Tiempo recuperable (h/sem) — solo confirmado",
+     "value": "0,0"
+    },
+    {
+     "label": "Impacto económico anual estimado (COP)",
+     "value": "Defina costo/hora"
+    },
+    {
+     "label": "Acciones con plazo vencido",
+     "value": "0"
+    }
+   ],
+   "conclusions": [
+    "Sin datos registrados en el modo seleccionado: aún no es posible generar conclusiones."
+   ]
+  },
+  "calc4a": []
+ },
+ "all": {
+  "kpis": {
+   "activities": 15,
+   "complete": 14,
+   "hours": 284.11474359,
+   "capacity": 567,
+   "pct": 0.501084204,
+   "alerts": 3,
+   "overload": 1,
+   "low": 2
+  },
+  "positions": [
+   {
+    "dataKind": "demo",
+    "area": "Cajas",
+    "site": "Sede Demo 1",
+    "position": "Cargo Demo A (ficticio)",
+    "occupants": 6,
+    "capacity": 226.8,
+    "hours": 144.11474359,
+    "pct": 0.635426559,
+    "activities": 5,
+    "complete": 5,
+    "reading": "Dentro del rango",
+    "level": "ok"
+   },
+   {
+    "dataKind": "demo",
+    "area": "Cajas",
+    "site": "Sede Demo 1",
+    "position": "Cargo Demo B (ficticio)",
+    "occupants": 1,
+    "capacity": 37.8,
+    "hours": 41,
+    "pct": 1.084656085,
+    "activities": 5,
+    "complete": 5,
+    "reading": "ALERTA: carga superior a la capacidad. Revise datos, solapamientos, horas extra y distribución",
+    "level": "overload"
+   },
+   {
+    "dataKind": "demo",
+    "area": "Cajas",
+    "site": "Sede Demo 2",
+    "position": "Cargo Demo A (ficticio)",
+    "occupants": 4,
+    "capacity": 151.2,
+    "hours": 78,
+    "pct": 0.515873016,
+    "activities": 2,
+    "complete": 2,
+    "reading": "Dentro del rango",
+    "level": "ok"
+   },
+   {
+    "dataKind": "demo",
+    "area": "Carnes - Operaciones",
+    "site": "Sede Demo 1",
+    "position": "Cargo Demo C (ficticio)",
+    "occupants": 3,
+    "capacity": 113.4,
+    "hours": 18,
+    "pct": 0.158730159,
+    "activities": 2,
+    "complete": 1,
+    "reading": "VALIDAR: carga baja. Verifique que el inventario esté completo; no implica personal sobrante · Hay actividades con datos incompletos",
+    "level": "low"
+   },
+   {
+    "dataKind": "demo",
+    "area": "Carnes - Operaciones",
+    "site": "Sede Demo 1",
+    "position": "Cargo Demo D (ficticio)",
+    "occupants": 1,
+    "capacity": 37.8,
+    "hours": 3,
+    "pct": 0.079365079,
+    "activities": 1,
+    "complete": 1,
+    "reading": "VALIDAR: carga baja. Verifique que el inventario esté completo; no implica personal sobrante",
+    "level": "low"
+   }
+  ],
+  "activities": [
+   {
+    "code": "DEMO-001",
+    "dataKind": "demo",
+    "area": "Cajas",
+    "site": "Sede Demo 1",
+    "position": "Cargo Demo A (ficticio)",
+    "secondaryPosition": null,
+    "status": "OK",
+    "complete": true,
+    "hoursWeek": 98.4,
+    "hoursMonth": 426.4,
+    "result": {
+     "status": "OK",
+     "execPerWeek": 240,
+     "hoursPerExec": 0.068333333,
+     "hsBase": 16.4,
+     "hsHigh": 21.32,
+     "hsLow": 13.12,
+     "hsMin": 12.4,
+     "hsMax": 24.4,
+     "hsSel": 16.4,
+     "mult": 6,
+     "hTotal": 98.4,
+     "hPrimary": 98.4,
+     "hSecondary": 0,
+     "hUnplanned": 0,
+     "hRework": 2.4,
+     "hWait": 0,
+     "hHighTotal": 127.92,
+     "hLowTotal": 78.72,
+     "hMonth": 426.4
+    }
+   },
+   {
+    "code": "DEMO-002",
+    "dataKind": "demo",
+    "area": "Cajas",
+    "site": "Sede Demo 1",
+    "position": "Cargo Demo A (ficticio)",
+    "secondaryPosition": null,
+    "status": "OK",
+    "complete": true,
+    "hoursWeek": 36,
+    "hoursMonth": 156,
+    "result": {
+     "status": "OK",
+     "execPerWeek": 18,
+     "hoursPerExec": 0.333333333,
+     "hsBase": 6,
+     "hsHigh": 6,
+     "hsLow": 6,
+     "hsMin": 6,
+     "hsMax": 6,
+     "hsSel": 6,
+     "mult": 6,
+     "hTotal": 36,
+     "hPrimary": 36,
+     "hSecondary": 0,
+     "hUnplanned": 0,
+     "hRework": 0,
+     "hWait": 0,
+     "hHighTotal": 36,
+     "hLowTotal": 36,
+     "hMonth": 156
+    }
+   },
+   {
+    "code": "DEMO-003",
+    "dataKind": "demo",
+    "area": "Cajas",
+    "site": "Sede Demo 1",
+    "position": "Cargo Demo A (ficticio)",
+    "secondaryPosition": null,
+    "status": "OK",
+    "complete": true,
+    "hoursWeek": 3,
+    "hoursMonth": 13,
+    "result": {
+     "status": "OK",
+     "execPerWeek": 1,
+     "hoursPerExec": 3,
+     "hsBase": 3,
+     "hsHigh": 3,
+     "hsLow": 3,
+     "hsMin": 3,
+     "hsMax": 3,
+     "hsSel": 3,
+     "mult": 1,
+     "hTotal": 3,
+     "hPrimary": 3,
+     "hSecondary": 0,
+     "hUnplanned": 0,
+     "hRework": 0,
+     "hWait": 0,
+     "hHighTotal": 3,
+     "hLowTotal": 3,
+     "hMonth": 13
+    }
+   },
+   {
+    "code": "DEMO-004",
+    "dataKind": "demo",
+    "area": "Cajas",
+    "site": "Sede Demo 1",
+    "position": "Cargo Demo A (ficticio)",
+    "secondaryPosition": null,
+    "status": "OK",
+    "complete": true,
+    "hoursWeek": 0.923076923,
+    "hoursMonth": 4,
+    "result": {
+     "status": "OK",
+     "execPerWeek": 0.230769231,
+     "hoursPerExec": 4,
+     "hsBase": 0.923076923,
+     "hsHigh": 0.923076923,
+     "hsLow": 0.923076923,
+     "hsMin": 0.923076923,
+     "hsMax": 0.923076923,
+     "hsSel": 0.923076923,
+     "mult": 1,
+     "hTotal": 0.923076923,
+     "hPrimary": 0.923076923,
+     "hSecondary": 0,
+     "hUnplanned": 0,
+     "hRework": 0,
+     "hWait": 0,
+     "hHighTotal": 0.923076923,
+     "hLowTotal": 0.923076923,
+     "hMonth": 4
+    }
+   },
+   {
+    "code": "DEMO-005",
+    "dataKind": "demo",
+    "area": "Cajas",
+    "site": "Sede Demo 1",
+    "position": "Cargo Demo A (ficticio)",
+    "secondaryPosition": null,
+    "status": "OK",
+    "complete": true,
+    "hoursWeek": 1.791666667,
+    "hoursMonth": 7.763888889,
+    "result": {
+     "status": "OK",
+     "execPerWeek": 5,
+     "hoursPerExec": 0.358333333,
+     "hsBase": 1.791666667,
+     "hsHigh": 1.791666667,
+     "hsLow": 1.791666667,
+     "hsMin": 1.791666667,
+     "hsMax": 1.791666667,
+     "hsSel": 1.791666667,
+     "mult": 1,
+     "hTotal": 1.791666667,
+     "hPrimary": 1.791666667,
+     "hSecondary": 0,
+     "hUnplanned": 1.791666667,
+     "hRework": 0.125,
+     "hWait": 0,
+     "hHighTotal": 1.791666667,
+     "hLowTotal": 1.791666667,
+     "hMonth": 7.763888889
+    }
+   },
+   {
+    "code": "DEMO-006",
+    "dataKind": "demo",
+    "area": "Cajas",
+    "site": "Sede Demo 1",
+    "position": "Cargo Demo B (ficticio)",
+    "secondaryPosition": null,
+    "status": "OK",
+    "complete": true,
+    "hoursWeek": 17.5,
+    "hoursMonth": 75.833333333,
+    "result": {
+     "status": "OK",
+     "execPerWeek": 210,
+     "hoursPerExec": 0.083333333,
+     "hsBase": 17.5,
+     "hsHigh": 17.5,
+     "hsLow": 17.5,
+     "hsMin": 17.5,
+     "hsMax": 17.5,
+     "hsSel": 17.5,
+     "mult": 1,
+     "hTotal": 17.5,
+     "hPrimary": 17.5,
+     "hSecondary": 0,
+     "hUnplanned": 0,
+     "hRework": 0,
+     "hWait": 0,
+     "hHighTotal": 17.5,
+     "hLowTotal": 17.5,
+     "hMonth": 75.833333333
+    }
+   },
+   {
+    "code": "DEMO-007",
+    "dataKind": "demo",
+    "area": "Cajas",
+    "site": "Sede Demo 1",
+    "position": "Cargo Demo B (ficticio)",
+    "secondaryPosition": null,
+    "status": "OK",
+    "complete": true,
+    "hoursWeek": 6,
+    "hoursMonth": 26,
+    "result": {
+     "status": "OK",
+     "execPerWeek": 12,
+     "hoursPerExec": 0.5,
+     "hsBase": 6,
+     "hsHigh": 6,
+     "hsLow": 6,
+     "hsMin": 6,
+     "hsMax": 6,
+     "hsSel": 6,
+     "mult": 1,
+     "hTotal": 6,
+     "hPrimary": 6,
+     "hSecondary": 0,
+     "hUnplanned": 0,
+     "hRework": 0,
+     "hWait": 0,
+     "hHighTotal": 6,
+     "hLowTotal": 6,
+     "hMonth": 26
+    }
+   },
+   {
+    "code": "DEMO-008",
+    "dataKind": "demo",
+    "area": "Cajas",
+    "site": "Sede Demo 1",
+    "position": "Cargo Demo B (ficticio)",
+    "secondaryPosition": null,
+    "status": "OK",
+    "complete": true,
+    "hoursWeek": 12,
+    "hoursMonth": 52,
+    "result": {
+     "status": "OK",
+     "execPerWeek": 6,
+     "hoursPerExec": 2,
+     "hsBase": 12,
+     "hsHigh": 12,
+     "hsLow": 12,
+     "hsMin": 12,
+     "hsMax": 12,
+     "hsSel": 12,
+     "mult": 1,
+     "hTotal": 12,
+     "hPrimary": 12,
+     "hSecondary": 0,
+     "hUnplanned": 0,
+     "hRework": 0,
+     "hWait": 3,
+     "hHighTotal": 12,
+     "hLowTotal": 12,
+     "hMonth": 52
+    }
+   },
+   {
+    "code": "DEMO-009",
+    "dataKind": "demo",
+    "area": "Cajas",
+    "site": "Sede Demo 1",
+    "position": "Cargo Demo B (ficticio)",
+    "secondaryPosition": "Cargo Demo A (ficticio)",
+    "status": "OK",
+    "complete": true,
+    "hoursWeek": 8,
+    "hoursMonth": 34.666666667,
+    "result": {
+     "status": "OK",
+     "execPerWeek": 4,
+     "hoursPerExec": 2,
+     "hsBase": 8,
+     "hsHigh": 8,
+     "hsLow": 8,
+     "hsMin": 8,
+     "hsMax": 8,
+     "hsSel": 8,
+     "mult": 1,
+     "hTotal": 8,
+     "hPrimary": 4,
+     "hSecondary": 4,
+     "hUnplanned": 0,
+     "hRework": 0,
+     "hWait": 0,
+     "hHighTotal": 8,
+     "hLowTotal": 8,
+     "hMonth": 34.666666667
+    }
+   },
+   {
+    "code": "DEMO-010",
+    "dataKind": "demo",
+    "area": "Cajas",
+    "site": "Sede Demo 1",
+    "position": "Cargo Demo B (ficticio)",
+    "secondaryPosition": null,
+    "status": "OK",
+    "complete": true,
+    "hoursWeek": 1.5,
+    "hoursMonth": 6.5,
+    "result": {
+     "status": "OK",
+     "execPerWeek": 6,
+     "hoursPerExec": 0.25,
+     "hsBase": 1.5,
+     "hsHigh": 1.5,
+     "hsLow": 1.5,
+     "hsMin": 1.5,
+     "hsMax": 1.5,
+     "hsSel": 1.5,
+     "mult": 1,
+     "hTotal": 1.5,
+     "hPrimary": 1.5,
+     "hSecondary": 0,
+     "hUnplanned": 0,
+     "hRework": 0,
+     "hWait": 0,
+     "hHighTotal": 1.5,
+     "hLowTotal": 1.5,
+     "hMonth": 6.5
+    }
+   },
+   {
+    "code": "DEMO-011",
+    "dataKind": "demo",
+    "area": "Carnes - Operaciones",
+    "site": "Sede Demo 1",
+    "position": "Cargo Demo C (ficticio)",
+    "secondaryPosition": null,
+    "status": "OK",
+    "complete": true,
+    "hoursWeek": 18,
+    "hoursMonth": 78,
+    "result": {
+     "status": "OK",
+     "execPerWeek": 60,
+     "hoursPerExec": 0.1,
+     "hsBase": 6,
+     "hsHigh": 6,
+     "hsLow": 6,
+     "hsMin": 6,
+     "hsMax": 6,
+     "hsSel": 6,
+     "mult": 3,
+     "hTotal": 18,
+     "hPrimary": 18,
+     "hSecondary": 0,
+     "hUnplanned": 0,
+     "hRework": 0,
+     "hWait": 0,
+     "hHighTotal": 18,
+     "hLowTotal": 18,
+     "hMonth": 78
+    }
+   },
+   {
+    "code": "DEMO-012",
+    "dataKind": "demo",
+    "area": "Carnes - Operaciones",
+    "site": "Sede Demo 1",
+    "position": "Cargo Demo D (ficticio)",
+    "secondaryPosition": null,
+    "status": "OK",
+    "complete": true,
+    "hoursWeek": 3,
+    "hoursMonth": 13,
+    "result": {
+     "status": "OK",
+     "execPerWeek": 3,
+     "hoursPerExec": 1,
+     "hsBase": 3,
+     "hsHigh": 3,
+     "hsLow": 3,
+     "hsMin": 3,
+     "hsMax": 3,
+     "hsSel": 3,
+     "mult": 1,
+     "hTotal": 3,
+     "hPrimary": 3,
+     "hSecondary": 0,
+     "hUnplanned": 0,
+     "hRework": 0,
+     "hWait": 0,
+     "hHighTotal": 3,
+     "hLowTotal": 3,
+     "hMonth": 13
+    }
+   },
+   {
+    "code": "DEMO-013",
+    "dataKind": "demo",
+    "area": "Cajas",
+    "site": "Sede Demo 2",
+    "position": "Cargo Demo A (ficticio)",
+    "secondaryPosition": null,
+    "status": "OK",
+    "complete": true,
+    "hoursWeek": 60,
+    "hoursMonth": 260,
+    "result": {
+     "status": "OK",
+     "execPerWeek": 180,
+     "hoursPerExec": 0.083333333,
+     "hsBase": 15,
+     "hsHigh": 15,
+     "hsLow": 15,
+     "hsMin": 15,
+     "hsMax": 15,
+     "hsSel": 15,
+     "mult": 4,
+     "hTotal": 60,
+     "hPrimary": 60,
+     "hSecondary": 0,
+     "hUnplanned": 0,
+     "hRework": 0,
+     "hWait": 0,
+     "hHighTotal": 60,
+     "hLowTotal": 60,
+     "hMonth": 260
+    }
+   },
+   {
+    "code": "DEMO-014",
+    "dataKind": "demo",
+    "area": "Cajas",
+    "site": "Sede Demo 2",
+    "position": "Cargo Demo A (ficticio)",
+    "secondaryPosition": null,
+    "status": "OK",
+    "complete": true,
+    "hoursWeek": 18,
+    "hoursMonth": 78,
+    "result": {
+     "status": "OK",
+     "execPerWeek": 18,
+     "hoursPerExec": 0.25,
+     "hsBase": 4.5,
+     "hsHigh": 4.5,
+     "hsLow": 4.5,
+     "hsMin": 4.5,
+     "hsMax": 4.5,
+     "hsSel": 4.5,
+     "mult": 4,
+     "hTotal": 18,
+     "hPrimary": 18,
+     "hSecondary": 0,
+     "hUnplanned": 0,
+     "hRework": 0,
+     "hWait": 0,
+     "hHighTotal": 18,
+     "hLowTotal": 18,
+     "hMonth": 78
+    }
+   },
+   {
+    "code": "DEMO-015",
+    "dataKind": "demo",
+    "area": "Carnes - Operaciones",
+    "site": "Sede Demo 1",
+    "position": "Cargo Demo C (ficticio)",
+    "secondaryPosition": null,
+    "status": "Falta tiempo promedio",
+    "complete": false,
+    "hoursWeek": null,
+    "hoursMonth": null,
+    "result": {
+     "status": "MISSING_TIME"
+    }
+   }
+  ],
+  "dashboard": {
+   "modeBanner": "ATENCIÓN: se muestran datos REAL y DEMO juntos. Cambie a REAL para ver solo la información del estudio.",
+   "assumptionsBanner": "Supuestos de capacidad SIN validar (hoja Parametros): los porcentajes de capacidad son referenciales.",
+   "indicators": {
+    "areasWithInfo": "2 de 14",
+    "activities": 15,
+    "completePct": 0.933333333,
+    "hours": 284.11474359,
+    "capacity": 567,
+    "capacityPct": 0.501084204,
+    "overload": 1,
+    "lowLoad": 2,
+    "verifiablePct": 0,
+    "opportunities": 0,
+    "recoverableHours": 0,
+    "criticalNoBackup": 0
+   },
+   "areas": [
+    {
+     "area": "Administración punto de venta",
+     "activities": 0,
+     "complete": 0,
+     "hours": null,
+     "capacity": null,
+     "pct": null,
+     "reading": "Sin información registrada"
+    },
+    {
+     "area": "Cajas",
+     "activities": 12,
+     "complete": 12,
+     "hours": 263.11474359,
+     "capacity": 415.8,
+     "pct": 0.632791591,
+     "reading": "Dentro del rango"
+    },
+    {
+     "area": "Carnes - Operaciones",
+     "activities": 3,
+     "complete": 2,
+     "hours": 21,
+     "capacity": 151.2,
+     "pct": 0.138888889,
+     "reading": "VALIDAR: carga baja. Verifique que el inventario esté completo; no implica personal sobrante · Hay actividades con datos incompletos"
+    },
+    {
+     "area": "Domicilios",
+     "activities": 0,
+     "complete": 0,
+     "hours": null,
+     "capacity": null,
+     "pct": null,
+     "reading": "Sin información registrada"
+    },
+    {
+     "area": "Fruver - Operaciones",
+     "activities": 0,
+     "complete": 0,
+     "hours": null,
+     "capacity": null,
+     "pct": null,
+     "reading": "Sin información registrada"
+    },
+    {
+     "area": "Inventarios",
+     "activities": 0,
+     "complete": 0,
+     "hours": null,
+     "capacity": null,
+     "pct": null,
+     "reading": "Sin información registrada"
+    },
+    {
+     "area": "OPL - Operaciones",
+     "activities": 0,
+     "complete": 0,
+     "hours": null,
+     "capacity": null,
+     "pct": null,
+     "reading": "Sin información registrada"
+    },
+    {
+     "area": "Panadería - Operaciones",
+     "activities": 0,
+     "complete": 0,
+     "hours": null,
+     "capacity": null,
+     "pct": null,
+     "reading": "Sin información registrada"
+    },
+    {
+     "area": "PLS",
+     "activities": 0,
+     "complete": 0,
+     "hours": null,
+     "capacity": null,
+     "pct": null,
+     "reading": "Sin información registrada"
+    },
+    {
+     "area": "Recibo y almacenamiento - Operaciones",
+     "activities": 0,
+     "complete": 0,
+     "hours": null,
+     "capacity": null,
+     "pct": null,
+     "reading": "Sin información registrada"
+    },
+    {
+     "area": "Riesgos y prevención de pérdidas - Operaciones",
+     "activities": 0,
+     "complete": 0,
+     "hours": null,
+     "capacity": null,
+     "pct": null,
+     "reading": "Sin información registrada"
+    },
+    {
+     "area": "SAC - Operaciones",
+     "activities": 0,
+     "complete": 0,
+     "hours": null,
+     "capacity": null,
+     "pct": null,
+     "reading": "Sin información registrada"
+    },
+    {
+     "area": "Servicio al cliente PDV",
+     "activities": 0,
+     "complete": 0,
+     "hours": null,
+     "capacity": null,
+     "pct": null,
+     "reading": "Sin información registrada"
+    },
+    {
+     "area": "Supervisión de cajas y tesorería",
+     "activities": 0,
+     "complete": 0,
+     "hours": null,
+     "capacity": null,
+     "pct": null,
+     "reading": "Sin información registrada"
+    }
+   ],
+   "byValue": [
+    {
+     "label": "Agrega valor directo",
+     "hours": 0,
+     "pct": 0
+    },
+    {
+     "label": "Necesaria sin agregar valor directo",
+     "hours": 0,
+     "pct": 0
+    },
+    {
+     "label": "Podría ser prescindible",
+     "hours": 0,
+     "pct": 0
+    },
+    {
+     "label": "Sin clasificar",
+     "hours": 284.11474359,
+     "pct": 1
+    }
+   ],
+   "byType": [
+    {
+     "label": "Operativa",
+     "hours": 0,
+     "pct": 0
+    },
+    {
+     "label": "Administrativa",
+     "hours": 0,
+     "pct": 0
+    },
+    {
+     "label": "De control",
+     "hours": 0,
+     "pct": 0
+    },
+    {
+     "label": "De coordinación",
+     "hours": 0,
+     "pct": 0
+    },
+    {
+     "label": "De servicio",
+     "hours": 0,
+     "pct": 0
+    },
+    {
+     "label": "De soporte",
+     "hours": 0,
+     "pct": 0
+    },
+    {
+     "label": "Eventual",
+     "hours": 0,
+     "pct": 0
+    }
+   ],
+   "byPotential": [
+    {
+     "label": "Automatización",
+     "hours": 0,
+     "pct": 0
+    },
+    {
+     "label": "Estandarización",
+     "hours": 0,
+     "pct": 0
+    },
+    {
+     "label": "Simplificación",
+     "hours": 0,
+     "pct": 0
+    }
+   ],
+   "top10": [
+    {
+     "name": "",
+     "code": "DEMO-001",
+     "area": "Cajas",
+     "position": "Cargo Demo A (ficticio)",
+     "site": "Sede Demo 1",
+     "hours": 98.4,
+     "pct": 0.346338943
+    },
+    {
+     "name": "",
+     "code": "DEMO-013",
+     "area": "Cajas",
+     "position": "Cargo Demo A (ficticio)",
+     "site": "Sede Demo 2",
+     "hours": 60,
+     "pct": 0.211182282
+    },
+    {
+     "name": "",
+     "code": "DEMO-002",
+     "area": "Cajas",
+     "position": "Cargo Demo A (ficticio)",
+     "site": "Sede Demo 1",
+     "hours": 36,
+     "pct": 0.126709369
+    },
+    {
+     "name": "",
+     "code": "DEMO-014",
+     "area": "Cajas",
+     "position": "Cargo Demo A (ficticio)",
+     "site": "Sede Demo 2",
+     "hours": 18,
+     "pct": 0.063354685
+    },
+    {
+     "name": "",
+     "code": "DEMO-011",
+     "area": "Carnes - Operaciones",
+     "position": "Cargo Demo C (ficticio)",
+     "site": "Sede Demo 1",
+     "hours": 18,
+     "pct": 0.063354685
+    },
+    {
+     "name": "",
+     "code": "DEMO-006",
+     "area": "Cajas",
+     "position": "Cargo Demo B (ficticio)",
+     "site": "Sede Demo 1",
+     "hours": 17.5,
+     "pct": 0.061594832
+    },
+    {
+     "name": "",
+     "code": "DEMO-008",
+     "area": "Cajas",
+     "position": "Cargo Demo B (ficticio)",
+     "site": "Sede Demo 1",
+     "hours": 12,
+     "pct": 0.042236456
+    },
+    {
+     "name": "",
+     "code": "DEMO-009",
+     "area": "Cajas",
+     "position": "Cargo Demo B (ficticio)",
+     "site": "Sede Demo 1",
+     "hours": 8,
+     "pct": 0.028157638
+    },
+    {
+     "name": "",
+     "code": "DEMO-007",
+     "area": "Cajas",
+     "position": "Cargo Demo B (ficticio)",
+     "site": "Sede Demo 1",
+     "hours": 6,
+     "pct": 0.021118228
+    },
+    {
+     "name": "",
+     "code": "DEMO-012",
+     "area": "Carnes - Operaciones",
+     "position": "Cargo Demo D (ficticio)",
+     "site": "Sede Demo 1",
+     "hours": 3,
+     "pct": 0.010559114
+    }
+   ],
+   "coverage": [
+    {
+     "label": "Actividades con datos completos",
+     "value": "93%",
+     "note": "1 actividad(es) incompletas: vea el estado de captura de cada actividad."
+    },
+    {
+     "label": "Confianza ALTA en la estimación",
+     "value": "0",
+     "note": "Meta del estudio: respaldar con datos de confianza alta las actividades de mayor peso."
+    },
+    {
+     "label": "Confianza MEDIA",
+     "value": "0",
+     "note": ""
+    },
+    {
+     "label": "Confianza BAJA",
+     "value": "0",
+     "note": ""
+    },
+    {
+     "label": "Actividades con fuente verificable",
+     "value": "0%",
+     "note": ""
+    },
+    {
+     "label": "Medibilidad evaluada (hoja 5)",
+     "value": "0",
+     "note": "Faltan 15 actividades por evaluar."
+    },
+    {
+     "label": "…con baja medibilidad",
+     "value": "0",
+     "note": ""
+    },
+    {
+     "label": "Pertinencia evaluada (hoja 6)",
+     "value": "0",
+     "note": ""
+    },
+    {
+     "label": "…situación 1 (capacitar) / 2 (no corresponde) / 3 (especialización) / 4 (simplificar o automatizar)",
+     "value": "0 / 0 / 0 / 0",
+     "note": ""
+    },
+    {
+     "label": "Riesgos evaluados (hoja 7)",
+     "value": "0",
+     "note": ""
+    },
+    {
+     "label": "…criticidad crítica o alta",
+     "value": "0",
+     "note": ""
+    },
+    {
+     "label": "…requieren respaldo prioritario",
+     "value": "0",
+     "note": ""
+    }
+   ],
+   "opportunities": [
+    {
+     "label": "Hallazgo confirmado",
+     "value": "0"
+    },
+    {
+     "label": "Hipótesis",
+     "value": "0"
+    },
+    {
+     "label": "Recomendación pendiente de validación",
+     "value": "0"
+    },
+    {
+     "label": "Tiempo recuperable (h/sem) — solo confirmado",
+     "value": "0,0"
+    },
+    {
+     "label": "Impacto económico anual estimado (COP)",
+     "value": "Defina costo/hora"
+    },
+    {
+     "label": "Acciones con plazo vencido",
+     "value": "0"
+    }
+   ],
+   "conclusions": [
+    "COBERTURA: 15 actividades registradas en 2 de 14 áreas. El análisis es PRELIMINAR: faltan áreas por levantar.",
+    "CARGA: 1 cargo(s) superan la capacidad disponible. Antes de concluir sobrecarga, revise datos, solapamientos, horas extraordinarias y distribución de actividades.",
+    "CARGA BAJA: 2 cargo(s) con carga inventariada inferior al 50% de su capacidad. Valide que el inventario esté completo; no es evidencia de personal sobrante.",
+    "CALIDAD DE DATOS: 1 actividad(es) con datos incompletos; no se incluyen en las cargas hasta completarlas.",
+    "AUTOMATIZACIÓN: no hay actividades con potencial alto registradas.",
+    "RIESGOS: aún no hay actividades con riesgo evaluado (hoja 7).",
+    "OPORTUNIDADES: aún no hay oportunidades registradas (hoja 8).",
+    "SUPUESTOS: los supuestos de capacidad (reserva, días laborales) no han sido validados; los porcentajes de capacidad son referenciales.",
+    "MODO: se están mostrando datos TODOS (ficticios o mezclados con datos reales). Cambie el modo a REAL para ver solo la información del estudio."
+   ]
+  },
+  "calc4a": [
+   {
+    "code": "DEMO-001",
+    "kind": "demo",
+    "v": [
+     240,
+     0.068333333,
+     16.4,
+     21.32,
+     13.12,
+     12.4,
+     24.4,
+     16.4,
+     6,
+     6,
+     98.4,
+     98.4,
+     0,
+     0,
+     2.4,
+     0,
+     127.92,
+     78.72,
+     426.4
+    ]
+   },
+   {
+    "code": "DEMO-002",
+    "kind": "demo",
+    "v": [
+     18,
+     0.333333333,
+     6,
+     6,
+     6,
+     6,
+     6,
+     6,
+     6,
+     6,
+     36,
+     36,
+     0,
+     0,
+     0,
+     0,
+     36,
+     36,
+     156
+    ]
+   },
+   {
+    "code": "DEMO-003",
+    "kind": "demo",
+    "v": [
+     1,
+     3,
+     3,
+     3,
+     3,
+     3,
+     3,
+     3,
+     6,
+     1,
+     3,
+     3,
+     0,
+     0,
+     0,
+     0,
+     3,
+     3,
+     13
+    ]
+   },
+   {
+    "code": "DEMO-004",
+    "kind": "demo",
+    "v": [
+     0.230769231,
+     4,
+     0.923076923,
+     0.923076923,
+     0.923076923,
+     0.923076923,
+     0.923076923,
+     0.923076923,
+     6,
+     1,
+     0.923076923,
+     0.923076923,
+     0,
+     0,
+     0,
+     0,
+     0.923076923,
+     0.923076923,
+     4
+    ]
+   },
+   {
+    "code": "DEMO-005",
+    "kind": "demo",
+    "v": [
+     5,
+     0.358333333,
+     1.791666667,
+     1.791666667,
+     1.791666667,
+     1.791666667,
+     1.791666667,
+     1.791666667,
+     6,
+     1,
+     1.791666667,
+     1.791666667,
+     0,
+     1.791666667,
+     0.125,
+     0,
+     1.791666667,
+     1.791666667,
+     7.763888889
+    ]
+   },
+   {
+    "code": "DEMO-006",
+    "kind": "demo",
+    "v": [
+     210,
+     0.083333333,
+     17.5,
+     17.5,
+     17.5,
+     17.5,
+     17.5,
+     17.5,
+     1,
+     1,
+     17.5,
+     17.5,
+     0,
+     0,
+     0,
+     0,
+     17.5,
+     17.5,
+     75.833333333
+    ]
+   },
+   {
+    "code": "DEMO-007",
+    "kind": "demo",
+    "v": [
+     12,
+     0.5,
+     6,
+     6,
+     6,
+     6,
+     6,
+     6,
+     1,
+     1,
+     6,
+     6,
+     0,
+     0,
+     0,
+     0,
+     6,
+     6,
+     26
+    ]
+   },
+   {
+    "code": "DEMO-008",
+    "kind": "demo",
+    "v": [
+     6,
+     2,
+     12,
+     12,
+     12,
+     12,
+     12,
+     12,
+     1,
+     1,
+     12,
+     12,
+     0,
+     0,
+     0,
+     3,
+     12,
+     12,
+     52
+    ]
+   },
+   {
+    "code": "DEMO-009",
+    "kind": "demo",
+    "v": [
+     4,
+     2,
+     8,
+     8,
+     8,
+     8,
+     8,
+     8,
+     1,
+     1,
+     8,
+     4,
+     4,
+     0,
+     0,
+     0,
+     8,
+     8,
+     34.666666667
+    ]
+   },
+   {
+    "code": "DEMO-010",
+    "kind": "demo",
+    "v": [
+     6,
+     0.25,
+     1.5,
+     1.5,
+     1.5,
+     1.5,
+     1.5,
+     1.5,
+     1,
+     1,
+     1.5,
+     1.5,
+     0,
+     0,
+     0,
+     0,
+     1.5,
+     1.5,
+     6.5
+    ]
+   },
+   {
+    "code": "DEMO-011",
+    "kind": "demo",
+    "v": [
+     60,
+     0.1,
+     6,
+     6,
+     6,
+     6,
+     6,
+     6,
+     3,
+     3,
+     18,
+     18,
+     0,
+     0,
+     0,
+     0,
+     18,
+     18,
+     78
+    ]
+   },
+   {
+    "code": "DEMO-012",
+    "kind": "demo",
+    "v": [
+     3,
+     1,
+     3,
+     3,
+     3,
+     3,
+     3,
+     3,
+     1,
+     1,
+     3,
+     3,
+     0,
+     0,
+     0,
+     0,
+     3,
+     3,
+     13
+    ]
+   },
+   {
+    "code": "DEMO-013",
+    "kind": "demo",
+    "v": [
+     180,
+     0.083333333,
+     15,
+     15,
+     15,
+     15,
+     15,
+     15,
+     4,
+     4,
+     60,
+     60,
+     0,
+     0,
+     0,
+     0,
+     60,
+     60,
+     260
+    ]
+   },
+   {
+    "code": "DEMO-014",
+    "kind": "demo",
+    "v": [
+     18,
+     0.25,
+     4.5,
+     4.5,
+     4.5,
+     4.5,
+     4.5,
+     4.5,
+     4,
+     4,
+     18,
+     18,
+     0,
+     0,
+     0,
+     0,
+     18,
+     18,
+     78
+    ]
+   },
+   {
+    "code": "DEMO-015",
+    "kind": "demo",
+    "v": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     3,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ]
+   }
+  ]
+ }
+}
