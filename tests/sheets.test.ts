@@ -189,6 +189,30 @@ async function main() {
       const prot = sheet.protections.get("2_Caracterizacion") ?? [];
       if (!prot.length || prot.some((r) => /^(P|Q|R|S|T|U|V)\d/.test(r))) throw new Error(`protección: ${JSON.stringify(prot)}`);
     });
+    await check("Cerrar huecos: tras eliminar una actividad el espejo deja la fila vacía y compactSheet sube las demás, sin tocar las fórmulas de la hoja (y no pisa filas sin vincular)", async () => {
+      const { compactSheet } = await import("../src/server/sheets/mirror");
+      const { adapterById } = await import("../src/server/sheets/adapters");
+      const g = new FakeSheet(TABS);                           // hoja limpia: solo registros de la app
+      const [{ id: positionId }] = (await admin.db.execute(sql`select id from public.positions where study_id = ${studyId} limit 1`)) as unknown as { id: string }[];
+      for (const code of ["ZGAP-1", "ZGAP-2"]) await addActivity(app.db, owner, studyId, { code, name: `Temporal ${code}`, positionId, dataKind: "real", calcMode: "per_event", scope: "per_employee", executions: 1, period: "week", unitsPerExecution: null, timeAvgMin: 3, planning: "planned" });
+      try {
+        await pushAll(app.db, conn, g);
+        g.set("3_Actividades", "C", 8, "=FORMULA_C8");
+        await admin.db.execute(sql`delete from public.activities where study_id = ${studyId} and code = 'ZGAP-1'`);
+        await pushAll(app.db, conn, g);                        // la fila de ZGAP-1 queda vacía entre dos registros
+        const col = async () => (await g.read("'3_Actividades'!B7:B80")).map((r) => String(r[0] ?? ""));
+        if (!(await col()).some((c, i, all) => c === "" && all.slice(i + 1).some((x) => x !== ""))) throw new Error("no se generó el hueco que se quería cerrar");
+        const r = await compactSheet(app.db, conn, g, adapterById("3")!);
+        const after = await col(); const n = after.filter(Boolean).length;
+        if (r.gapsBefore < 1 || after.slice(0, n).some((c) => c === "") || after.slice(n).some((c) => c !== "")) throw new Error(`sigue habiendo huecos: ${JSON.stringify(after.slice(0, n + 2))}`);
+        if (g.cell("3_Actividades", "C", 8) !== "=FORMULA_C8") throw new Error("se tocó una fórmula");
+        const again = await compactSheet(app.db, conn, g, adapterById("3")!);
+        if (again.moved !== 0 || again.cleared !== 0) throw new Error("la compactación no es idempotente");
+        g.setRow("3_Actividades", n + 7 + 3, { B: "AJENA-1", H: "Fila que no es de la app" });   // una fila ajena: NO se debe pisar
+        let refused = false; try { await compactSheet(app.db, conn, g, adapterById("3")!); } catch { refused = true; }
+        if (!refused) throw new Error("debía negarse a compactar con una fila sin vincular");
+      } finally { await admin.db.execute(sql`delete from public.activities where study_id = ${studyId} and code in ('ZGAP-1', 'ZGAP-2')`); }
+    });
     await check("Reconciliación: recupera una edición cuyo evento se perdió y no duplica nada al repetirse", async () => {
       const rows = await sheet.read("'3_Actividades'!B7:B30");
       const r = rows.findIndex((x) => x[0] === "T-2") + 7;

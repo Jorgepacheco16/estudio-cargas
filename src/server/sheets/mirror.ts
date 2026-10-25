@@ -104,6 +104,58 @@ async function mirrorSheet(db: Db, conn: Conn, gw: SheetGateway, a: Adapter, dry
   return st;
 }
 
+/**
+ * Cierra los huecos de una hoja: sube las filas vinculadas a la app para que queden contiguas (sin filas vacías entre registros), conservando su orden
+ * actual, y limpia las filas que quedan libres al final. Solo mueve casillas de ENTRADA y los vínculos; las fórmulas de la hoja no se tocan. Si hay filas
+ * sin vincular (que no son de la app) NO hace nada: moverlas podría pisarlas. Los registros nuevos que aún no estén en la hoja se agregan al final.
+ */
+export async function compactSheet(db: Db, conn: Conn, gw: SheetGateway, a: Adapter, dryRun = false): Promise<{ sheet: string; moved: number; cleared: number; gapsBefore: number }> {
+  const s = a.sheet, name = s.sheetName;
+  const internal = await findInternal(gw, a);
+  if (!internal) throw new Error(`La hoja «${name}» aún no tiene columnas de vínculo; sincronice primero.`);
+  const app = await withRls(db, { sub: conn.actorId }, (tx) => a.all(tx, conn.studyId));
+  const first = s.firstDataRow, last = s.lastDataRow;
+  const block = await gw.read(`${q(name)}!A${first}:${indexToCol(lastInputCol(a))}${last}`);
+  const links = await gw.read(`${q(name)}!${internal.idCol}${first}:${internal.verCol}${last}`);
+  const kindCol = a.spec.kind?.[0];
+  const dataCols = Object.values(a.spec).map(([col]) => col).filter((c) => c !== kindCol);
+  const cellAt = (row: number, col: string) => (block[row - first] ?? [])[colToIndex(col) - 1];
+  const linkAt = (row: number) => (links[row - first] ?? []) as unknown[];
+  const byId = new Map(app.map((x) => [x.rec.id, x]));
+  const linked: { row: number; item: (typeof app)[number] }[] = [];
+  let lastUsed = first - 1;
+  for (let row = first; row <= last; row++) {
+    const id = text(linkAt(row)[0]), has = id !== null || dataCols.some((c) => !blank(cellAt(row, c)));
+    if (!has) continue;
+    lastUsed = row;
+    const item = id ? byId.get(id) : undefined;
+    if (!item) { if (id) continue; throw new Error(`La fila ${row} de «${name}» no es de la app (sin vínculo); no se compacta para no pisarla.`); }
+    linked.push({ row, item });
+  }
+  const seen = new Set(linked.map((x) => x.item.rec.id));
+  const order = [...linked.map((x) => x.item), ...app.filter((x) => !seen.has(x.rec.id))];
+  const gapsBefore = linked.filter((x, i) => x.row !== first + i).length;
+  const updates: { range: string; values: CellValue[][] }[] = [];
+  let moved = 0;
+  order.forEach((it, i) => {
+    const row = first + i, want = cellsOf(a, it.rec, it.extras);
+    let changed = false;
+    for (const [col, v] of Object.entries(want)) if (!sameCell(cellAt(row, col), v)) { updates.push({ range: `${q(name)}!${col}${row}`, values: [[v]] }); changed = true; }
+    const link = linkAt(row);
+    if (text(link[0]) !== it.rec.id || Number(link[1]) !== it.rec.version) { updates.push({ range: `${q(name)}!${internal.idCol}${row}:${internal.verCol}${row}`, values: [[it.rec.id, it.rec.version]] }); changed = true; }
+    if (changed) moved++;
+  });
+  let cleared = 0;
+  for (let row = first + order.length; row <= Math.max(lastUsed, first + order.length - 1); row++) {
+    let any = false;
+    for (const col of dataCols) if (!blank(cellAt(row, col))) { updates.push({ range: `${q(name)}!${col}${row}`, values: [[""]] }); any = true; }
+    if (text(linkAt(row)[0]) !== null) { updates.push({ range: `${q(name)}!${internal.idCol}${row}:${internal.verCol}${row}`, values: [["", ""]] }); any = true; }
+    if (any) cleared++;
+  }
+  if (!dryRun) for (let i = 0; i < updates.length; i += 400) await gw.write(updates.slice(i, i + 400));
+  return { sheet: name, moved, cleared, gapsBefore };
+}
+
 /** Supuestos del estudio y lista de áreas → hoja «Parametros». Solo las casillas de entrada (C5, C7–C13, C19–C23 y la lista E5…). */
 export async function mirrorParameters(db: Db, conn: Conn, gw: SheetGateway, dryRun = false): Promise<PushStats> {
   const { p, ars } = await withRls(db, { sub: conn.actorId }, async (tx) => ({
