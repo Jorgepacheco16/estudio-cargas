@@ -6,7 +6,7 @@ export type NavEntry = NavLink | { group: string; items: NavLink[] };
 
 export const MENU: NavEntry[] = [
   { href: "/", label: "Inicio" },
-  { href: "/datos/parametros", label: "Parámetros" },
+  { href: "/parametros", label: "Parámetros" },
   { href: "/estudio", label: "Estudio" },
   { href: "/cargos", label: "Cargos y dotación" },
   { href: "/actividades", label: "Actividades" },
@@ -15,12 +15,12 @@ export const MENU: NavEntry[] = [
   {
     group: GRUPO_DIAGNOSTICO,
     items: [
-      { href: "/datos/5", label: "Medibilidad" },
-      { href: "/datos/6", label: "Pertinencia" },
-      { href: "/datos/7", label: "Riesgos" },
-      { href: "/datos/8", label: "Oportunidades" },
-      { href: "/datos/9", label: "Rediseño" },
-      { href: "/datos/10", label: "Plan de acción" },
+      { href: "/diagnostico/medibilidad", label: "Medibilidad" },
+      { href: "/diagnostico/pertinencia", label: "Pertinencia" },
+      { href: "/diagnostico/riesgos", label: "Riesgos" },
+      { href: "/diagnostico/oportunidades", label: "Oportunidades" },
+      { href: "/diagnostico/rediseno", label: "Rediseño" },
+      { href: "/diagnostico/plan-de-accion", label: "Plan de acción" },
     ],
   },
   { href: "/sedes", label: "Comparador sedes" },

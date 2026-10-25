@@ -7,7 +7,7 @@ import { MENU, isActive, type NavLink } from "@/lib/nav";
 /** Iconos de línea (24×24) por ruta; solo decorativos. */
 const ICON: Record<string, string> = {
   "/": "M3 12l9-9 9 9M5 10v10h5v-6h4v6h5V10",
-  "/datos/parametros": "M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0M14 4v4M8 10v4M16 16v4",
+  "/parametros": "M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0M14 4v4M8 10v4M16 16v4",
   "/estudio": "M4 5a2 2 0 012-2h12a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V5zM8 8h8M8 12h8M8 16h5",
   "/cargos": "M16 11a4 4 0 10-8 0 4 4 0 008 0zM4 21a8 8 0 0116 0",
   "/actividades": "M9 6h11M9 12h11M9 18h11M4 6h.01M4 12h.01M4 18h.01",

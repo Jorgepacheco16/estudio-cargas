@@ -34,11 +34,12 @@ test("la sesión se reconoce y el estudio se crea con sus 14 áreas", async () =
   await page.getByLabel("Nuevo estudio").fill("Estudio E2E");
   await page.getByRole("button", { name: "Crear estudio" }).click();
   await banner("Estudio creado con sus 14 áreas");
-  await open("/datos/parametros");
+  await open("/parametros");
   await expect(page.getByRole("heading", { name: "Áreas (14)" })).toBeVisible();
 });
 
-const nuevo = async (hoja: string) => { await open(`/datos/${hoja}/nuevo`); };
+const BASE: Record<string, string> = { "2": "/cargos", "3": "/actividades", "7": "/diagnostico/riesgos" };
+const nuevo = async (hoja: string) => { await open(`${BASE[hoja]}/nuevo`); };
 const guardar = () => page.getByRole("button", { name: "Guardar", exact: true }).click();
 
 test("se registra un cargo con su dotación desde la app (hoja 2) y la capacidad sale calculada, no editable", async () => {
@@ -53,7 +54,7 @@ test("se registra un cargo con su dotación desde la app (hoja 2) y la capacidad
   await expect(page.locator("input[name=c_R], input[name=c_V]")).toHaveCount(0); // las columnas con fórmula no tienen campo
   await guardar();
   await banner("Registro creado");
-  await expect(page.locator("tr", { hasText: "Cajero E2E" })).toContainText("OK");
+  await expect(page.locator("tr", { hasText: "Cajero E2E" }).last()).toContainText("OK"); // la fila de la lista de registros (la última tabla de la sección)
 });
 
 test("se registra una actividad completa (hoja 3) y se calcula su carga; editar el tiempo la recalcula", async () => {
@@ -73,7 +74,7 @@ test("se registra una actividad completa (hoja 3) y se calcula su carga; editar 
   await banner("Registro creado");
   await open("/calculo?modo=real");
   await expect(page.locator("tr", { hasText: "E2E-1" })).toContainText("4,00"); // 4/día × 6 días × 5 min ÷ 60 × 2 ocupantes
-  await open("/datos/3");
+  await open("/actividades");
   await page.locator("tr", { hasText: "E2E-1" }).getByRole("link", { name: "Editar" }).click(); await settle();
   await page.locator("input[name=c_T]").fill("10");
   await guardar();
@@ -96,9 +97,9 @@ test("una actividad con código repetido se rechaza con un mensaje claro", async
 test("409 por versión desactualizada: dos pestañas editan la misma actividad y la segunda recibe el conflicto sin pisar a la primera", async () => {
   const other = await page.context().newPage();
   try {
-    await open("/datos/3");
+    await open("/actividades");
     await page.locator("tr", { hasText: "E2E-1" }).getByRole("link", { name: "Editar" }).click(); await settle();
-    await page.waitForURL(/\/datos\/3\/[0-9a-f-]{36}$/); await settle();
+    await page.waitForURL(/\/actividades\/[0-9a-f-]{36}$/); await settle();
     const url = page.url();                  // esta pestaña queda con la versión vista
     await other.goto(url); await other.waitForLoadState("networkidle"); await other.waitForTimeout(1000);
     await expect(other.locator("input[name=c_T]"), `la segunda pestaña (${other.url()}) muestra: ${(await other.locator("body").innerText()).replace(/\s+/g, " ").slice(0, 300)}`).toBeVisible({ timeout: 15000 });
@@ -120,7 +121,7 @@ test("un usuario de solo lectura (viewer) ve los datos pero no puede modificar n
   try {
     await signInCookies(viewer, ctx, baseURL!);
     const p = await ctx.newPage();
-    for (const [ruta, boton] of [["/datos/2/nuevo", "Guardar"], ["/datos/7/nuevo", "Guardar"]] as const) {
+    for (const [ruta, boton] of [["/cargos/nuevo", "Guardar"], ["/diagnostico/riesgos/nuevo", "Guardar"]] as const) {
       await p.goto(ruta); await p.waitForLoadState("networkidle");
       await expect(p.getByText("Su rol es de solo lectura")).toBeVisible();
       await expect(p.getByRole("button", { name: boton }).first()).toBeDisabled();
@@ -156,13 +157,13 @@ test("hoja 7: se captura el riesgo desde la app y se muestra la criticidad calcu
 });
 
 test("un valor inválido al editar un registro se rechaza (escala 1 a 5) y el dato no cambia", async () => {
-  await open("/datos/7");
+  await open("/diagnostico/riesgos");
   await page.locator("tr", { hasText: "E2E-1" }).getByRole("link", { name: "Editar" }).click();
   await settle();
   await page.locator("input[name=c_K]").fill("9");
   await guardar();
   await banner(/Impacto legal.*fuera de la escala 1–5/);
-  await open("/datos/7");
+  await open("/diagnostico/riesgos");
   await expect(page.locator("tr", { hasText: "E2E-1" })).toContainText("Crítica"); // el registro anterior sigue igual
 });
 test("la exportación a Excel con sesión trae los datos del estudio", async () => {
