@@ -11,8 +11,11 @@ export async function UserBadge() {
     <>
       <AutoRefresh />
       <div className="account" aria-label="Cuenta">
-        <span className="account-label">Sesión iniciada</span>
-        <span className="account-mail" title={user.email ?? undefined}>{user.email}</span>
+        <span className="account-avatar" aria-hidden="true">{(user.email ?? "?").charAt(0).toUpperCase()}</span>
+        <span className="account-text">
+          <span className="account-mail">{user.email}</span>
+          <span className="account-label"><span className="account-dot" aria-hidden="true" />Sesión iniciada</span>
+        </span>
       </div>
       <form className="session" action={signOutAction}>
         <button className="btn" type="submit">

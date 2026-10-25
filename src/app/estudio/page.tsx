@@ -27,33 +27,56 @@ export default async function Estudio({ searchParams }: { searchParams: Promise<
       {sp.ok && <div className="banner" style={{ background: "var(--blue-soft)", color: "var(--blue)" }}>{sp.ok}</div>}
       {sp.error && <div className="banner" style={{ background: "var(--red-soft)", color: "var(--red-dark)" }}>{sp.error}</div>}
 
-      <section className="card">
-        <h2>Estudios</h2>
-        {studies.length > 0 && (
-          <form action={selectStudyAction} style={{ display: "flex", gap: 8, alignItems: "flex-end", marginTop: 12, flexWrap: "wrap" }}>
-            <label className="f">Estudio activo
-              <select name="id" defaultValue={active?.id}>{studies.map((s) => <option key={s.id} value={s.id}>{s.name} · {ROLE[s.role] ?? s.role}</option>)}</select>
-            </label>
-            <button className="btn" type="submit">Usar este estudio</button>
-          </form>
-        )}
-        <form action={createStudyAction} style={{ display: "flex", gap: 8, alignItems: "flex-end", marginTop: 12, flexWrap: "wrap" }}>
-          <label className="f">Nuevo estudio<input name="name" required minLength={3} maxLength={120} placeholder="Nombre del estudio" /></label>
-          <label className="f">Descripción (opcional)<input name="description" maxLength={300} /></label>
-          <button className="btn solid" type="submit">Crear estudio</button>
-        </form>
-        <p className="note">Al crear un estudio se cargan las 14 áreas operativas del Excel y los parámetros por defecto.</p>
-        {active && <p style={{ marginTop: 12 }}><a className="btn" href="/api/respaldo" download>Descargar respaldo completo (Excel)</a></p>}
-      </section>
-
-      {active && (
-        <section className="card">
-          <h2>Captura de datos</h2>
-          <p className="note">La aplicación es la fuente de los datos: cada dato se ingresa en su sección (Parámetros, Cargos y dotación, Actividades y Diagnóstico y rediseño) y se escribe automáticamente en la hoja de Google. Las columnas con fórmula se muestran como valores calculados, sin edición.</p>
-          <p style={{ marginTop: 12 }}><a className="btn solid" href="/cargos">Ir a Cargos y dotación</a></p>
+      <div className="grid-2">
+        <section className="card" aria-label="Estudio activo">
+          <h2>Estudio activo</h2>
+          <p className="note">Todas las secciones muestran y guardan los datos del estudio activo.</p>
+          {studies.length > 0 ? (
+            <form action={selectStudyAction} className="stack-form">
+              <div className="field">
+                <label htmlFor="estudio-id">Estudio</label>
+                <select id="estudio-id" name="id" defaultValue={active?.id}>{studies.map((s) => <option key={s.id} value={s.id}>{s.name} · {ROLE[s.role] ?? s.role}</option>)}</select>
+                <p className="hint">{active ? `Su rol en este estudio: ${ROLE[active.role] ?? active.role}.` : ""}</p>
+              </div>
+              <div><button className="btn" type="submit">Usar este estudio</button></div>
+            </form>
+          ) : <div className="empty">Aún no tiene estudios. Cree el primero en el bloque de la derecha.</div>}
         </section>
-      )}
-    </main>
+
+        <section className="card" aria-label="Crear un estudio">
+          <h2>Crear un estudio</h2>
+          <p className="note">Al crear un estudio se cargan las 14 áreas operativas del Excel y los parámetros por defecto.</p>
+          <form action={createStudyAction} className="stack-form">
+            <div className="field">
+              <label htmlFor="estudio-nombre">Nombre del nuevo estudio</label>
+              <input id="estudio-nombre" name="name" required minLength={3} maxLength={120} />
+              <p className="hint">Mínimo 3 caracteres.</p>
+            </div>
+            <div className="field">
+              <label htmlFor="estudio-desc">Descripción (opcional)</label>
+              <input id="estudio-desc" name="description" maxLength={300} />
+              <p className="hint">Para qué se hace el estudio, sede o período.</p>
+            </div>
+            <div><button className="btn solid" type="submit">Crear estudio</button></div>
+          </form>
+        </section>
+
+        {active && (
+          <section className="card" aria-label="Respaldo">
+            <h2>Respaldo del estudio</h2>
+            <p className="note">Descargue un Excel con todos los datos del estudio activo: cargos, actividades, evaluaciones y plan de acción.</p>
+            <div className="stack-form"><div><a className="btn" href="/api/respaldo" download>Descargar respaldo completo (Excel)</a></div></div>
+          </section>
+        )}
+
+        {active && (
+          <section className="card" aria-label="Captura de datos">
+            <h2>Captura de datos</h2>
+            <p className="note">La aplicación es la fuente de los datos: cada dato se ingresa en su sección (Parámetros, Cargos y dotación, Actividades y Diagnóstico y rediseño) y se escribe automáticamente en la hoja de Google. Las columnas con fórmula se muestran como valores calculados, sin edición.</p>
+            <div className="stack-form"><div><a className="btn solid" href="/cargos">Ir a Cargos y dotación</a></div></div>
+          </section>
+        )}
+      </div>    </main>
   );
 }
 
