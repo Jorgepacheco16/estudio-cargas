@@ -5,7 +5,7 @@ export interface Thresholds { high: number; low: number }
 export type Mode = "real" | "demo" | "all";
 export type AlertLevel = "overload" | "low" | "ok" | "nodata";
 
-export interface ActivityRow { code: string; dataKind: string; area: string; site: string; position: string; secondaryPosition: string | null; status: string; complete: boolean; hoursWeek: number | null; hoursMonth: number | null; result: ActivityResult }
+export interface ActivityRow { code: string; dataKind: string; area: string; site: string; position: string; secondaryPosition: string | null; secondaryArea?: string | null; secondarySite?: string | null; status: string; complete: boolean; hoursWeek: number | null; hoursMonth: number | null; result: ActivityResult }
 export interface PositionRow {
   dataKind: string; area: string; site: string; position: string; occupants: number; capacity: number; hours: number; pct: number | null;
   activities: number; complete: number; reading: string; level: AlertLevel;
@@ -33,7 +33,7 @@ export function analyze(staffAll: StaffingInput[], actsAll: ActivityInput[], prm
   const acts = actsAll.filter((a) => keep(a.dataKind));
   const results = acts.map((a) => computeActivity(a, prm, occupantsOf(staff, a)));
   const activities: ActivityRow[] = acts.map((a, i) => ({
-    code: a.code, dataKind: a.dataKind, area: a.area, site: a.site, position: a.position, secondaryPosition: a.secondaryPosition ?? null, status: STATUS_ES[results[i].status], complete: results[i].status === "OK",
+    code: a.code, dataKind: a.dataKind, area: a.area, site: a.site, position: a.position, secondaryPosition: a.secondaryPosition ?? null, secondaryArea: a.secondaryArea ?? null, secondarySite: a.secondarySite ?? null, status: STATUS_ES[results[i].status], complete: results[i].status === "OK",
     hoursWeek: results[i].hTotal ?? null, hoursMonth: results[i].hMonth ?? null, result: results[i],
   }));
 
@@ -42,7 +42,10 @@ export function analyze(staffAll: StaffingInput[], actsAll: ActivityInput[], prm
   for (const a of acts) {
     if (!keys.has(key(a.dataKind, a.area, a.site, a.position))) keys.set(key(a.dataKind, a.area, a.site, a.position), a);
     // El cargo que asume el resto de la carga también aparece (D-08: sin dotación se muestra «Falta registrar cantidad y jornada»).
-    if (a.secondaryPosition && !keys.has(key(a.dataKind, a.area, a.site, a.secondaryPosition))) keys.set(key(a.dataKind, a.area, a.site, a.secondaryPosition), { dataKind: a.dataKind, area: a.area, site: a.site, position: a.secondaryPosition });
+    if (a.secondaryPosition) {
+      const [sa, ss] = [a.secondaryArea ?? a.area, a.secondarySite ?? a.site];
+      if (!keys.has(key(a.dataKind, sa, ss, a.secondaryPosition))) keys.set(key(a.dataKind, sa, ss, a.secondaryPosition), { dataKind: a.dataKind, area: sa, site: ss, position: a.secondaryPosition });
+    }
   }
 
   const positions: PositionRow[] = [...keys.entries()].map(([k, p]) => {
@@ -53,7 +56,7 @@ export function analyze(staffAll: StaffingInput[], actsAll: ActivityInput[], prm
     acts.forEach((a, i) => {
       const r = results[i];
       if (key(a.dataKind, a.area, a.site, a.position) === k) { count++; if (r.status === "OK") { complete++; hours += r.hPrimary!; } }
-      if (r.status === "OK" && a.secondaryPosition && key(a.dataKind, a.area, a.site, a.secondaryPosition) === k) hours += r.hSecondary!;
+      if (r.status === "OK" && a.secondaryPosition && key(a.dataKind, a.secondaryArea ?? a.area, a.secondarySite ?? a.site, a.secondaryPosition) === k) hours += r.hSecondary!;
     });
     const pct = capacity > 0 && hours > 0 ? hours / capacity : null;
     const { reading, level } = readPosition({ activities: count, complete, hours, capacity, pct }, th);

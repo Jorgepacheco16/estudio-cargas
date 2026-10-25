@@ -122,6 +122,7 @@ export async function loadStudyDataTx(tx: Tx, studyId: string): Promise<StudyDat
         executions: num(a.executionsPerPeriod), period: a.period, unitsPerExecution: num(a.unitsPerExecution), timeAvgMin: num(a.timeAvgMin), timeMinMin: num(a.timeMinMin), timeMaxMin: num(a.timeMaxMin),
         seasonHigh: num(a.seasonHighFactor), seasonLow: num(a.seasonLowFactor), simultaneous: a.simultaneousPeople, loadShare: num(a.loadSharePct),
         secondaryPosition: a.secondaryPositionId ? byId.get(a.secondaryPositionId)?.name ?? null : null, planning: a.planning,
+        secondaryArea: a.secondaryPositionId ? byId.get(a.secondaryPositionId)?.area ?? null : null, secondarySite: a.secondaryPositionId ? byId.get(a.secondaryPositionId)?.site ?? null : null,
         waitMin: num(a.waitMin), waitOccupies: a.waitOccupiesPerson, travelMin: num(a.travelMin), reworkPct: num(a.reworkPct), reworkMin: num(a.reworkMin),
       }];
     });

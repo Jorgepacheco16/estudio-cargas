@@ -79,7 +79,7 @@ export function drillRows(a: Analysis, cfg: DrillConfig, level: LevelKey, f: Dri
     });
     rows = [
       ...acts.filter((x) => same(x, f)).map((x) => as(x, "primary")),
-      ...acts.filter((x) => x.secondaryPosition && norm(x.area) === norm(f.area) && norm(x.site) === norm(f.site) && norm(x.secondaryPosition) === norm(f.position)).map((x) => as(x, "secondary")),
+      ...acts.filter((x) => x.secondaryPosition && norm(x.secondaryArea ?? x.area) === norm(f.area) && norm(x.secondarySite ?? x.site) === norm(f.site) && norm(x.secondaryPosition) === norm(f.position)).map((x) => as(x, "secondary")),
     ];
   } else {
     const code = (f as DrillFilters & { code?: string }).code;

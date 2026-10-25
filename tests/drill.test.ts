@@ -87,6 +87,15 @@ async function main() {
   const mk = (code: string, site: string, mins: number): ActivityInput => ({ code, dataKind: "real", area: "Cajas", site, position: "Cajero", employeeCode: null, calcMode: "per_event", scope: "position_total", executions: 1, period: "week", unitsPerExecution: null, timeAvgMin: mins, timeMinMin: null, timeMaxMin: null, seasonHigh: null, seasonLow: null, simultaneous: null, loadShare: null, secondaryPosition: null, planning: "planned", waitMin: null, waitOccupies: null, travelMin: null, reworkPct: null, reworkMin: null });
   const acts = [mk("N-1", "Norte", 600), mk("S-1", "Sur", 1200), mk("C-1", "Centro", 600)]; // horas por ocupante: 10/2=5, 20/4=5, 10/2=5 → similar
   const prm = { workDaysPerWeek: 6, weeksPerMonth: 52 / 12, weeksPerYear: 52, reservePct: 0.1, scenario: "base" as const };
+  await check("Cargo secundario con su propia área: la parte que asume se muestra en SU área y sede, no en la de la actividad (sin área propia se mantiene la regla de la hoja 4b)", () => {
+    const st = [{ dataKind: "real" as const, area: "Domicilios", site: "Norte", position: "Auxiliar", headcount: 1, weeklyHours: 42 }, { dataKind: "real" as const, area: "Cajas", site: "Norte", position: "Cajero", headcount: 2, weeklyHours: 42 }];
+    const base = { ...mk("X-1", "Norte", 600), loadShare: 0.5, secondaryPosition: "Auxiliar" };
+    const find = (a: ReturnType<typeof analyze>, area: string) => a.positions.find((p) => p.position === "Auxiliar" && p.area === area);
+    const own = analyze(st, [{ ...base, secondaryArea: "Domicilios", secondarySite: "Norte" }], prm, TH, "real");
+    if (!find(own, "Domicilios") || (find(own, "Domicilios")!.hours ?? 0) <= 0 || find(own, "Domicilios")!.occupants !== 1 || find(own, "Cajas")) throw new Error(JSON.stringify(own.positions.map((p) => [p.area, p.position, p.hours, p.occupants])));
+    const legacy = analyze(st, [base], prm, TH, "real");
+    if (!find(legacy, "Cajas")) throw new Error("sin área propia debe conservar la regla de la hoja 4b");
+  });
   await check("Comparador de sedes: cálculo por sede (ocupantes, jornada, horas por ocupante) y lecturas con datos controlados", () => {
     const similar = analyze(staff, acts, prm, TH, "real");
     const c = compareSites(similar, "Cajas", "Cajero", "real", 0.1);

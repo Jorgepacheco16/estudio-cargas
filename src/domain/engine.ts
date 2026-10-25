@@ -9,6 +9,8 @@ export interface ActivityInput {
   timeAvgMin: number | null; timeMinMin: number | null; timeMaxMin: number | null;
   seasonHigh: number | null; seasonLow: number | null; simultaneous: number | null; loadShare: number | null;
   secondaryPosition: string | null; planning: "planned" | "unplanned" | null;
+  /** Área y sede REALES del cargo secundario (si no se informan, se asume la de la actividad, como en la hoja 4b del libro). */
+  secondaryArea?: string | null; secondarySite?: string | null;
   waitMin: number | null; waitOccupies: boolean | null; travelMin: number | null; reworkPct: number | null; reworkMin: number | null;
 }
 export interface StaffingInput { dataKind: "real" | "demo"; area: string; site: string; position: string; headcount: number | null; weeklyHours: number | null }
