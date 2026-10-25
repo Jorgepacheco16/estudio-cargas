@@ -83,7 +83,7 @@ export async function EntryNew({ hoja }: { hoja: EntryId }) {
   const lookups = await entryOptions(getDb(), user.id, study!.id);
   return (
     <main>
-      <div className="head"><div><h1>Nuevo registro · {def.short}</h1><div className="sub">Los campos con * son obligatorios. Lo que deje vacío se guarda vacío.</div></div></div>
+      <div className="head"><div><h1>Nuevo registro · {def.short}</h1><div className="sub">Los campos con * son obligatorios. Lo que deje vacío se guarda vacío.</div></div><div className="tools"><Link className="btn" href={basePath(hoja)}>← Volver a {def.short}</Link></div></div>
       <EntryForm hoja={def.id} base={basePath(hoja)} {...formProps(def)} lookups={lookups} canWrite={study!.role !== "viewer"} />
     </main>
   );
@@ -99,7 +99,7 @@ export async function EntryEdit({ hoja, id }: { hoja: EntryId; id: string }) {
   const lookups = await entryOptions(getDb(), user.id, study!.id);
   return (
     <main>
-      <div className="head"><div><h1>Editar registro · {def.short}</h1><div className="sub">Al guardar, la hoja de Google se actualiza con estos valores.</div></div></div>
+      <div className="head"><div><h1>Editar registro · {def.short}</h1><div className="sub">Al guardar, la hoja de Google se actualiza con estos valores.</div></div><div className="tools"><Link className="btn" href={basePath(hoja)}>← Volver a {def.short}</Link></div></div>
       <EntryForm key={found!.row.version} hoja={def.id} base={basePath(hoja)} recId={id} version={found!.row.version} {...formProps(def, found!.row)} lookups={lookups} canWrite={study!.role !== "viewer"} />
     </main>
   );

@@ -7,6 +7,13 @@ export interface FormField { col: string; header: string; hint: string; group: s
 export interface FormComputed { col: string; header: string; value: string }
 export interface Lookups { areas: string[]; sites: string[]; positions: string[]; activities: { code: string; name: string }[] }
 
+/** Cuánto ancho ocupa cada campo: los textos largos ocupan toda la fila, los nombres y cargos dos columnas, el resto una. */
+const spanOf = (f: FormField): "full" | "two" | "one" => {
+  if (f.control === "textarea") return "full";
+  if (f.control === "text" || f.control === "position" || f.control === "site") return f.header.length > 34 || /nombre|cargo|proceso|otros|responsable|indicador/i.test(f.header) ? "two" : "one";
+  return "one";
+};
+
 export function EntryForm({ hoja, base, recId, version, fields, computed, initial, lookups, canWrite }: {
   hoja: string; base: string; recId?: string; version?: number; fields: FormField[]; computed: FormComputed[]; initial: Record<string, string>; lookups: Lookups; canWrite: boolean;
 }) {
@@ -14,20 +21,21 @@ export function EntryForm({ hoja, base, recId, version, fields, computed, initia
   const val = (col: string) => state.values[col] ?? "";
   const groups = [...new Set(fields.map((f) => f.group))];
   return (
-    <form action={action} style={{ display: "grid", gap: 16 }}>
+    <form action={action} className="entry-form">
       <input type="hidden" name="hoja" value={hoja} />
       {recId && <><input type="hidden" name="recId" value={recId} /><input type="hidden" name="version" value={version} /></>}
       {state.errors.length > 0 && (
         <div className="banner" role="alert" style={{ background: "var(--red-soft)", color: "var(--red-dark)" }}>
-          <b>No se guardó:</b><ul style={{ margin: "4px 0 0 18px" }}>{state.errors.map((e) => <li key={e}>{e}</li>)}</ul>
+          <div><b>No se guardó:</b><ul style={{ margin: "4px 0 0 18px", padding: 0 }}>{state.errors.map((e) => <li key={e}>{e}</li>)}</ul></div>
         </div>
       )}
-      {groups.map((g) => (
-        <fieldset key={g} className="card" style={{ border: "1px solid var(--line, #ddd)" }}>
-          <legend style={{ fontWeight: 600, padding: "0 6px" }}>{g}</legend>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))", gap: 12 }}>
+      {groups.map((g, gi) => (
+        <section key={g} className="card" role="group" aria-labelledby={`g${gi}`}>
+          <h2 id={`g${gi}`}>{g}</h2>
+          <div className="form-grid">
             {fields.filter((f) => f.group === g).map((f) => {
-              const name = `c_${f.col}`, common = { name, id: name, defaultValue: val(f.col), required: false, title: f.hint || undefined };
+              const name = `c_${f.col}`, hint = `${name}-h`;
+              const common = { name, id: name, defaultValue: val(f.col), "aria-describedby": f.hint ? hint : undefined };
               const options = f.control === "area" ? lookups.areas : f.control === "select" ? f.options : f.control === "yesno" ? ["Sí", "No"] : [];
               let input;
               if (options.length || f.control === "area" || f.control === "select" || f.control === "yesno") {
@@ -35,40 +43,40 @@ export function EntryForm({ hoja, base, recId, version, fields, computed, initia
               } else if (f.control === "activity") {
                 input = <select {...common}><option value="">(elija)</option>{lookups.activities.map((a) => <option key={a.code} value={a.code}>{a.code} · {a.name}</option>)}</select>;
               } else if (f.control === "textarea") {
-                input = <textarea {...common} rows={3} maxLength={4000} placeholder={f.hint} />;
+                input = <textarea {...common} rows={4} maxLength={4000} />;
               } else if (f.control === "date") {
                 input = <input {...common} type="date" />;
               } else {
                 const list = f.control === "site" ? "dl_sites" : f.control === "position" ? "dl_positions" : undefined;
-                input = <input {...common} list={list} maxLength={300} inputMode={f.control === "number" || f.control === "percent" ? "decimal" : undefined} placeholder={f.control === "percent" ? "Ej.: 15 %" : f.hint} />;
+                input = <input {...common} list={list} maxLength={300} inputMode={f.control === "number" || f.control === "percent" ? "decimal" : undefined} placeholder={f.control === "percent" ? "Ej.: 15 %" : undefined} />;
               }
               return (
-                <label key={f.col} className="f" htmlFor={name}>
-                  {f.header}{f.required ? " *" : ""}
+                <div key={f.col} className={`field span-${spanOf(f)}`}>
+                  <label htmlFor={name}>{f.header}{f.required && <span className="req" title="Obligatorio"> *</span>}</label>
                   {input}
-                  {f.hint && <span className="muted" style={{ fontSize: 12 }}>{f.hint}</span>}
-                </label>
+                  <p className="hint" id={hint}>{f.hint}</p>
+                </div>
               );
             })}
           </div>
-        </fieldset>
+        </section>
       ))}
       <datalist id="dl_sites">{lookups.sites.map((s) => <option key={s} value={s} />)}</datalist>
       <datalist id="dl_positions">{lookups.positions.map((s) => <option key={s} value={s} />)}</datalist>
       {computed.length > 0 && (
-        <section className="card" aria-label="Calculado por la hoja (no editable)">
+        <section className="card calc-card" aria-label="Calculado por la hoja (no editable)">
           <h2>Calculado por la hoja (no editable)</h2>
-          <p className="note">Estos valores los resuelve la fórmula del libro; la aplicación los muestra, no los captura. Se actualizan al guardar.</p>
-          <dl style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))", gap: 8, marginTop: 8 }}>
-            {computed.map((c) => <div key={c.col}><dt className="muted" style={{ fontSize: 12 }}>{c.header}</dt><dd style={{ margin: 0 }}>{c.value === "" ? "—" : c.value}</dd></div>)}
+          <p className="note">🔒 Estos valores los resuelve la fórmula del libro; la aplicación los muestra, no los captura. Se actualizan al guardar.</p>
+          <dl className="calc-grid">
+            {computed.map((c) => <div key={c.col}><dt>{c.header}</dt><dd>{c.value === "" ? "—" : c.value}</dd></div>)}
           </dl>
         </section>
       )}
-      <div style={{ display: "flex", gap: 8 }}>
+      {!canWrite && <div className="banner">Su rol es de solo lectura: no puede modificar este estudio.</div>}
+      <div className="form-actions">
         <button className="btn solid" type="submit" disabled={!canWrite || pending}>{pending ? "Guardando…" : "Guardar"}</button>
         <Link className="btn" href={base}>Cancelar</Link>
       </div>
-      {!canWrite && <div className="banner">Su rol es de solo lectura: no puede modificar este estudio.</div>}
     </form>
   );
 }
