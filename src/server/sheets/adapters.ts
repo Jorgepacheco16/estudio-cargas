@@ -63,6 +63,18 @@ async function resolvePosition(c: Ctx, kind: "real" | "demo", area: string, site
   return ins;
 }
 
+/**
+ * Cargo secundario de una actividad: la hoja solo trae su NOMBRE, no su área. Si ese cargo ya existe en el estudio (con ese nombre y tipo) se usa, de
+ * preferencia el de la misma sede, sin importar el área; solo si no existe se crea, bajo el área y la sede de la actividad.
+ */
+async function resolveSecondary(c: Ctx, kind: "real" | "demo", area: string, site: string, name: string): Promise<{ id: string } | { error: string }> {
+  const rows = await c.tx.select({ id: positions.id, siteName: sites.name }).from(positions).innerJoin(sites, eq(sites.id, positions.siteId))
+    .where(and(eq(positions.studyId, c.studyId), eq(positions.dataKind, kind), sql`${norm(positions.name)} = lower(btrim(${name}))`));
+  if (rows.length) return { id: (rows.find((r) => norm0(r.siteName) === norm0(site)) ?? rows[0]).id };
+  return resolvePosition(c, kind, area, site, name);
+}
+const norm0 = (s: string) => s.trim().toLowerCase().replace(/\s+/g, " ");
+
 const areaIdOf = async (c: Ctx, name: string | null): Promise<string | null> => {
   if (!name) return null;
   const [a] = await c.tx.select({ id: areas.id }).from(areas).where(and(eq(areas.studyId, c.studyId), sql`${norm(areas.name)} = lower(btrim(${name}))`));
@@ -92,7 +104,7 @@ const activitiesAdapter: Adapter = {
       positionId = p.id;
       const sec = r.s("secondaryPosition");
       secondaryPositionId = null;
-      if (sec) { const q = await resolvePosition(c, kind, area, site, sec); if ("error" in q) return q; secondaryPositionId = q.id; }
+      if (sec) { const q = await resolveSecondary(c, kind, area, site, sec); if ("error" in q) return q; secondaryPositionId = q.id; }
     } else if (!existing) return { error: `Falta ${[!area && "área", !site && "sede", !pos && "cargo"].filter(Boolean).join(", ")}; sin cargo no se puede guardar la actividad` };
     return { values: { dataKind: kind, positionId, secondaryPositionId, ...activityFields(r) } };
   },

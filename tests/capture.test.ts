@@ -101,6 +101,16 @@ async function main() {
       if (got.row.cells[entryDef("3")!.fields.find((f) => f.field === "loadShare")!.col] !== 0.5) throw new Error("«50» en un porcentaje debe guardarse como 50 %");
     });
 
+    await check("Cargo secundario: si ya existe con ese nombre en otra área se usa ese, no se crea uno nuevo bajo el área de la actividad", async () => {
+      const base = { kind: "REAL", site: "S1", executions: "1", period: "Día", calcMode: "Por evento", scope: "Por colaborador", timeAvg: "5" };
+      const a = await saveEntry(app.db, owner, studyId, "3", cells("3", { ...base, code: "D-1", area: "Domicilios", position: "Auxiliar de domicilios", name: "Entregar pedido" }), {});
+      if (!a.ok) throw new Error(JSON.stringify(a));
+      const b = await saveEntry(app.db, owner, studyId, "3", cells("3", { ...base, code: "D-2", area: "Cajas", position: "Cajero", name: "Validar pedido", secondaryPosition: "Auxiliar de domicilios" }), {});
+      if (!b.ok) throw new Error(JSON.stringify(b));
+      const rows = (await admin.db.execute(sql`select a.name area from public.positions p join public.areas a on a.id = p.area_id where p.study_id = ${studyId} and lower(p.name) = 'auxiliar de domicilios'`)) as unknown as { area: string }[];
+      if (rows.length !== 1 || rows[0].area !== "Domicilios") throw new Error(JSON.stringify(rows));
+    });
+
     for (const [id, values] of [
       ["5", { code: "C-1", direct: "Sí", hasIndicators: "Sí" }],
       ["6", { code: "C-1", situation: "1. Corresponde al cargo, requiere capacitación" }],
