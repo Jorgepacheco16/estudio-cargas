@@ -5,7 +5,10 @@ import { createDb } from "../src/db/client";
 import { createStudy } from "../src/server/studies";
 import { entryDef, type EntryId } from "../src/server/entry/defs";
 import { listEntries, saveEntry } from "../src/server/entry/service";
+import ExcelJS from "exceljs";
+import { PDFDocument } from "pdf-lib";
 import { buildCoverage, splitProfile, type CoverageActivity } from "../src/domain/coverage";
+import { NOTICE, coveragePayload, coveragePdf, coverageXlsx, wrapText } from "../src/lib/coverage-export";
 import { check, rejects, summary, URL_ADMIN, URL_APP } from "./helpers";
 
 /**
@@ -82,8 +85,24 @@ async function main() {
       if (!failed) throw new Error("un tramo que ya no se puede dividir debe fallar, no devolver un resultado parcial");
     });
 
-    /* ───── Con la base de datos ───── */
-    studyId = await createStudy(app.db, owner, "Estudio de cobertura (prueba)");
+    await check("Exportación: el Excel y el PDF traen cargo, resumen, aviso de IA, cada función COMPLETA (sin recortar) con su estado en texto, actividades y observación", async () => {
+      const long = "Elaborar y entregar el informe mensual de indicadores de la bodega, consolidando recibo, despacho y diferencias de inventario, y presentarlo a la jefatura inmediata antes del quinto día hábil de cada mes con sus soportes";
+      const r = buildCoverage([{ functions: [fn(long, "partial", ["A-1"], "Falta la presentación a la jefatura, que ninguna actividad contempla"), fn("Recibir mercancía", "covered", ["A-1", "A-2"]), fn("Capacitar al personal nuevo", "none", [], "Ninguna actividad lo contempla")] }], { functionsText: "x", activities: acts(3) });
+      if (!r.ok) throw new Error(r.reason);
+      const wb = new ExcelJS.Workbook(); await wb.xlsx.load(await coverageXlsx("Cajero · Cajas · Norte", r.result, "2026-10-26") as unknown as ArrayBuffer);
+      const ws = wb.worksheets[0]; const cells: string[] = []; ws.eachRow((row) => row.eachCell((c) => cells.push(String(c.value ?? ""))));
+      for (const must of ["Cajero · Cajas · Norte", r.result.summary, NOTICE, long, "✖ Sin cobertura", "⚠ Parcialmente cubierta", "✔ Cubierta", "A-1 · Actividad 1", "Falta la presentación a la jefatura"]) if (!cells.some((c) => c.includes(must))) throw new Error(`el Excel no trae «${must.slice(0, 40)}»`);
+      if (cells.some((c) => c.includes("..."))) throw new Error("el Excel recorta texto");
+      const pdf = await coveragePdf("Cajero · Cajas · Norte", r.result, "2026-10-26");
+      if (Buffer.from(pdf.subarray(0, 5)).toString() !== "%PDF-" || (await PDFDocument.load(pdf)).getPageCount() < 1) throw new Error("PDF inválido");
+      const many = buildCoverage([{ functions: Array.from({ length: 60 }, (_, i) => fn(`Función número ${i + 1} con un texto bastante largo para que ocupe varias líneas en la celda de la tabla del PDF`, i % 3 === 0 ? "none" : "covered", i % 3 === 0 ? [] : ["A-1"], i % 3 === 0 ? "Falta" : "")) }], { functionsText: "x", activities: acts(1) });
+      if (!many.ok || (await PDFDocument.load(await coveragePdf("Cargo grande", many.result, "2026-10-26"))).getPageCount() < 3) throw new Error("el PDF de 60 funciones debe paginar");
+      const lines = wrapText(long, 200, (s) => s.length * 4);
+      if (lines.length < 4 || lines.some((l) => l.length * 4 > 200) || lines.join(" ") !== long) throw new Error(`ajuste de líneas: ${lines.length}`);
+      if (coveragePayload.safeParse({ cargo: "x", result: { functions: [{ n: 1, text: "x", status: "otro", activities: [], note: "" }] } }).success) throw new Error("aceptó una carga inválida");
+    });
+
+    /* ───── Con la base de datos ───── */    studyId = await createStudy(app.db, owner, "Estudio de cobertura (prueba)");
     await admin.db.execute(sql`insert into public.memberships (study_id, user_id, role) values (${studyId}, ${viewer}, 'viewer')`);
     const cargo = async (site: string, position: string, functions: string) => {
       const r = await saveEntry(app.db, owner, studyId, "2", cells("2", { area: "Cajas", site, position, headcount: "2", weeklyHours: "42", functions }), {});

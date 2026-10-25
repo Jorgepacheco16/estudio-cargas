@@ -1,6 +1,6 @@
 "use client";
 import { useState, useTransition } from "react";
-import { validateCoverageAction } from "@/app/agente/actions";
+import { exportCoverageAction, validateCoverageAction } from "@/app/agente/actions";
 import type { CoverageOutcome } from "@/server/coverage";
 import { STATUS_ES } from "@/domain/coverage";
 
@@ -50,6 +50,31 @@ export function CoveragePanel({ cargoId, options }: { cargoId?: string; options?
   );
 }
 
+/** Descarga del resultado en pantalla como Excel o PDF (el archivo se arma en el servidor al momento y no se guarda). */
+function ExportButtons({ outcome }: { outcome: Extract<CoverageOutcome, { ok: true }> }) {
+  const [busy, setBusy] = useState<"xlsx" | "pdf" | null>(null);
+  const [err, setErr] = useState("");
+  const go = async (format: "xlsx" | "pdf") => {
+    setBusy(format); setErr("");
+    try {
+      const r = await exportCoverageAction(format, { cargo: outcome.cargo, result: outcome.result });
+      if (!r.ok) { setErr(r.message); return; }
+      const bytes = Uint8Array.from(atob(r.base64), (c) => c.charCodeAt(0));
+      const url = URL.createObjectURL(new Blob([bytes], { type: r.mime }));
+      const a = document.createElement("a"); a.href = url; a.download = r.filename; document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 10_000);
+    } catch { setErr("No se pudo descargar el archivo. Intente de nuevo."); }
+    finally { setBusy(null); }
+  };
+  return (
+    <div className="tools" style={{ margin: "0 0 16px" }}>
+      <button className="btn" type="button" onClick={() => go("xlsx")} disabled={busy !== null}>{busy === "xlsx" ? "Preparando…" : "Descargar Excel"}</button>
+      <button className="btn" type="button" onClick={() => go("pdf")} disabled={busy !== null}>{busy === "pdf" ? "Preparando…" : "Descargar PDF"}</button>
+      {err && <span role="alert" style={{ color: "var(--red-dark)", fontSize: ".875rem" }}>{err}</span>}
+    </div>
+  );
+}
+
 function CoverageResultView({ outcome }: { outcome: Extract<CoverageOutcome, { ok: true }> }) {
   const r = outcome.result;
   const banner = r.level === "alert"
@@ -61,6 +86,7 @@ function CoverageResultView({ outcome }: { outcome: Extract<CoverageOutcome, { o
     <section className="coverage-result" aria-label="Resultado de la validación de cobertura">
       <h3>Cobertura de funciones · {outcome.cargo}</h3>
       <p className="coverage-summary"><b>{r.summary}</b></p>
+      <ExportButtons outcome={outcome} />
       <div className="banner" role={r.level === "alert" ? "alert" : "status"} style={banner.style}>{banner.text}</div>
       <div className="tbl-wrap" tabIndex={0} role="region" aria-label="Tabla desplazable">
         <table>

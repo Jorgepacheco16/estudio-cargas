@@ -46,3 +46,5 @@ La pestaña **Cálculo de tiempos (4a)** muestra, para cada actividad, las misma
 ### Validar la cobertura de funciones de un cargo
 
 Al terminar de ingresar las actividades de un cargo, compruebe que no quedó ninguna función del perfil sin actividad: en **Cargos y dotación › Editar** (junto a «Funciones formalmente asignadas (perfil)») pulse **Validar cobertura de funciones**, o elija el cargo en **Agente de IA › Validar cobertura de un cargo**. Cada función aparece como Cubierta, Parcialmente cubierta (con lo que falta) o Sin cobertura (alerta), y se listan aparte las actividades que no se relacionaron con ninguna función. Es una ayuda de la IA: verifique el resultado antes de decidir. No cambia ningún dato; hay un tope de 20 validaciones por día.
+
+El resultado de la validación se puede descargar con **Descargar Excel** y **Descargar PDF** (arriba de la tabla). Los archivos incluyen el cargo, el resumen, el aviso de IA, cada función completa con su estado, las actividades que la cubren y las actividades sin función; se generan al momento y no se guardan.

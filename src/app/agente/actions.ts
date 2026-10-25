@@ -7,6 +7,7 @@ import { activeStudyId } from "@/data/source";
 import { decideProposal, runAgent } from "@/server/agent";
 import { rateLimit } from "@/lib/ratelimit";
 import { validateCoverage, type CoverageOutcome } from "@/server/coverage";
+import { coveragePayload, coveragePdf, coverageXlsx } from "@/lib/coverage-export";
 
 const back = (kind: "ok" | "error", msg: string): never => redirect(`/agente?${kind}=${encodeURIComponent(msg)}`);
 
@@ -44,6 +45,21 @@ export async function validateCoverageAction(positionId: string): Promise<Covera
   if (!z.string().uuid().safeParse(positionId).success) return { ok: false, code: "not_found", message: "Cargo inválido." };
   try { return await validateCoverage(getDb(), user.id, study.id, positionId); }
   catch { return { ok: false, code: "error", message: "No se pudo validar la cobertura. Puede reintentar." }; }
+}
+
+/** Genera el Excel o el PDF del resultado que la persona tiene en pantalla. No guarda nada: el archivo se arma al momento y se entrega para descargar. */
+export type CoverageFile = { ok: true; filename: string; mime: string; base64: string } | { ok: false; message: string };
+export async function exportCoverageAction(format: "xlsx" | "pdf", payload: unknown): Promise<CoverageFile> {
+  const user = await getUser();
+  if (!user) return { ok: false, message: "Su sesión terminó. Vuelva a ingresar." };
+  const p = coveragePayload.safeParse(payload);
+  if (!p.success || (format !== "xlsx" && format !== "pdf")) return { ok: false, message: "No se pudo preparar el archivo. Vuelva a validar la cobertura e intente de nuevo." };
+  try {
+    const stamp = new Date().toLocaleDateString("en-CA", { timeZone: "America/Bogota" });
+    const base = `cobertura-de-funciones_${stamp}`;
+    if (format === "xlsx") return { ok: true, filename: `${base}.xlsx`, mime: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", base64: (await coverageXlsx(p.data.cargo, p.data.result, stamp)).toString("base64") };
+    return { ok: true, filename: `${base}.pdf`, mime: "application/pdf", base64: Buffer.from(await coveragePdf(p.data.cargo, p.data.result, stamp)).toString("base64") };
+  } catch { return { ok: false, message: "No se pudo generar el archivo. Intente de nuevo." }; }
 }
 
 export async function decideAction(fd: FormData) {
