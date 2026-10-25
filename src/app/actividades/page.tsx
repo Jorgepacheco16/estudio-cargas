@@ -1,12 +1,16 @@
+import { Purpose } from "@/components/Purpose";
 import { loadAnalysis, parseMode } from "@/data/source";
 import { ExportButtons, ModeForm, fmt } from "@/components/Tools";
+import { EntrySection } from "@/components/entry/views";
 
+export const metadata = { title: "Actividades" };
 export default async function Actividades({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
-  const { analysis: a, mode, label } = await loadAnalysis(parseMode((await searchParams).modo));
+  const sp = (await searchParams) as Record<string, string | undefined>;
+  const { analysis: a, mode, label } = await loadAnalysis(parseMode(sp.modo));
   return (
     <main>
       <div className="head">
-        <div><h1>Inventario de actividades</h1><div className="sub">{label} · {a.activities.length} actividades</div></div>
+        <div><h1>Actividades</h1><Purpose k="actividades" /><div className="sub">{label} · {a.activities.length} actividades</div></div>
         <div className="tools"><ModeForm mode={mode} /><ExportButtons view="actividades" mode={mode} /></div>
       </div>
       <section className="card">
@@ -30,6 +34,7 @@ export default async function Actividades({ searchParams }: { searchParams: Prom
         )}
         <p className="note">Una actividad con datos faltantes se conserva y no suma carga hasta completarse; la aplicación nunca rellena un vacío por su cuenta.</p>
       </section>
+      <EntrySection hoja="3" sp={sp} />
     </main>
   );
 }

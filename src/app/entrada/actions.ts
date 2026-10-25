@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { getDb } from "@/db/server";
 import { getUser } from "@/lib/supabase/server";
 import { activeStudyId } from "@/data/source";
+import { basePath, PARAMETROS_PATH } from "@/lib/entry-routes";
 import { ENTRY_IDS, entryDef, type EntryId } from "@/server/entry/defs";
 import { deleteEntry, saveEntry, scheduleMirror } from "@/server/entry/service";
 import { SHEETS, parseForm, saveRow } from "@/server/capture";
@@ -17,12 +18,12 @@ async function session() {
   if (!user) redirect("/login");
   const study = await activeStudyId(user!.id);
   if (!study) redirect("/estudio");
-  if (study!.role === "viewer") redirect("/datos?error=" + encodeURIComponent("Su rol es de solo lectura: no puede modificar este estudio."));
+  if (study!.role === "viewer") redirect("/estudio?error=" + encodeURIComponent("Su rol es de solo lectura: no puede modificar este estudio."));
   return { user: user!, study: study! };
 }
 const sheetId = (v: unknown): EntryId => {
   const s = String(v ?? "");
-  if (!(ENTRY_IDS as string[]).includes(s)) redirect("/datos");
+  if (!(ENTRY_IDS as string[]).includes(s)) redirect("/");
   return s as EntryId;
 };
 
@@ -44,7 +45,7 @@ export async function saveEntryAction(_prev: FormState, fd: FormData): Promise<F
   if (!res.ok) return { errors: res.errors, values: raw };
   if (res.result !== "unchanged") scheduleMirror(getDb(), user.id, study.id, id);
   const msg = res.result === "created" ? "Registro creado" : res.result === "updated" ? "Registro actualizado" : "Sin cambios";
-  redirect(`/datos/${id}?ok=${encodeURIComponent(msg + (res.notices.length ? ". " + res.notices.join("; ") : "") + ". Se envía a la hoja de Google.")}`);
+  redirect(`${basePath(id)}?ok=${encodeURIComponent(msg + (res.notices.length ? ". " + res.notices.join("; ") : "") + ". Se envía a la hoja de Google.")}`);
 }
 
 export async function deleteEntryAction(fd: FormData) {
@@ -52,9 +53,9 @@ export async function deleteEntryAction(fd: FormData) {
   const id = sheetId(fd.get("hoja"));
   const recId = String(fd.get("recId") ?? "");
   const r = await deleteEntry(getDb(), user.id, study.id, id, recId);
-  if (!r.ok) redirect(`/datos/${id}?error=${encodeURIComponent(r.error)}`);
+  if (!r.ok) redirect(`${basePath(id)}?error=${encodeURIComponent(r.error)}`);
   scheduleMirror(getDb(), user.id, study.id, id);
-  redirect(`/datos/${id}?ok=${encodeURIComponent("Registro eliminado. Se limpia también en la hoja de Google.")}`);
+  redirect(`${basePath(id)}?ok=${encodeURIComponent("Registro eliminado. Se limpia también en la hoja de Google.")}`);
 }
 
 /** Parámetros del estudio (hoja «Parametros»). */
@@ -70,14 +71,14 @@ export async function saveParamsAction(_prev: FormState, fd: FormData): Promise<
   if (r === "conflict") return { errors: ["Conflicto (409): otra persona modificó los parámetros. Recargue y repita el cambio."], values: raw };
   if (r === "error" || r === "exists") return { errors: ["No se pudo guardar. Intente de nuevo."], values: raw };
   scheduleMirror(getDb(), user.id, study.id, "params");
-  redirect(`/datos/parametros?ok=${encodeURIComponent("Parámetros guardados. Se envían a la hoja de Google.")}`);
+  redirect(`${PARAMETROS_PATH}?ok=${encodeURIComponent("Parámetros guardados. Se envían a la hoja de Google.")}`);
 }
 
 /** Lista de áreas del estudio (se espeja a «Parametros»!E5). */
 export async function addAreaAction(fd: FormData) {
   const { user, study } = await session();
   const name = String(fd.get("name") ?? "").trim();
-  if (!name || name.length > 120) redirect("/datos/parametros?error=" + encodeURIComponent("Escriba el nombre del área (máximo 120 caracteres)."));
+  if (!name || name.length > 120) redirect(PARAMETROS_PATH + "?error=" + encodeURIComponent("Escriba el nombre del área (máximo 120 caracteres)."));
   try {
     await withRls(getDb(), { sub: user.id }, async (tx) => {
       const ex = await tx.select({ n: areaTable.name, o: areaTable.sortOrder }).from(areaTable).where(eq(areaTable.studyId, study.id));
@@ -85,9 +86,9 @@ export async function addAreaAction(fd: FormData) {
       if (ex.length >= 36) throw new Error("La hoja admite máximo 36 áreas.");
       await tx.insert(areaTable).values({ studyId: study.id, name, sortOrder: Math.max(0, ...ex.map((x) => x.o ?? 0)) + 1 });
     });
-  } catch (e) { redirect("/datos/parametros?error=" + encodeURIComponent(e instanceof Error && e.message.length < 100 ? e.message : "No se pudo agregar el área.")); }
+  } catch (e) { redirect(PARAMETROS_PATH + "?error=" + encodeURIComponent(e instanceof Error && e.message.length < 100 ? e.message : "No se pudo agregar el área.")); }
   scheduleMirror(getDb(), user.id, study.id, "params");
-  redirect("/datos/parametros?ok=" + encodeURIComponent("Área agregada."));
+  redirect(PARAMETROS_PATH + "?ok=" + encodeURIComponent("Área agregada."));
 }
 
 export async function removeAreaAction(fd: FormData) {
@@ -95,7 +96,7 @@ export async function removeAreaAction(fd: FormData) {
   const name = String(fd.get("name") ?? "");
   try {
     await withRls(getDb(), { sub: user.id }, async (tx) => { await tx.delete(areaTable).where(and(eq(areaTable.studyId, study.id), eq(areaTable.name, name))); });
-  } catch { redirect("/datos/parametros?error=" + encodeURIComponent("No se puede quitar el área: hay datos que la usan.")); }
+  } catch { redirect(PARAMETROS_PATH + "?error=" + encodeURIComponent("No se puede quitar el área: hay datos que la usan.")); }
   scheduleMirror(getDb(), user.id, study.id, "params");
-  redirect("/datos/parametros?ok=" + encodeURIComponent("Área eliminada."));
+  redirect(PARAMETROS_PATH + "?ok=" + encodeURIComponent("Área eliminada."));
 }

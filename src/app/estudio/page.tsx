@@ -1,4 +1,5 @@
-﻿import { redirect } from "next/navigation";
+import { Purpose } from "@/components/Purpose";
+import { redirect } from "next/navigation";
 import { getDb } from "@/db/server";
 import { getUser } from "@/lib/supabase/server";
 import { activeStudyId } from "@/data/source";
@@ -8,6 +9,7 @@ import { listStudies } from "@/server/studies";
 import { createStudyAction, selectStudyAction } from "./actions";
 const ROLE: Record<string, string> = { owner: "Propietario", editor: "Editor", analyst: "Analista", viewer: "Solo lectura" };
 
+export const metadata = { title: "Estudio" };
 export default async function Estudio({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   const user = await getUser();
   if (!user) redirect("/login");
@@ -20,7 +22,7 @@ export default async function Estudio({ searchParams }: { searchParams: Promise<
   return (
     <main>
       <div className="head">
-        <div><h1>Estudio</h1><div className="sub">Sesión: {user!.email ?? "usuario"}{active ? ` · ${active.name} (${ROLE[active.role] ?? active.role})` : ""}</div></div>
+        <div><h1>Estudio</h1><Purpose k="estudio" /><div className="sub">Sesión: {user!.email ?? "usuario"}{active ? ` · ${active.name} (${ROLE[active.role] ?? active.role})` : ""}</div></div>
       </div>
       {sp.ok && <div className="banner" style={{ background: "var(--blue-soft)", color: "var(--blue)" }}>{sp.ok}</div>}
       {sp.error && <div className="banner" style={{ background: "var(--red-soft)", color: "var(--red-dark)" }}>{sp.error}</div>}
@@ -47,8 +49,8 @@ export default async function Estudio({ searchParams }: { searchParams: Promise<
       {active && (
         <section className="card">
           <h2>Captura de datos</h2>
-          <p className="note">La aplicación es la fuente de los datos: cargos, actividades y las hojas 5 a 10 se ingresan en <a href="/datos">Datos de entrada</a> y se escriben automáticamente en la hoja de Google. Las columnas con fórmula se muestran como valores calculados, sin edición.</p>
-          <p style={{ marginTop: 12 }}><a className="btn solid" href="/datos">Ir a Datos de entrada</a></p>
+          <p className="note">La aplicación es la fuente de los datos: cada dato se ingresa en su sección (Parámetros, Cargos y dotación, Actividades y Diagnóstico y rediseño) y se escribe automáticamente en la hoja de Google. Las columnas con fórmula se muestran como valores calculados, sin edición.</p>
+          <p style={{ marginTop: 12 }}><a className="btn solid" href="/cargos">Ir a Cargos y dotación</a></p>
         </section>
       )}
     </main>

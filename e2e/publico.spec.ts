@@ -5,7 +5,7 @@ import AxeBuilder from "@axe-core/playwright";
 
 test("el tablero muestra los 12 indicadores y las secciones A a F con datos DEMO", async ({ page }) => {
   await page.goto("/?modo=demo");
-  await expect(page.getByRole("heading", { level: 1, name: "Tablero ejecutivo" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "Inicio" })).toBeVisible();
   await expect(page.getByLabel("Indicadores").locator(".card")).toHaveCount(12);
   for (const h of ["A. Carga laboral por área", "C. Las 10 actividades que más horas consumen", "D. Cobertura y calidad de la información", "E. Oportunidades de mejora y plan de acción", "F. Conclusiones preliminares"]) {
     await expect(page.getByRole("heading", { name: h })).toBeVisible();
@@ -20,7 +20,7 @@ test("el selector de modo cambia entre DEMO, REAL y TODOS sin errores", async ({
     await page.locator("select[name=modo]").selectOption(modo);
     await page.getByRole("button", { name: "Aplicar" }).click();
     await expect(page).toHaveURL(new RegExp(`modo=${modo}`));
-    await expect(page.getByRole("heading", { level: 1, name: "Tablero ejecutivo" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "Inicio" })).toBeVisible();
   }
 });
 
@@ -31,7 +31,7 @@ test("toda la navegación principal responde y las páginas de captura piden ini
   for (const l of links) {
     const r = await page.goto(l.href);
     expect(r?.status(), `${l.text} (${l.href})`).toBeLessThan(400);
-    if (["/estudio", "/datos", "/integraciones", "/historia", "/agente"].includes(l.href)) await expect(page, `${l.href} debe pedir sesión`).toHaveURL(/\/login/);
+    if (["/estudio", "/parametros", "/integraciones", "/historia", "/agente"].includes(l.href)) await expect(page, `${l.href} debe pedir sesión`).toHaveURL(/\/login/);
   }
 });
 
@@ -94,7 +94,7 @@ test("el drill-down baja de nivel con un clic y el comparador de sedes se export
   await expect(page).toHaveURL(/level=area/);
   await expect(page.getByRole("navigation", { name: "Ruta del drill-down" })).toContainText("Estudio");
   await page.goto("/sedes?modo=demo");
-  await expect(page.getByRole("heading", { name: "Comparador de sedes" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Comparador sedes" })).toBeVisible();
   const [d] = await Promise.all([page.waitForEvent("download"), page.getByRole("link", { name: "Exportar Excel" }).click()]);
   expect(d.suggestedFilename()).toMatch(/sedes.*\.xlsx$/);
 });
@@ -118,7 +118,7 @@ test("la política de contenido usa un código distinto por petición, sin 'unsa
 });
 test("la pestaña de la hoja 4a muestra las columnas calculadas con los encabezados del libro y se exporta", async ({ page }) => {
   await page.goto("/calculo?modo=demo");
-  await expect(page.getByRole("heading", { name: "Cálculo de tiempos por actividad" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Cálculo de tiempos" })).toBeVisible();
   for (const h of ["Ejecuciones por semana", "Horas/sem TOTALES de la actividad en la sede", "Horas/mes equivalentes"]) await expect(page.getByRole("columnheader", { name: h })).toBeVisible();
   const [d] = await Promise.all([page.waitForEvent("download"), page.getByRole("link", { name: "Exportar Excel" }).click()]);
   expect(d.suggestedFilename()).toMatch(/calculo.*\.xlsx$/);

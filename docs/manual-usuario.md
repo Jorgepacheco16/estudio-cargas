@@ -6,12 +6,12 @@ Entre a la dirección de la aplicación y pulse **Ingresar con Google**. Solo se
 Roles: **Propietario**, **Editor**, **Analista** (pueden modificar) y **Solo lectura** (solo consulta; los botones de guardar aparecen deshabilitados).
 
 ## 2. Estudio
-En **Estudio**: cree un estudio (se cargan las 14 áreas operativas y los parámetros por defecto) y elija el estudio activo. **La aplicación es la única fuente de los datos de entrada** (D-63): todo se captura en **Datos de entrada**, donde hay un formulario por cada hoja del libro (2 Caracterización, 3 Actividades, 5 a 10) con TODAS sus casillas amarillas, con los mismos encabezados y listas desplegables; cada guardado se escribe solo en la hoja de Google. Si otra persona modificó el registro antes, verá un aviso de conflicto (409): recargue y repita.
+En **Estudio**: cree un estudio (se cargan las 14 áreas operativas y los parámetros por defecto) y elija el estudio activo. **La aplicación es la única fuente de los datos de entrada** (D-63): cada dato se captura en su propia sección (Parámetros, Cargos y dotación, Actividades y las seis subsecciones de **Diagnóstico y rediseño**), con un formulario que tiene TODAS las casillas amarillas del libro con TODAS sus casillas amarillas, con los mismos encabezados y listas desplegables; cada guardado se escribe solo en la hoja de Google. Si otra persona modificó el registro antes, verá un aviso de conflicto (409): recargue y repita.
 
 Una actividad con datos faltantes se guarda y muestra **qué le falta**; no suma carga hasta estar completa. La aplicación nunca inventa valores.
 
 ## 3. Hojas 5 a 10 y parámetros
-En **Datos de entrada** hay una entrada por hoja (Cargos y dotación, Actividades, Medibilidad, Pertinencia, Riesgos, Oportunidades, Rediseño, Plan de acción) más **Parámetros y áreas**. Cada una muestra los registros con **Editar** / **Eliminar** y las columnas con fórmula del libro (marcadas 🔒) como **valores calculados de solo lectura**, con las mismas reglas del Excel (puntaje, nivel, criticidad, prioridad, carga propuesta, cumplimiento y alertas de plazo).
+En cada una de esas secciones, el bloque **Registros capturados** (con el botón «Agregar registro») muestra los registros con **Editar** / **Eliminar** y las columnas con fórmula del libro (marcadas 🔒) como **valores calculados de solo lectura**, con las mismas reglas del Excel (puntaje, nivel, criticidad, prioridad, carga propuesta, cumplimiento y alertas de plazo).
 - Los porcentajes se escriben como número (10 = 10 %). Decimales con coma o punto.
 - Un valor inválido (texto en un número, escala fuera de 1–5, fecha imposible) se rechaza con un mensaje.
 - Cada cambio queda en el registro de auditoría.

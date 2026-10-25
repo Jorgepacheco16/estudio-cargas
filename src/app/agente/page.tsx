@@ -1,3 +1,4 @@
+import { Purpose } from "@/components/Purpose";
 import { redirect } from "next/navigation";
 import { getDb } from "@/db/server";
 import { getUser } from "@/lib/supabase/server";
@@ -16,6 +17,7 @@ function describe(kind: string, change: Record<string, unknown>): string {
   return "";
 }
 
+export const metadata = { title: "Agente de IA" };
 export default async function Agente({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   const sp = await searchParams;
   const user = await getUser();
@@ -29,7 +31,7 @@ export default async function Agente({ searchParams }: { searchParams: Promise<R
   return (
     <main>
       <div className="head">
-        <div><h1>Agente de IA</h1><div className="sub">El agente solo propone; nada cambia sin aprobación humana registrada.</div></div>
+        <div><h1>Agente de IA</h1><Purpose k="agente" /><div className="sub">El agente solo propone; nada cambia sin aprobación humana registrada.</div></div>
         <div className="tools"><ExportButtons view="agente" mode="real" /></div>
       </div>
       {sp.ok && <div className="banner" style={{ background: "var(--blue-soft)", color: "var(--blue)" }}>{sp.ok}</div>}

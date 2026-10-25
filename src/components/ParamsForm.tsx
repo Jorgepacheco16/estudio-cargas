@@ -1,7 +1,7 @@
 "use client";
 import { useActionState } from "react";
-import { saveParamsAction } from "@/app/datos/actions";
-import type { FormState } from "@/app/datos/actions";
+import { saveParamsAction } from "@/app/entrada/actions";
+import type { FormState } from "@/app/entrada/actions";
 
 export interface ParamField { key: string; label: string; kind: string; options: { code: string; label: string }[] }
 

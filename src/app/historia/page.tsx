@@ -1,3 +1,4 @@
+import { Purpose } from "@/components/Purpose";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getDb } from "@/db/server";
@@ -16,6 +17,7 @@ const nf = (n: number | null, d = 2) => (n === null ? "—" : n.toLocaleString("
 const when = (d: Date) => d.toLocaleString("es-CO", { timeZone: "America/Bogota", dateStyle: "short", timeStyle: "short" });
 const DAY = 86400000;
 
+export const metadata = { title: "Historia y desviaciones" };
 export default async function Historia({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   const user = await getUser();
   if (!user) redirect("/login");
@@ -23,7 +25,7 @@ export default async function Historia({ searchParams }: { searchParams: Promise
   const vista = VISTAS.some(([v]) => v === sp.vista) ? sp.vista! : "linea";
   const study = await activeStudyId(user!.id);
   const tabs = <div className="tabs" role="tablist" aria-label="Vistas">{VISTAS.map(([v, l]) => <Link key={v} href={`/historia?vista=${v}`} role="tab" aria-selected={v === vista} className={v === vista ? "on" : ""}>{l}</Link>)}</div>;
-  const head = <div className="head"><div><h1>Historia, productividad y desviaciones</h1><div className="sub">{study ? study.name : "Sin estudio"} · propuesta fuera del Excel original; los umbrales son provisionales hasta que el responsable los decida</div></div></div>;
+  const head = <div className="head"><div><h1>Historia y desviaciones</h1><Purpose k="historia" /><div className="sub">{study ? study.name : "Sin estudio"} · propuesta fuera del Excel original; los umbrales son provisionales hasta que el responsable los decida</div></div></div>;
   if (!study) return <main>{head}{tabs}<div className="empty">Cree o seleccione un estudio en la sección Estudio.</div></main>;
   const canWrite = study.role !== "viewer";
   const db = getDb();
@@ -156,7 +158,7 @@ export default async function Historia({ searchParams }: { searchParams: Promise
       <section className="card">
         <h2>Desviaciones ({devs.filter((d) => d.status === "open").length} abiertas)</h2>
         <form action={detectAction} style={{ marginTop: 12 }}><button className="btn solid" type="submit" disabled={!canWrite}>Detectar desviaciones ahora</button></form>
-        <p className="note">Ocho reglas explícitas (R1 a R8) comparan fotos, mediciones y el plan. Los umbrales (diferencia estimado vs medido, mínimo de mediciones, salto de horas y mínimo de historia) se editan en <Link href="/datos/parametros">Parámetros</Link> y son provisionales. Una desviación descartada no vuelve a aparecer durante 30 días; una abierta o reconocida no se duplica.</p>
+        <p className="note">Ocho reglas explícitas (R1 a R8) comparan fotos, mediciones y el plan. Los umbrales (diferencia estimado vs medido, mínimo de mediciones, salto de horas y mínimo de historia) se editan en <Link href="/parametros">Parámetros</Link> y son provisionales. Una desviación descartada no vuelve a aparecer durante 30 días; una abierta o reconocida no se duplica.</p>
         {devs.length === 0 ? <div className="empty">Sin desviaciones.</div> : <div className="tbl-wrap" tabIndex={0} role="region" aria-label="Tabla desplazable"><table>
           <thead><tr><th>Regla</th><th>Qué se detectó</th><th>Base → observado</th><th>Estado</th><th>Explicación del agente</th><th>Acciones</th></tr></thead>
           <tbody>{devs.map((d) => {

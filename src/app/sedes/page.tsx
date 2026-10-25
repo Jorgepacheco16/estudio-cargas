@@ -1,3 +1,4 @@
+import { Purpose } from "@/components/Purpose";
 import { getDb } from "@/db/server";
 import { getUser } from "@/lib/supabase/server";
 import { activeStudyId, loadAnalysis, parseMode } from "@/data/source";
@@ -5,6 +6,7 @@ import { ExportButtons, ModeForm, fmt, fmtPct } from "@/components/Tools";
 import { comparablePositions, compareSites } from "@/domain/sites";
 import { loadUndocumented } from "@/server/studies";
 
+export const metadata = { title: "Comparador sedes" };
 export default async function Sedes({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   const sp = await searchParams;
   const loaded = await loadAnalysis(parseMode(sp.modo));
@@ -18,7 +20,7 @@ export default async function Sedes({ searchParams }: { searchParams: Promise<Re
   return (
     <main>
       <div className="head">
-        <div><h1>Comparador de sedes</h1><div className="sub">{loaded.label} · el mismo cargo en cada sede (hoja 2b del Excel)</div></div>
+        <div><h1>Comparador sedes</h1><Purpose k="sedes" /><div className="sub">{loaded.label} · el mismo cargo en cada sede</div></div>
         <div className="tools"><ModeForm mode={mode} />{chosen && <ExportButtons view="sedes" mode={mode} extra={`area=${encodeURIComponent(chosen.area)}&position=${encodeURIComponent(chosen.position)}`} />}</div>
       </div>
       {options.length === 0 ? <div className="empty">No hay cargos registrados para el modo seleccionado.</div> : (

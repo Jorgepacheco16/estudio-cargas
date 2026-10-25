@@ -1,14 +1,14 @@
 "use client";
 import { useActionState } from "react";
 import Link from "next/link";
-import { saveEntryAction, type FormState } from "@/app/datos/actions";
+import { saveEntryAction, type FormState } from "@/app/entrada/actions";
 
 export interface FormField { col: string; header: string; hint: string; group: string; control: string; options: string[]; required: boolean }
 export interface FormComputed { col: string; header: string; value: string }
 export interface Lookups { areas: string[]; sites: string[]; positions: string[]; activities: { code: string; name: string }[] }
 
-export function EntryForm({ hoja, recId, version, fields, computed, initial, lookups, canWrite }: {
-  hoja: string; recId?: string; version?: number; fields: FormField[]; computed: FormComputed[]; initial: Record<string, string>; lookups: Lookups; canWrite: boolean;
+export function EntryForm({ hoja, base, recId, version, fields, computed, initial, lookups, canWrite }: {
+  hoja: string; base: string; recId?: string; version?: number; fields: FormField[]; computed: FormComputed[]; initial: Record<string, string>; lookups: Lookups; canWrite: boolean;
 }) {
   const [state, action, pending] = useActionState<FormState, FormData>(saveEntryAction, { errors: [], values: initial });
   const val = (col: string) => state.values[col] ?? "";
@@ -66,7 +66,7 @@ export function EntryForm({ hoja, recId, version, fields, computed, initial, loo
       )}
       <div style={{ display: "flex", gap: 8 }}>
         <button className="btn solid" type="submit" disabled={!canWrite || pending}>{pending ? "Guardando…" : "Guardar"}</button>
-        <Link className="btn" href={`/datos/${hoja}`}>Cancelar</Link>
+        <Link className="btn" href={base}>Cancelar</Link>
       </div>
       {!canWrite && <div className="banner">Su rol es de solo lectura: no puede modificar este estudio.</div>}
     </form>

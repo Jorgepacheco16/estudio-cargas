@@ -12,6 +12,7 @@ async function signInWithGoogle() {
   redirect(data.url);
 }
 
+export const metadata = { title: "Ingresar" };
 export default async function Login({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   const sp = await searchParams;
   if (await getUser()) redirect("/estudio");

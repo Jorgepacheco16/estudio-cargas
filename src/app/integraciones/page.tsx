@@ -1,3 +1,4 @@
+import { Purpose } from "@/components/Purpose";
 import { redirect } from "next/navigation";
 import { getDb } from "@/db/server";
 import { getUser } from "@/lib/supabase/server";
@@ -8,6 +9,7 @@ import { connectAction, previewAction, syncAction } from "./actions";
 const MODE: Record<string, string> = { off: "Apagada", push: "La app alimenta la hoja (recomendado)", pull: "Solo hoja → app", bidirectional: "Bidireccional" };
 const when = (d: Date | null) => (d ? d.toLocaleString("es-CO", { timeZone: "America/Bogota", dateStyle: "short", timeStyle: "short" }) : "—");
 
+export const metadata = { title: "Integraciones" };
 export default async function Integraciones({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   const user = await getUser();
   if (!user) redirect("/login");
@@ -20,7 +22,7 @@ export default async function Integraciones({ searchParams }: { searchParams: Pr
 
   return (
     <main>
-      <div className="head"><div><h1>Integraciones</h1><div className="sub">Google Sheets · la aplicación manda; la hoja es una vista de captura{study ? ` · ${study.name}` : ""}</div></div></div>
+      <div className="head"><div><h1>Integraciones</h1><Purpose k="integraciones" /><div className="sub">Google Sheets · la aplicación manda; la hoja es una vista de captura{study ? ` · ${study.name}` : ""}</div></div></div>
       {sp.ok && <div className="banner" style={{ background: "var(--blue-soft)", color: "var(--blue)" }}>{sp.ok}</div>}
       {sp.error && <div className="banner" style={{ background: "var(--red-soft)", color: "var(--red-dark)" }}>{sp.error}</div>}
       {!study ? <div className="empty">Cree o seleccione un estudio en la sección Estudio.</div> : (
@@ -58,11 +60,11 @@ export default async function Integraciones({ searchParams }: { searchParams: Pr
             {!isOwner && <p className="note">Solo el propietario del estudio puede conectar o cambiar la hoja.</p>}
           </section>
 
-          <section className="card">
-            <h2>Cambios en vivo desde la hoja (Apps Script, solo modos heredados)</h2>
-            <p className="note">Con el modo «La app alimenta la hoja» NO se necesita: los datos se capturan en la app (Datos de entrada) y se escriben solos en la hoja; lo que se edite a mano en las casillas de entrada de la hoja se vuelve a sobrescribir con el valor de la app. Solo para los modos heredados: para que las ediciones en la hoja lleguen a la aplicación en segundos: abra la hoja → Extensiones → Apps Script, pegue el código descargado, defina la propiedad <b>WEBHOOK_SECRET</b> (el mismo valor de SHEETS_WEBHOOK_SECRET del servidor) y cree los activadores <b>onEditInstalled</b> (al editar) y <b>onChangeInstalled</b> (al cambiar). Sin esto la aplicación igual se actualiza con «Sincronizar ahora» y con la reconciliación diaria.</p>
+<details className="adv"><summary>Detalle avanzado: cambios en vivo desde la hoja (solo modos heredados)</summary><div className="adv-body"><section className="card">
+            <h2>Apps Script</h2>
+            <p className="note">Con el modo «La app alimenta la hoja» NO se necesita: los datos se capturan en la app (en cada sección) y se escriben solos en la hoja; lo que se edite a mano en las casillas de entrada de la hoja se vuelve a sobrescribir con el valor de la app. Solo para los modos heredados: para que las ediciones en la hoja lleguen a la aplicación en segundos: abra la hoja → Extensiones → Apps Script, pegue el código descargado, defina la propiedad <b>WEBHOOK_SECRET</b> (el mismo valor de SHEETS_WEBHOOK_SECRET del servidor) y cree los activadores <b>onEditInstalled</b> (al editar) y <b>onChangeInstalled</b> (al cambiar). Sin esto la aplicación igual se actualiza con «Sincronizar ahora» y con la reconciliación diaria.</p>
             <a className="btn" href="/api/sheets/script" download>Descargar Code.gs</a>
-          </section>
+</section></div></details>
 
           <section className="card">
             <h2>Eventos recientes ({events.length})</h2>

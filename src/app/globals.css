@@ -7,12 +7,12 @@
   --blue-dark: #003c73;
   --blue-soft: #e4eef8;
   --green: #20c463;
-  --green-dark: #12803f;
+  --green-dark: #0c6a33;
   --green-soft: #e0f6e9;
   --amber: #8a5300;
   --amber-soft: #fdefd2;
   --ink: #252b33;
-  --muted: #747b84;
+  --muted: #5a626c;
   --bg: #f3f5f7;
   --card: #ffffff;
   --line: #e1e5ea;
@@ -86,6 +86,15 @@ h2 { font-size: 1.0625rem; margin: 0; font-weight: 700; }
 .nav-in { max-width: 1280px; margin: 0 auto; padding: 6px 16px; display: flex; gap: 4px; overflow-x: auto; scrollbar-width: thin; }
 .nav a { color: #fff; padding: 8px 14px; font-size: .875rem; border-radius: 10px; min-height: 44px; display: inline-flex; align-items: center; gap: 8px; white-space: nowrap; font-weight: 500; transition: background .15s; }
 .nav a svg { width: 18px; height: 18px; flex: none; opacity: .9; }
+.nav-group { background: transparent; border: 0; color: #fff; padding: 8px 14px; font: inherit; font-size: .875rem; border-radius: 10px; min-height: 44px; display: inline-flex; align-items: center; gap: 8px; white-space: nowrap; font-weight: 500; cursor: pointer; }
+.nav-group svg { width: 18px; height: 18px; flex: none; opacity: .9; }
+.nav-group .chev { width: 16px; height: 16px; transition: transform .15s; }
+.nav-group:hover { background: rgba(255, 255, 255, .16); }
+.nav-group.on { background: rgba(255, 255, 255, .22); font-weight: 700; box-shadow: inset 0 -3px 0 #fff; }
+.nav-group:focus-visible, .nav a:focus-visible { outline: 3px solid #fff; outline-offset: -3px; }
+.nav-sub { background: rgba(0, 0, 0, .22); border-top: 1px solid rgba(255, 255, 255, .15); }
+.nav-sub .nav-in { padding-left: 32px; }
+.nav a.sub-link { font-size: .8125rem; min-height: 40px; padding: 6px 12px; }
 .nav a:hover { background: rgba(255, 255, 255, .16); }
 .nav a[aria-current="page"] { background: #fff; color: var(--blue-dark); font-weight: 700; box-shadow: 0 1px 4px rgba(0, 0, 0, .2); }
 .nav a[aria-current="page"] svg { opacity: 1; }
@@ -183,3 +192,25 @@ tbody tr:hover { background: var(--blue-soft); }
   .card { box-shadow: none; break-inside: avoid; }
   th { background: var(--blue) !important; color: #fff !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 }
+
+/* ───── Claridad: propósito, ayudas, calculado vs editable, detalle avanzado ───── */
+.lead { margin: 6px 0 0; max-width: 70ch; color: var(--ink); font-size: .9375rem; }
+.help { display: inline-flex; align-items: center; gap: 3px; border-bottom: 1px dotted var(--blue); cursor: help; color: inherit; }
+.help-i { display: inline-flex; align-items: center; justify-content: center; width: 16px; height: 16px; border-radius: 50%; background: var(--blue); color: #fff; font-size: .6875rem; font-weight: 700; font-style: italic; }
+.help:focus-visible { outline: 3px solid var(--blue); outline-offset: 2px; border-radius: 4px; }
+td.calc { background: color-mix(in srgb, var(--blue-soft) 45%, transparent); color: var(--muted); }
+th.calc { background: var(--blue-dark); }
+details.adv { border: 1px solid var(--line); border-radius: var(--radius); background: var(--card); box-shadow: var(--shadow); margin-top: 16px; }
+details.adv > summary { cursor: pointer; padding: 14px 20px; font-weight: 700; list-style: none; display: flex; align-items: center; gap: 8px; min-height: 48px; }
+details.adv > summary::-webkit-details-marker { display: none; }
+details.adv > summary::before { content: "▸"; color: var(--blue); transition: transform .15s; }
+details.adv[open] > summary::before { transform: rotate(90deg); }
+details.adv > summary:focus-visible { outline: 3px solid var(--blue); outline-offset: -3px; border-radius: var(--radius); }
+details.adv > .adv-body { padding: 0 20px 20px; }
+details.adv > .adv-body > .card { box-shadow: none; border: 0; padding: 0; margin-top: 0; }
+/* El color nunca va solo: cada estado lleva su símbolo */
+.pill.ok::before { content: "✔ "; }
+.pill.overload::before { content: "▲ "; }
+.pill.low::before { content: "● "; }
+.pill.nodata::before { content: "○ "; }
+.loading { padding: 48px 0; text-align: center; color: var(--muted); }

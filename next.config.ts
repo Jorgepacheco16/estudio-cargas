@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import { LEGACY_REDIRECTS } from "./src/lib/entry-routes";
 
 /**
  * Cabeceras de seguridad (Fase 6). La política de contenido (CSP) se genera por petición en src/proxy.ts, con un código aleatorio (nonce),
@@ -6,6 +7,7 @@ import type { NextConfig } from "next";
  */
 const config: NextConfig = {
   poweredByHeader: false,
+  async redirects() { return LEGACY_REDIRECTS.map((r) => ({ ...r, permanent: false })); }, // rutas anteriores de «Datos de entrada»
   async headers() {
     return [{
       source: "/:path*",
