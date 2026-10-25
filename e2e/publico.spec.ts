@@ -31,7 +31,7 @@ test("toda la navegación principal responde y las páginas de captura piden ini
   for (const l of links) {
     const r = await page.goto(l.href);
     expect(r?.status(), `${l.text} (${l.href})`).toBeLessThan(400);
-    if (["/estudio", "/datos", "/integraciones", "/historia"].includes(l.href)) await expect(page, `${l.href} debe pedir sesión`).toHaveURL(/\/login/);
+    if (["/estudio", "/datos", "/integraciones", "/historia", "/agente"].includes(l.href)) await expect(page, `${l.href} debe pedir sesión`).toHaveURL(/\/login/);
   }
 });
 

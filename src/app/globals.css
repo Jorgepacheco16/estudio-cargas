@@ -79,6 +79,8 @@ h2 { font-size: 1.125rem; margin: 0; }
 .btn:hover { background: var(--blue-soft); }
 .btn.solid { background: var(--red); border-color: var(--red); color: #fff; }
 .btn.solid:hover { background: var(--red-dark); border-color: var(--red-dark); }
+.btn:disabled, .btn:disabled:hover { opacity: .45; cursor: not-allowed; }
+.btn.solid:disabled:hover { background: var(--red); border-color: var(--red); }
 :root[data-theme="dark"] .btn.solid { color: #17203a; }
 select, input { min-height: 44px; border: 1px solid var(--line); border-radius: 8px; padding: 0 12px; font: inherit; background: var(--card); color: var(--ink); }
 label.f { display: flex; flex-direction: column; gap: 4px; font-size: .75rem; color: var(--muted); }

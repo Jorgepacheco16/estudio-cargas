@@ -98,16 +98,18 @@ test("409 por versión desactualizada: dos pestañas editan la misma actividad y
   try {
     await open("/datos/3");
     await page.locator("tr", { hasText: "E2E-1" }).getByRole("link", { name: "Editar" }).click(); await settle();
+    await page.waitForURL(/\/datos\/3\/[0-9a-f-]{36}$/); await settle();
     const url = page.url();                  // esta pestaña queda con la versión vista
     await other.goto(url); await other.waitForLoadState("networkidle"); await other.waitForTimeout(1000);
-    await other.locator("input[name=c_T]").fill("10");
+    await expect(other.locator("input[name=c_T]"), `la segunda pestaña (${other.url()}) muestra: ${(await other.locator("body").innerText()).replace(/\s+/g, " ").slice(0, 300)}`).toBeVisible({ timeout: 15000 });
+    await other.locator("input[name=c_T]").fill("11");  // distinto del valor guardado (10) para que haya un cambio real y suba la versión
     await other.getByRole("button", { name: "Guardar", exact: true }).click();
     await expect(other.locator(".banner").filter({ hasText: "Registro actualizado" })).toBeVisible();   // la otra pestaña guarda primero: sube la versión
     await page.locator("input[name=c_T]").fill("77");
     await guardar();
     await banner("Conflicto (409)");
     await page.goto(url); await settle();
-    await expect(page.locator("input[name=c_T]")).toHaveValue("10"); // el 77 no se guardó
+    await expect(page.locator("input[name=c_T]")).toHaveValue("11"); // el 77 no se guardó
   } finally { await other.close(); }
 });
 
@@ -136,7 +138,7 @@ test("el tablero en modo REAL refleja la actividad registrada", async () => {
   await open("/?modo=real");
   const kpi = (label: string) => page.getByLabel("Indicadores").locator(".card", { hasText: label }).locator(".kpi");
   await expect(kpi("Actividades registradas")).toHaveText("1");
-  await expect(kpi("Horas/semana inventariadas")).toHaveText("8,0");
+  await expect(kpi("Horas/semana inventariadas")).toHaveText("8,8"); // 4/día × 6 días × 11 min ÷ 60 × 2 ocupantes
   await expect(kpi("Capacidad disponible")).toHaveText("75,6");
   await expect(page.getByLabel("Carga por cargo", { exact: true })).toContainText("Cajero E2E");
 });
@@ -159,7 +161,7 @@ test("un valor inválido al editar un registro se rechaza (escala 1 a 5) y el da
   await settle();
   await page.locator("input[name=c_K]").fill("9");
   await guardar();
-  await banner(/fuera de 1–5/);
+  await banner(/Impacto legal.*fuera de la escala 1–5/);
   await open("/datos/7");
   await expect(page.locator("tr", { hasText: "E2E-1" })).toContainText("Crítica"); // el registro anterior sigue igual
 });
@@ -181,6 +183,7 @@ test("el respaldo completo en Excel se descarga y trae los datos del estudio", a
 });
 
 test("historia: foto, mediciones con índice de productividad y detección de desviaciones", async () => {
+  test.setTimeout(240_000); // muchos pasos contra un Supabase remoto
   await open("/historia?vista=linea");
   await page.locator("input[name=label]").fill("Foto E2E");
   await page.getByRole("button", { name: "Tomar foto ahora" }).click();
@@ -198,7 +201,7 @@ test("historia: foto, mediciones con índice de productividad y detección de de
     await f.getByRole("button", { name: "Guardar medición" }).click();
     await banner("Medición guardada");
   }
-  await expect(page.locator("tr", { hasText: "E2E-1" }).first()).toContainText("1,67"); // real 10/h ÷ estándar 6/h
+  await expect(page.locator("tr", { hasText: "E2E-1" }).first()).toContainText("1,83"); // real 10/h ÷ estándar 5,45/h (11 min por ejecución)
 
   await open("/historia?vista=desviaciones");
   await page.getByRole("button", { name: "Detectar desviaciones ahora" }).click();

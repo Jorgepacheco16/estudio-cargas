@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import { getDb } from "@/db/server";
 import { getUser } from "@/lib/supabase/server";
 import { activeStudyId } from "@/data/source";
@@ -18,10 +19,12 @@ function describe(kind: string, change: Record<string, unknown>): string {
 export default async function Agente({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   const sp = await searchParams;
   const user = await getUser();
-  const study = user ? await activeStudyId(user.id) : null;
-  const proposals = user && study ? await listProposals(getDb(), user.id, study.id) : [];
+  if (!user) redirect("/login");
+  const study = await activeStudyId(user.id);
+  const proposals = study ? await listProposals(getDb(), user.id, study.id) : [];
   const configured = Boolean(process.env.ANTHROPIC_API_KEY);
   const canWrite = !!study && study.role !== "viewer";
+  const blocked = !configured ? "El agente no está configurado (falta ANTHROPIC_API_KEY)." : !canWrite ? "Su rol es de solo lectura." : null;
 
   return (
     <main>
@@ -32,12 +35,13 @@ export default async function Agente({ searchParams }: { searchParams: Promise<R
       {sp.ok && <div className="banner" style={{ background: "var(--blue-soft)", color: "var(--blue)" }}>{sp.ok}</div>}
       {sp.error && <div className="banner" style={{ background: "var(--red-soft)", color: "var(--red-dark)" }}>{sp.error}</div>}
 
-      {!user || !study ? <div className="empty">Inicie sesión y seleccione un estudio para usar el agente.</div> : (
+      {!study ? <div className="empty">Cree o seleccione un estudio en la sección Estudio.</div> : (
         <>
+          {blocked && <div className="banner">{blocked}</div>}
           <section className="card">
             <h2>Ejecutar análisis</h2>
             <form action={runAgentAction} style={{ marginTop: 12 }}>
-              <button className="btn solid" type="submit" disabled={!configured || !canWrite}>Pedir propuestas al agente</button>
+              <button className="btn solid" type="submit" disabled={!!blocked} title={blocked ?? undefined}>Pedir propuestas al agente</button>
             </form>
             <p className="note">
               {configured ? `Modelo: ${agentModel()} · tope de ${AGENT_DAILY_LIMIT} ejecuciones por día y estudio.` : "Agente sin configurar: falta ANTHROPIC_API_KEY."}{" "}
