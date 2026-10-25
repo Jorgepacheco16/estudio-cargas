@@ -81,7 +81,8 @@ h2 { font-size: 1rem; margin: 0; font-weight: 600; line-height: 1.3; }
 .topbar .tag { font-size: .875rem; color: var(--muted); font-weight: 600; }
 /* Tres zonas: identidad (logotipo + nombre), cuenta (correo) y sesión (Salir) */
 .brand { display: flex; align-items: center; gap: 16px; min-width: 0; }
-.brand-name { font-size: 1.25rem; font-weight: 800; letter-spacing: .02em; text-transform: uppercase; white-space: nowrap; color: var(--blue); line-height: 1.25; padding-left: 16px; border-left: 1px solid var(--line); }
+/* Título de la aplicación: azul profundo, trazo firme pero no pesado, con tracking amplio y la barra roja de acento que ya usan los títulos de cada vista */
+.brand-name { font-size: 1.1875rem; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; white-space: nowrap; color: var(--blue-dark); line-height: 1.1; padding: 4px 0 4px 16px; border-left: 4px solid var(--red); }
 :root[data-theme="dark"] .brand-name { color: var(--ink); }
 .topbar-user { display: flex; align-items: center; gap: 0; margin-left: auto; }
 .account { display: flex; align-items: center; gap: 12px; padding: 0 24px; border-left: 1px solid var(--line); }
