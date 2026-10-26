@@ -3,6 +3,7 @@ import { useActionState } from "react";
 import Link from "next/link";
 import { saveEntryAction, type FormState } from "@/app/entrada/actions";
 import { CoveragePanel } from "@/components/CoveragePanel";
+import { LONG_TEXT_MAX } from "@/domain/limits";
 
 export interface FormField { col: string; header: string; hint: string; group: string; control: string; options: string[]; required: boolean }
 export interface FormComputed { col: string; header: string; value: string }
@@ -44,7 +45,7 @@ export function EntryForm({ hoja, base, recId, version, fields, computed, initia
               } else if (f.control === "activity") {
                 input = <select {...common}><option value="">(elija)</option>{lookups.activities.map((a) => <option key={a.code} value={a.code}>{a.code} · {a.name}</option>)}</select>;
               } else if (f.control === "textarea") {
-                input = <textarea {...common} rows={4} maxLength={4000} />;
+                input = <textarea {...common} rows={4} maxLength={LONG_TEXT_MAX} />;
               } else if (f.control === "date") {
                 input = <input {...common} type="date" />;
               } else {

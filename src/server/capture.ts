@@ -8,6 +8,7 @@ import type { PgTable } from "drizzle-orm/pg-core";
 import { withRls, type Db } from "../db/client";
 import { auditLog, studyParameters } from "../db/schema";
 import { LABELS } from "../domain/labels";
+import { LONG_TEXT_MAX } from "../domain/limits";
 
 export type FieldKind = "text" | "longtext" | "bool" | "scale" | "int" | "num" | "pct" | "date" | "list" | "activity" | "area";
 export interface Field { key: string; label: string; kind: FieldKind; list?: keyof typeof LABELS; required?: boolean; notNull?: boolean; max?: number; hint?: string }
@@ -55,7 +56,7 @@ export function parseForm(def: SheetDef, raw: Record<string, FormDataEntryValue>
     }
     switch (f.kind) {
       case "text": case "longtext":
-        if (s.length > (f.max ?? 4000)) errors.push(`${f.label}: máximo ${f.max ?? 4000} caracteres`); else values[f.key] = s; break;
+        { const max = f.max ?? (f.kind === "longtext" ? LONG_TEXT_MAX : 4000); if (s.length > max) errors.push(`${f.label}: máximo ${max} caracteres`); else values[f.key] = s; break; }
       case "bool":
         if (s !== "yes" && s !== "no") errors.push(`${f.label}: elija Sí o No`); else values[f.key] = s === "yes"; break;
       case "scale": case "int": {
