@@ -7,7 +7,7 @@ import { ADAPTERS, cellsOf, sameValue, toCell } from "../src/server/sheets/adapt
 import { readRowFrom } from "../src/server/import/parse";
 import { Report } from "../src/server/import/normalize";
 import { activityFields } from "../src/server/import/rowmaps";
-import { SYNCED_SHEETS, colToIndex } from "../src/domain/sheetmap";
+import { SYNCED_SHEETS, colToIndex, indexToCol } from "../src/domain/sheetmap";
 import { looksLikeFormula } from "../src/domain/cellguard";
 import { sheetChangeEvent, type SheetChangeEvent } from "../src/domain/contracts";
 import { check, summary, URL_ADMIN, URL_APP } from "./helpers";
@@ -189,6 +189,47 @@ async function main() {
       const prot = sheet.protections.get("2_Caracterizacion") ?? [];
       if (!prot.length || prot.some((r) => /^(P|Q|R|S|T|U|V)\d/.test(r))) throw new Error(`protección: ${JSON.stringify(prot)}`);
     });
+    await check("Turnos y descripción de la operación (D-67, D-69) → hojas 2 y 3 de Google: columnas nuevas al final con su encabezado, valores por cargo y por actividad, sin repetir escrituras, con refresco al cambiar y sin tocar filas de otra persona", async () => {
+      const { saveShift, setActivityShifts, deleteShift, listShifts } = await import("../src/server/shifts");
+      const { saveOperation } = await import("../src/server/operation");
+      const { mirrorExtras, EXTRA_HEADERS } = await import("../src/server/sheets/extras");
+      const { adapterById } = await import("../src/server/sheets/adapters");
+      const [{ id: positionId }] = (await admin.db.execute(sql`select id from public.positions where study_id = ${studyId} and name = 'Cajero' limit 1`)) as unknown as { id: string }[];
+      const [{ id: actId }] = (await admin.db.execute(sql`select id from public.activities where study_id = ${studyId} and code = 'APP-1'`)) as unknown as { id: string }[];
+      const every = ["0", "1", "2", "3", "4", "5", "6"];
+      for (const t of [{ name: "Apertura", start: "05:30", end: "13:00", breakMin: "30", days: every }, { name: "Cierre", start: "13:00", end: "20:30", breakMin: "30", days: ["0", "1", "2", "3", "4", "5"] }]) {
+        const r = await saveShift(app.db, owner, studyId, positionId, undefined, t); if (!r.ok) throw new Error(JSON.stringify(r));
+      }
+      const shifts = await listShifts(app.db, owner, studyId, positionId);
+      await setActivityShifts(app.db, owner, studyId, actId, { all: false, ids: [shifts.find((s) => s.name === "Apertura")!.id] });
+      await saveOperation(app.db, owner, studyId, positionId, "Apertura con 5 cajas y cierre con 6; el resto según el pronóstico.");
+      await pushAll(app.db, conn, sheet);
+      const colOf = async (tab: string, header: string) => { const h = (await sheet.read(`'${tab}'!A6:BF6`))[0] as unknown[]; const i = h.indexOf(header); if (i < 0) throw new Error(`falta la columna «${header}» en ${tab}`); return indexToCol(i + 1); };
+      const [cTurnos, cOper, cAct] = [await colOf("2_Caracterizacion", EXTRA_HEADERS.shifts), await colOf("2_Caracterizacion", EXTRA_HEADERS.operation), await colOf("3_Actividades", EXTRA_HEADERS.activityShifts)];
+      if (colToIndex(cTurnos) <= 22 || colToIndex(cAct) <= 51) throw new Error("las columnas nuevas deben ir después de las del libro");
+      const t7 = String(sheet.cell("2_Caracterizacion", cTurnos, 7));
+      if (!t7.includes("Apertura · 05:30–13:00 · receso 30 min · 7 h netas") || !t7.includes("Cierre · L–S · 13:00–20:30")) throw new Error(t7);
+      if (sheet.cell("2_Caracterizacion", cOper, 7) !== "Apertura con 5 cajas y cierre con 6; el resto según el pronóstico.") throw new Error("descripción de la operación");
+      const r3 = ((await sheet.read("'3_Actividades'!B7:B40")).findIndex((x) => x[0] === "APP-1")) + 7;
+      if (sheet.cell("3_Actividades", cAct, r3) !== "Apertura") throw new Error(String(sheet.cell("3_Actividades", cAct, r3)));
+      // sin cambios no se escribe nada
+      const [a2, a3] = [adapterById("2")!, adapterById("3")!];
+      if ((await mirrorExtras(app.db, conn, sheet, a2)) !== 0 || (await mirrorExtras(app.db, conn, sheet, a3)) !== 0) throw new Error("repitió escrituras sin cambios");
+      // una fila de otra persona (datos sin vínculo) conserva lo que tenga en las columnas nuevas
+      sheet.set("2_Caracterizacion", "B", 150, "Cajas"); sheet.set("2_Caracterizacion", cTurnos, 150, "nota de otra persona");
+      await mirrorExtras(app.db, conn, sheet, a2);
+      if (sheet.cell("2_Caracterizacion", cTurnos, 150) !== "nota de otra persona") throw new Error("pisó una fila sin vínculo");
+      sheet.set("2_Caracterizacion", "B", 150, null); sheet.set("2_Caracterizacion", cTurnos, 150, null);
+      // al eliminar un turno en uso y vaciar la operación, la hoja se refresca
+      await deleteShift(app.db, owner, studyId, shifts.find((s) => s.name === "Apertura")!.id, true);
+      await saveOperation(app.db, owner, studyId, positionId, "");
+      if ((await mirrorExtras(app.db, conn, sheet, a2)) === 0 || (await mirrorExtras(app.db, conn, sheet, a3)) === 0) throw new Error("no refrescó");
+      const after = String(sheet.cell("2_Caracterizacion", cTurnos, 7));
+      if (after.includes("Apertura") || !after.includes("Cierre") || sheet.cell("2_Caracterizacion", cOper, 7) !== "" || sheet.cell("3_Actividades", cAct, r3) !== "") throw new Error(JSON.stringify([after, sheet.cell("2_Caracterizacion", cOper, 7), sheet.cell("3_Actividades", cAct, r3)]));
+      // vista previa: no escribe (ni agrega columnas)
+      const w = sheet.writes; await mirrorExtras(app.db, conn, sheet, a2, true); if (sheet.writes !== w) throw new Error("la vista previa escribió");
+    });
+
     await check("Cerrar huecos: tras eliminar una actividad el espejo deja la fila vacía y compactSheet sube las demás, sin tocar las fórmulas de la hoja (y no pisa filas sin vincular)", async () => {
       const { compactSheet } = await import("../src/server/sheets/mirror");
       const { adapterById } = await import("../src/server/sheets/adapters");

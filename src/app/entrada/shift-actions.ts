@@ -4,6 +4,7 @@ import { getDb } from "@/db/server";
 import { getUser } from "@/lib/supabase/server";
 import { activeStudyId } from "@/data/source";
 import { basePath } from "@/lib/entry-routes";
+import { scheduleMirror } from "@/server/entry/service";
 import { saveOperation } from "@/server/operation";
 import { deleteShift, saveShift } from "@/server/shifts";
 
@@ -33,6 +34,7 @@ export async function saveShiftAction(fd: FormData) {
   try { res = await saveShift(getDb(), user.id, study.id, positionId, shiftId, { name: str(fd, "name"), start: str(fd, "start"), end: str(fd, "end"), breakMin: str(fd, "breakMin"), days: fd.getAll("days").map(String) }); }
   catch { redirect(`${to}?error=${encodeURIComponent("No se pudo guardar el turno. Intente de nuevo.")}&from=turnos#turnos`); }
   if (!res.ok) redirect(`${to}?error=${encodeURIComponent(res.errors.join(" "))}&from=turnos#turnos`);
+  scheduleMirror(getDb(), user.id, study.id, "2"); scheduleMirror(getDb(), user.id, study.id, "3"); // turnos del cargo (hoja 2) y turnos de sus actividades (hoja 3)
   redirect(`${to}?ok=${encodeURIComponent(res.notices.join(" ") || "Turno guardado.")}&from=turnos#turnos`);
 }
 
@@ -46,6 +48,7 @@ export async function saveOperationAction(fd: FormData) {
   try { r = await saveOperation(getDb(), user.id, study.id, positionId, str(fd, "operation")); }
   catch { redirect(`${to}?error=${encodeURIComponent("No se pudo guardar la descripción. Intente de nuevo.")}&from=operacion#operacion`); }
   if (!r.ok) redirect(`${to}?error=${encodeURIComponent(r.error)}&from=operacion#operacion`);
+  if (r.changed) scheduleMirror(getDb(), user.id, study.id, "2");
   redirect(`${to}?ok=${encodeURIComponent(r.changed ? "Descripción de la operación guardada." : "Sin cambios.")}&from=operacion#operacion`);
 }
 
@@ -59,5 +62,6 @@ export async function deleteShiftAction(fd: FormData) {
   catch { redirect(`${to}?error=${encodeURIComponent("No se pudo eliminar el turno. Intente de nuevo.")}&from=turnos#turnos`); }
   if ("needsConfirm" in r) redirect(`${to}?error=${encodeURIComponent(`El turno lo usan ${r.needsConfirm} actividad(es). Marque «Confirmo» para quitarlo también de ellas y vuelva a eliminar.`)}&from=turnos#turnos`);
   if (!r.ok) redirect(`${to}?error=${encodeURIComponent(r.error)}&from=turnos#turnos`);
+  scheduleMirror(getDb(), user.id, study.id, "2"); scheduleMirror(getDb(), user.id, study.id, "3");
   redirect(`${to}?ok=${encodeURIComponent(r.removedFrom ? `Turno eliminado y quitado de ${r.removedFrom} actividad(es).` : "Turno eliminado.")}&from=turnos#turnos`);
 }

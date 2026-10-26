@@ -14,6 +14,7 @@ import { labelOf } from "../../domain/calculators";
 import { MIRROR_ADAPTERS, cellsOf, lastInputCol, type Adapter } from "./adapters";
 import type { CellValue, SheetGateway } from "./gateway";
 import { ensureInternal, findInternal, q, type Conn } from "./internal";
+import { mirrorExtras } from "./extras";
 
 export interface PushStats { sheet: string; appended: number; refreshed: number; cleared: number; unchanged: number; unlinked: number; formulaLike: number; diffs?: string[] }
 export const PROTECTION_NOTE = "Datos desde la app (no editar aquí)";
@@ -153,6 +154,7 @@ export async function compactSheet(db: Db, conn: Conn, gw: SheetGateway, a: Adap
     if (any) cleared++;
   }
   if (!dryRun) for (let i = 0; i < updates.length; i += 400) await gw.write(updates.slice(i, i + 400));
+  if (!dryRun) await mirrorExtras(db, conn, gw, a); // las columnas de turnos acompañan a las filas que se movieron
   return { sheet: name, moved, cleared, gapsBefore };
 }
 
@@ -182,7 +184,7 @@ export async function mirrorParameters(db: Db, conn: Conn, gw: SheetGateway, dry
 /** Espeja todo: supuestos, áreas y las 8 hojas de captura. En vista previa (dryRun) solo cuenta, sin escribir. */
 export async function pushAll(db: Db, conn: Conn, gw: SheetGateway, dryRun = false): Promise<PushStats[]> {
   const out: PushStats[] = [await mirrorParameters(db, conn, gw, dryRun)];
-  for (const a of MIRROR_ADAPTERS) out.push(await mirrorSheet(db, conn, gw, a, dryRun));
+  for (const a of MIRROR_ADAPTERS) { out.push(await mirrorSheet(db, conn, gw, a, dryRun)); if (!dryRun) await mirrorExtras(db, conn, gw, a); } // turnos y descripción de la operación (D-67, D-69)
   if (!dryRun) {
     for (const a of MIRROR_ADAPTERS) await gw.protect(a.sheet.sheetName, inputRanges(a), PROTECTION_NOTE);
   }
@@ -191,5 +193,7 @@ export async function pushAll(db: Db, conn: Conn, gw: SheetGateway, dryRun = fal
 
 /** Tras guardar o borrar un registro de una hoja: actualiza solo esa hoja en Google (más los supuestos si se pide). */
 export async function pushSheet(db: Db, conn: Conn, gw: SheetGateway, adapter: Adapter): Promise<PushStats> {
-  return mirrorSheet(db, conn, gw, adapter, false);
+  const st = await mirrorSheet(db, conn, gw, adapter, false);
+  await mirrorExtras(db, conn, gw, adapter); // turnos y descripción de la operación (D-67, D-69): después del espejo, que es quien crea el vínculo de cada fila
+  return st;
 }

@@ -5,10 +5,10 @@
 import { and, asc, eq, inArray, sql } from "drizzle-orm";
 import { withRls, type Db, type Tx } from "../db/client";
 import { activities, activityShifts, areas, auditLog, positionShifts, positions, sites } from "../db/schema";
-import { activityShiftsText, describeDays, normTime, parseShift, reconcileSelection, type ShiftInput } from "../domain/shifts";
+import { activityShiftsText, describeDays, describeShift, normTime, parseShift, reconcileSelection, type ShiftInput } from "../domain/shifts";
 
 export interface ShiftRow { id: string; positionId: string; name: string; start: string | null; end: string | null; breakMin: number | null; days: number | null; usedBy: number }
-export type ShiftResult = { ok: true; notices: string[] } | { ok: false; errors: string[] };
+export type ShiftResult = { ok: true; notices: string[]; changed?: boolean } | { ok: false; errors: string[] };
 
 const hhmm = (t: string | null) => (t ? normTime(t) : null);
 const audit = (tx: Tx, studyId: string, sub: string, action: string, entity: string, entityId: string, diff: Record<string, { from: unknown; to: unknown }> | null) =>
@@ -91,13 +91,13 @@ export async function setActivityShifts(db: Db, sub: string, studyId: string, ac
     const { kept, dropped } = reconcileSelection(sel.all ? [] : sel.ids, valid.map((v) => v.id));
     const before = await tx.select({ id: activityShifts.shiftId }).from(activityShifts).where(and(eq(activityShifts.studyId, studyId), eq(activityShifts.activityId, activityId)));
     const beforeIds = before.map((b) => b.id).sort().join(","), afterIds = [...kept].sort().join(",");
-    if (a.all === sel.all && beforeIds === afterIds) return { ok: true as const, notices: [] };
+    if (a.all === sel.all && beforeIds === afterIds) return { ok: true as const, notices: [], changed: false };
     await tx.update(activities).set({ allShifts: sel.all }).where(and(eq(activities.id, activityId), eq(activities.studyId, studyId)));
     await tx.delete(activityShifts).where(and(eq(activityShifts.studyId, studyId), eq(activityShifts.activityId, activityId)));
     if (kept.length) await tx.insert(activityShifts).values(kept.map((shiftId) => ({ studyId, activityId, shiftId })));
     const nameOf = new Map(valid.map((v) => [v.id, v.name]));
     await audit(tx, studyId, sub, "update", "activity_shifts", activityId, { shifts: { from: a.all ? "Todos los turnos" : before.map((b) => nameOf.get(b.id) ?? "?").join(", "), to: activityShiftsText(sel.all, kept.map((k) => nameOf.get(k) ?? "")) } });
-    return { ok: true as const, notices: dropped.length ? [`Se descartaron ${dropped.length} turno(s) que no pertenecen al cargo de la actividad.`] : [] };
+    return { ok: true as const, notices: dropped.length ? [`Se descartaron ${dropped.length} turno(s) que no pertenecen al cargo de la actividad.`] : [], changed: true };
   });
 }
 
@@ -118,13 +118,29 @@ export async function shiftsByPosition(db: Db, sub: string, studyId: string): Pr
   });
 }
 
-/** Texto de turnos por código de actividad (para el agente y las exportaciones): solo actividades que tienen turnos. */
+/** Texto de turnos por id de actividad (hoja de Google y agente): solo actividades que tienen turnos. */
+export async function shiftTextByActivityId(tx: Tx, studyId: string): Promise<Map<string, string>> {
+  const byCode = await shiftTextRows(tx, studyId);
+  return new Map(byCode.map((r) => [r.id, r.text]));
+}
+/** Lo mismo por código de actividad (para el agente). */
 export async function shiftTextByActivityCode(tx: Tx, studyId: string): Promise<Map<string, string>> {
+  const rows = await shiftTextRows(tx, studyId);
+  return new Map(rows.map((r) => [r.code, r.text]));
+}
+/** Descripción de los turnos de cada cargo, un turno por línea, para la hoja 2 de Google. Solo cargos con turnos. */
+export async function shiftLinesByPositionId(tx: Tx, studyId: string): Promise<Map<string, string>> {
+  const rows = await tx.select().from(positionShifts).where(eq(positionShifts.studyId, studyId)).orderBy(asc(positionShifts.sortOrder), asc(positionShifts.name));
+  const out = new Map<string, string[]>();
+  for (const r of rows) out.set(r.positionId, [...(out.get(r.positionId) ?? []), describeShift({ name: r.name, start: hhmm(r.startTime), end: hhmm(r.endTime), breakMin: r.breakMinutes, days: r.days })]);
+  return new Map([...out].map(([k, v]) => [k, v.join("\n")]));
+}
+async function shiftTextRows(tx: Tx, studyId: string): Promise<{ id: string; code: string; text: string }[]> {
   const acts = await tx.select({ id: activities.id, code: activities.code, all: activities.allShifts }).from(activities).where(eq(activities.studyId, studyId));
   const links = await tx.select({ activityId: activityShifts.activityId, name: positionShifts.name, days: positionShifts.days }).from(activityShifts).innerJoin(positionShifts, eq(positionShifts.id, activityShifts.shiftId)).where(eq(activityShifts.studyId, studyId));
   const names = new Map<string, string[]>();
   for (const l of links) names.set(l.activityId, [...(names.get(l.activityId) ?? []), l.days === null ? l.name : `${l.name} (${describeDays(l.days)})`]);
-  const out = new Map<string, string>();
-  for (const a of acts) { const t = activityShiftsText(a.all, names.get(a.id) ?? []); if (t) out.set(a.code, t); }
+  const out: { id: string; code: string; text: string }[] = [];
+  for (const a of acts) { const t = activityShiftsText(a.all, names.get(a.id) ?? []); if (t) out.push({ id: a.id, code: a.code, text: t }); }
   return out;
 }

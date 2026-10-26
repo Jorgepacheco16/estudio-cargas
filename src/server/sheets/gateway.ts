@@ -10,6 +10,8 @@ export interface SheetGateway {
   columnCount(sheetName: string): Promise<number>;
   /** Agrega columnas al final de la pestaña y las oculta. */
   appendHiddenColumns(sheetName: string, count: number): Promise<void>;
+  /** Agrega columnas VISIBLES al final de la pestaña (p. ej. «Turnos del cargo», D-67). */
+  appendColumns(sheetName: string, count: number): Promise<void>;
   title(): Promise<string>;
   /** Marca como «protegidos con aviso» los rangos indicados (A1, sin el nombre de la pestaña): quien edite a mano ve la advertencia, pero no se bloquea. Reemplaza los protegidos antes por la app. */
   protect(sheetName: string, ranges: string[], description: string): Promise<void>;
@@ -26,6 +28,10 @@ export function googleGateway(spreadsheetId: string): SheetGateway {
     read: (range) => readRange(spreadsheetId, range),
     async write(updates) { if (updates.length) await pushCells(spreadsheetId, updates); },
     async columnCount(sheetName) { return (await meta(sheetName)).cols; },
+    async appendColumns(sheetName, count) {
+      const { sheetId } = await meta(sheetName);
+      await sheetsClient().spreadsheets.batchUpdate({ spreadsheetId, requestBody: { requests: [{ appendDimension: { sheetId, dimension: "COLUMNS", length: count } }] } });
+    },
     async appendHiddenColumns(sheetName, count) {
       const { sheetId, cols } = await meta(sheetName);
       await sheetsClient().spreadsheets.batchUpdate({ spreadsheetId, requestBody: { requests: [
