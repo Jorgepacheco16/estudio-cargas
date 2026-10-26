@@ -276,3 +276,5 @@ details.adv > .adv-body > .card { box-shadow: none; border: 0; padding: 0; margi
 .stack-form { display: grid; gap: 16px; margin-top: 16px; }
 .stack-form .field { display: grid; grid-template-rows: auto auto auto; grid-row: auto; padding-bottom: 0; }
 .stack-form .field input, .stack-form .field select { width: 100%; }
+.grid-kpi + .banner { margin-top: 16px; }
+tfoot td { background: var(--blue-soft); border-top: 2px solid var(--blue); border-bottom: 0; }

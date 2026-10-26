@@ -73,14 +73,14 @@ test("se registra una actividad completa (hoja 3) y se calcula su carga; editar 
   await guardar();
   await banner("Registro creado");
   await open("/calculo?modo=real");
-  await expect(page.locator("tr", { hasText: "E2E-1" })).toContainText("4,00"); // 4/día × 6 días × 5 min ÷ 60 × 2 ocupantes
+  await expect(page.locator("tr", { hasText: "E2E-1" }).first()).toContainText("4,00"); // 4/día × 6 días × 5 min ÷ 60 × 2 ocupantes
   await open("/actividades");
   await page.locator("tr", { hasText: "E2E-1" }).getByRole("link", { name: "Editar" }).click(); await settle();
   await page.locator("input[name=c_T]").fill("10");
   await guardar();
   await banner("Registro actualizado");
   await open("/calculo?modo=real");
-  await expect(page.locator("tr", { hasText: "E2E-1" })).toContainText("8,00");
+  await expect(page.locator("tr", { hasText: "E2E-1" }).first()).toContainText("8,00");
 });
 
 test("una actividad con código repetido se rechaza con un mensaje claro", async () => {

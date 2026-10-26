@@ -119,6 +119,7 @@ test("la política de contenido usa un código distinto por petición, sin 'unsa
 test("la pestaña de la hoja 4a muestra las columnas calculadas con los encabezados del libro y se exporta", async ({ page }) => {
   await page.goto("/calculo?modo=demo");
   await expect(page.getByRole("heading", { name: "Cálculo de tiempos" })).toBeVisible();
+  await page.getByText("Detalle avanzado: todas las columnas del cálculo").click(); // el detalle completo está plegado por defecto
   for (const h of ["Ejecuciones por semana", "Horas/sem TOTALES de la actividad en la sede", "Horas/mes equivalentes"]) await expect(page.getByRole("columnheader", { name: h })).toBeVisible();
   const [d] = await Promise.all([page.waitForEvent("download"), page.getByRole("link", { name: "Exportar Excel" }).click()]);
   expect(d.suggestedFilename()).toMatch(/calculo.*\.xlsx$/);

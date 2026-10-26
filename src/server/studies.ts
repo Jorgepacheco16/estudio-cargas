@@ -97,6 +97,12 @@ export async function listActivityVersions(db: Db, sub: string, studyId: string)
   return withRls(db, { sub }, (tx) => tx.select({ id: activities.id, code: activities.code, version: activities.version }).from(activities).where(eq(activities.studyId, studyId)));
 }
 
+/** Nombre de cada actividad por código (para mostrarlo junto al código en las vistas de resultados). */
+export async function listActivityNames(db: Db, sub: string, studyId: string): Promise<Map<string, string>> {
+  const rows = await withRls(db, { sub }, (tx) => tx.select({ code: activities.code, name: activities.name }).from(activities).where(eq(activities.studyId, studyId)));
+  return new Map(rows.map((r) => [r.code.toLowerCase(), r.name]));
+}
+
 /** Carga el estudio completo en la forma que espera el motor de cálculo. */
 export type StudyData = { params: Params; thresholds: Thresholds; staff: StaffingInput[]; acts: ActivityInput[] };
 
