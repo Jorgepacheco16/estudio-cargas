@@ -1,7 +1,7 @@
 import { sql } from "drizzle-orm";
 import {
   pgTable, pgEnum, uuid, text, integer, smallint, numeric, boolean, date,
-  timestamp, jsonb, bigint, unique, index, foreignKey, check,
+  timestamp, jsonb, bigint, unique, index, foreignKey, check, time,
 } from "drizzle-orm/pg-core";
 
 /* Las columnas created_by / user_id apuntan a auth.users (tabla de Supabase). Drizzle intenta CREAR esa tabla si se
@@ -173,6 +173,8 @@ export const activities = pgTable("activities", {
   simultaneousPeople: integer("simultaneous_people"),
   loadSharePct: numeric("load_share_pct", { precision: 5, scale: 4 }),
   secondaryPositionId: uuid("secondary_position_id"),
+  /** D-67: la actividad aplica a todos los turnos del cargo (incluidos los que se agreguen después). Si es falso, aplica a los de activity_shifts. */
+  allShifts: boolean("all_shifts").notNull().default(false),
   planning: planning("planning"),
   tools: text("tools"),
   inputs: text("inputs"),
@@ -220,6 +222,38 @@ const perActivity = () => ({
 });
 const perActivityFk = (name: string, t: { activityId: any; studyId: any }) =>
   foreignKey({ columns: [t.activityId, t.studyId], foreignColumns: [activities.id, activities.studyId], name }).onDelete("cascade");
+
+/* ───────── Turnos del cargo (D-67) y turnos en que se ejecuta cada actividad ───────── */
+/** Un turno de un cargo (p. ej. Apertura 05:30–13:00, receso 30 min). Informativo: no entra en ningún cálculo de horas. */
+export const positionShifts = pgTable("position_shifts", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  studyId: studyFk(),
+  positionId: uuid("position_id").notNull(),
+  name: text("name").notNull(),
+  startTime: time("start_time"),
+  endTime: time("end_time"),
+  breakMinutes: smallint("break_minutes"),
+  sortOrder: integer("sort_order").notNull().default(0),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [
+  unique("position_shifts_id_study_uq").on(t.id, t.studyId),
+  unique("position_shifts_name_uq").on(t.positionId, t.name),
+  foreignKey({ columns: [t.positionId, t.studyId], foreignColumns: [positions.id, positions.studyId], name: "position_shifts_position_fk" }).onDelete("cascade"),
+  index("position_shifts_position_idx").on(t.positionId),
+  check("position_shifts_name_ck", sql`length(btrim(${t.name})) > 0`),
+  check("position_shifts_break_ck", sql`${t.breakMinutes} is null or ${t.breakMinutes} between 0 and 240`),
+]);
+/** Turnos concretos en que se ejecuta una actividad (cuando activities.all_shifts es falso). */
+export const activityShifts = pgTable("activity_shifts", {
+  studyId: studyFk(),
+  activityId: uuid("activity_id").notNull(),
+  shiftId: uuid("shift_id").notNull(),
+}, (t) => [
+  unique("activity_shifts_pk").on(t.activityId, t.shiftId),
+  foreignKey({ columns: [t.activityId, t.studyId], foreignColumns: [activities.id, activities.studyId], name: "activity_shifts_activity_fk" }).onDelete("cascade"),
+  foreignKey({ columns: [t.shiftId, t.studyId], foreignColumns: [positionShifts.id, positionShifts.studyId], name: "activity_shifts_shift_fk" }).onDelete("cascade"),
+  index("activity_shifts_shift_idx").on(t.shiftId),
+]);
 
 export const measurabilityAssessments = pgTable("measurability_assessments", {
   ...perActivity(),

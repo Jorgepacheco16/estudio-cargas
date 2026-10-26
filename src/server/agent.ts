@@ -8,6 +8,7 @@ import { withRls, type Db, type Tx } from "../db/client";
 import { activities, agentProposals, agentRuns, areas, auditLog, positions, sites, studyParameters } from "../db/schema";
 import { screenProposals, SYSTEM_PROMPT, TUNABLE, type StudyDigest, type TunableKey } from "../domain/agent";
 import { loadDashboardTx } from "./dashboard-data";
+import { shiftTextByActivityCode } from "./shifts";
 
 export const AGENT_DAILY_LIMIT = Number(process.env.AGENT_DAILY_LIMIT ?? 5);
 export const agentModel = () => process.env.ANTHROPIC_MODEL ?? "claude-sonnet-5-5";
@@ -27,6 +28,7 @@ export async function buildDigest(tx: Tx, studyId: string): Promise<StudyDigest>
   const posId = new Map(pos.map((x) => [key(x.area, x.site, x.name, x.kind), x.id]));
   const acts = await tx.select({ id: activities.id, code: activities.code }).from(activities).where(eq(activities.studyId, studyId));
   const actId = new Map(acts.map((a) => [a.code, a.id]));
+  const shiftText = await tx.transaction((t) => shiftTextByActivityCode(t as Tx, studyId)).catch(() => new Map<string, string>()); // D-67: turnos de la actividad (nombres de turnos, sin datos de personas)
   const k = d.analysis.kpis;
 
   const findings: StudyDigest["findings"] = [{
@@ -41,7 +43,7 @@ export async function buildDigest(tx: Tx, studyId: string): Promise<StudyDigest>
   for (const a of d.analysis.activities) {
     if (a.complete) continue;
     const id = actId.get(a.code);
-    if (id) findings.push({ entity: "activities", id, note: `${a.code}: ${a.status}` });
+    if (id) findings.push({ entity: "activities", id, note: `${a.code}: ${a.status}${shiftText.has(a.code) ? ` · Turnos: ${shiftText.get(a.code)}` : ""}` });
   }
   return {
     studyId,

@@ -6,6 +6,7 @@ import { activeStudyId } from "@/data/source";
 import { basePath, PARAMETROS_PATH } from "@/lib/entry-routes";
 import { ENTRY_IDS, entryDef, type EntryId } from "@/server/entry/defs";
 import { deleteEntry, saveEntry, scheduleMirror } from "@/server/entry/service";
+import { setActivityShifts } from "@/server/shifts";
 import { SHEETS, parseForm, saveRow } from "@/server/capture";
 import { areas as areaTable } from "@/db/schema";
 import { withRls } from "@/db/client";
@@ -43,6 +44,14 @@ export async function saveEntryAction(_prev: FormState, fd: FormData): Promise<F
     return { errors: [code === "42501" ? "No tiene permiso para modificar este estudio." : "No se pudo guardar. Intente de nuevo."], values: raw };
   }
   if (!res.ok) return { errors: res.errors, values: raw };
+  // D-67: turnos en que se ejecuta la actividad (solo si el formulario trajo el selector). Un fallo aquí no deshace la actividad ya guardada.
+  if (id === "3" && fd.get("shiftsTouched") === "1") {
+    try {
+      const r = await setActivityShifts(getDb(), user.id, study.id, res.recId, { all: fd.get("allShifts") === "on", ids: fd.getAll("shift").map(String) });
+      if (!r.ok) res.notices.push("La actividad se guardó, pero no sus turnos: " + r.errors.join(" "));
+      else res.notices.push(...r.notices);
+    } catch { res.notices.push("La actividad se guardó, pero no se pudieron guardar sus turnos. Ábrala y vuelva a elegirlos."); }
+  }
   if (res.result !== "unchanged") scheduleMirror(getDb(), user.id, study.id, id);
   const msg = res.result === "created" ? "Registro creado" : res.result === "updated" ? "Registro actualizado" : "Sin cambios";
   redirect(`${basePath(id)}?ok=${encodeURIComponent(msg + (res.notices.length ? ". " + res.notices.join("; ") : "") + ". Se envía a la hoja de Google.")}`);

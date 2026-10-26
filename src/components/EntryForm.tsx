@@ -4,6 +4,7 @@ import Link from "next/link";
 import { saveEntryAction, type FormState } from "@/app/entrada/actions";
 import { CoveragePanel } from "@/components/CoveragePanel";
 import { LONG_TEXT_MAX } from "@/domain/limits";
+import { ShiftPicker, type PickerPosition } from "@/components/entry/ShiftPicker";
 
 export interface FormField { col: string; header: string; hint: string; group: string; control: string; options: string[]; required: boolean }
 export interface FormComputed { col: string; header: string; value: string }
@@ -16,8 +17,8 @@ const spanOf = (f: FormField): "full" | "two" | "one" => {
   return "one";
 };
 
-export function EntryForm({ hoja, base, recId, version, fields, computed, initial, lookups, canWrite, coverage }: {
-  coverage?: { cargoId: string; afterCol: string }; hoja: string; base: string; recId?: string; version?: number; fields: FormField[]; computed: FormComputed[]; initial: Record<string, string>; lookups: Lookups; canWrite: boolean;
+export function EntryForm({ hoja, base, recId, version, fields, computed, initial, lookups, canWrite, coverage, shifts }: {
+  coverage?: { cargoId: string; afterCol: string }; shifts?: { positions: PickerPosition[]; initial: { all: boolean; ids: string[] }; cols: { kind: string; area: string; site: string; position: string }; afterCol: string }; hoja: string; base: string; recId?: string; version?: number; fields: FormField[]; computed: FormComputed[]; initial: Record<string, string>; lookups: Lookups; canWrite: boolean;
 }) {
   const [state, action, pending] = useActionState<FormState, FormData>(saveEntryAction, { errors: [], values: initial });
   const val = (col: string) => state.values[col] ?? "";
@@ -61,6 +62,7 @@ export function EntryForm({ hoja, base, recId, version, fields, computed, initia
               );
             })}
           </div>
+          {shifts && fields.some((f) => f.group === g && f.col === shifts.afterCol) && <ShiftPicker positions={shifts.positions} initial={shifts.initial} cols={shifts.cols} disabled={!canWrite} />}
           {coverage && fields.some((f) => f.group === g && f.col === coverage.afterCol) && (
             <div className="coverage-box">
               <h3>Cobertura de las funciones del perfil</h3>

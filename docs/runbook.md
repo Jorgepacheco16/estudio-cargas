@@ -41,6 +41,7 @@ Supabase mantiene copias diarias (según el plan). Para restaurar a un proyecto 
 
 ## Historia y desviaciones
 - **Migraciones**: `drizzle/0003_deviation_thresholds.sql` y luego `sql/0003_history.sql` (función segura de las fotos programadas).
+- **Turnos (D-67)**: `drizzle/0004_position_shifts.sql` y luego `sql/0004_shifts.sql` (tablas position_shifts y activity_shifts con sus políticas RLS; columna activities.all_shifts).
 - **Cron**: `vercel.json` programa `/api/sheets/reconcile` (diario) y `/api/history/snapshot` (lunes 10:00 UTC). Ambos exigen `Authorization: Bearer CRON_SECRET`.
 - **Evaluación del agente**: `npm run eval:agent` y `npm run eval:explain` (consumen tokens; no corren en CI).
 ## Pruebas de navegador y oráculo
