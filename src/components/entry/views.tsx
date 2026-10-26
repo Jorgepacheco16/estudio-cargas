@@ -100,7 +100,7 @@ export async function EntryNew({ hoja }: { hoja: EntryId }) {
   );
 }
 
-export async function EntryEdit({ hoja, id }: { hoja: EntryId; id: string }) {
+export async function EntryEdit({ hoja, id, sp }: { hoja: EntryId; id: string; sp?: Record<string, string | undefined> }) {
   const def = entryDef(hoja)!;
   if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
   const { user, study } = await session();
@@ -112,7 +112,7 @@ export async function EntryEdit({ hoja, id }: { hoja: EntryId; id: string }) {
     <main>
       <div className="head"><div><h1>Editar registro · {def.short}</h1><div className="sub">Al guardar, la hoja de Google se actualiza con estos valores.</div></div><div className="tools"><Link className="btn" href={basePath(hoja)}>← Volver a {def.short}</Link></div></div>
       <EntryForm key={found!.row.version} hoja={def.id} base={basePath(hoja)} coverage={hoja === "2" && found!.row.positionId ? { cargoId: found!.row.positionId, afterCol: "J" } : undefined} recId={id} version={found!.row.version} {...formProps(def, found!.row)} lookups={lookups} shifts={await shiftProps(user.id, study!.id, hoja, id)} canWrite={study!.role !== "viewer"} />
-      {hoja === "2" && found!.row.positionId && <ShiftsPanel positionId={found!.row.positionId} entryId={id} shifts={await listShifts(getDb(), user.id, study!.id, found!.row.positionId).catch(() => [])} canWrite={study!.role !== "viewer"} />}
+      {hoja === "2" && found!.row.positionId && <ShiftsPanel ok={sp?.ok} error={sp?.error} positionId={found!.row.positionId} entryId={id} shifts={await listShifts(getDb(), user.id, study!.id, found!.row.positionId).catch(() => [])} canWrite={study!.role !== "viewer"} />}
     </main>
   );
 }

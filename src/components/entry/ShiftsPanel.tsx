@@ -3,7 +3,7 @@ import { describeShift } from "@/domain/shifts";
 import type { ShiftRow } from "@/server/shifts";
 
 /** Turnos de un cargo (D-67), dentro del editor de «Cargos y dotación». Informativos: no cambian ningún cálculo. */
-export function ShiftsPanel({ positionId, entryId, shifts, canWrite }: { positionId: string; entryId: string; shifts: ShiftRow[]; canWrite: boolean }) {
+export function ShiftsPanel({ positionId, entryId, shifts, canWrite, ok, error }: { ok?: string; error?: string; positionId: string; entryId: string; shifts: ShiftRow[]; canWrite: boolean }) {
   const hidden = (shiftId?: string) => (
     <>
       <input type="hidden" name="positionId" value={positionId} />
@@ -22,6 +22,8 @@ export function ShiftsPanel({ positionId, entryId, shifts, canWrite }: { positio
   return (
     <section className="card" id="turnos" aria-labelledby="turnos-h">
       <h2 id="turnos-h">Turnos de este cargo ({shifts.length})</h2>
+      {ok && <div className="banner" role="status" style={{ background: "var(--blue-soft)", color: "var(--blue)", marginBottom: 12 }}>{ok}</div>}
+      {error && <div className="banner" role="alert" style={{ background: "var(--red-soft)", color: "var(--red-dark)", marginBottom: 12 }}>{error}</div>}
       <p className="note" style={{ marginTop: 0 }}>Registre los turnos en que se trabaja este cargo. Después, al crear una actividad, podrá elegir en cuáles se ejecuta o marcar «Todos los turnos». Es información para el estudio (y para el agente de IA): no cambia las horas ni la capacidad. Si la hora de fin es menor que la de inicio, el turno cruza la medianoche.</p>
       {shifts.length === 0 && <div className="empty">Este cargo aún no tiene turnos.</div>}
       {shifts.map((s) => (
