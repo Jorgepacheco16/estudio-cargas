@@ -1,0 +1,1 @@
+ALTER TABLE "positions" ADD COLUMN "operation_description" text;

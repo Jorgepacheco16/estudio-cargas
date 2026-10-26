@@ -6,6 +6,8 @@ import { entryDef, type EntryId } from "../src/server/entry/defs";
 import { saveEntry } from "../src/server/entry/service";
 import { activityShiftSelection, deleteShift, listShifts, saveShift, setActivityShifts, shiftTextByActivityCode, shiftsByPosition } from "../src/server/shifts";
 import { withRls } from "../src/db/client";
+import { getOperation, saveOperation } from "../src/server/operation";
+import { LONG_TEXT_MAX } from "../src/domain/limits";
 import { check, rejects, summary, URL_ADMIN, URL_APP } from "./helpers";
 
 /**
@@ -122,6 +124,21 @@ async function main() {
       if ((await listShifts(app.db, viewer, studyId, fiscal)).length === 0) throw new Error("el viewer no ve los turnos");
       await rejects(saveShift(app.db, viewer, studyId, fiscal, undefined, T("Nocturno", "22:00", "06:00")), "42501");
       await rejects(setActivityShifts(app.db, viewer, studyId, a1, { all: true, ids: [] }), "42501");
+    });
+
+    await check("Descripción de la operación (D-69): se guarda, se lee, repetirla no cambia nada, se puede vaciar, se rechaza si es demasiado larga y el viewer no escribe", async () => {
+      const txt = "Apertura con 5 cajas y cierre con 6; el resto se completa según el pronóstico de ventas.";
+      const a = await saveOperation(app.db, owner, studyId, fiscal, txt);
+      if (!a.ok || !a.changed || (await getOperation(app.db, owner, studyId, fiscal)) !== txt) throw new Error(JSON.stringify(a));
+      const same = await saveOperation(app.db, owner, studyId, fiscal, txt + "  ");
+      if (!same.ok || same.changed) throw new Error("repetir el mismo texto debía ser «sin cambios»");
+      if ((await getOperation(app.db, viewer, studyId, fiscal)) !== txt) throw new Error("el viewer debía poder leerla");
+      await rejects(saveOperation(app.db, viewer, studyId, fiscal, "x"), "42501");
+      if ((await saveOperation(app.db, owner, studyId, fiscal, "x".repeat(LONG_TEXT_MAX + 1))).ok) throw new Error("aceptó un texto demasiado largo");
+      const cleared = await saveOperation(app.db, owner, studyId, fiscal, "   ");
+      if (!cleared.ok || !cleared.changed || (await getOperation(app.db, owner, studyId, fiscal)) !== "") throw new Error("no se pudo vaciar");
+      const au = (await admin.db.execute(sql`select count(*)::int n from public.audit_log where study_id = ${studyId} and entity = 'position_operation' and origin = 'app'`)) as unknown as { n: number }[];
+      if (au[0].n !== 2) throw new Error(`auditoría ${au[0].n}`); // guardar y vaciar; lo repetido no audita
     });
 
     await check("Borrar el cargo borra sus turnos y los vínculos de las actividades (cascada)", async () => {

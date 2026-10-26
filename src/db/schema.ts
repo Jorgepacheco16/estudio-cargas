@@ -115,6 +115,8 @@ export const positions = pgTable("positions", {
   boss: text("boss"),
   objective: text("objective"),
   formalFunctions: text("formal_functions"),
+  /** D-69: cómo opera el cargo en la práctica (turnos que programa la herramienta, puestos mínimos de apertura y cierre, etc.). Texto informativo. */
+  operationDescription: text("operation_description"),
   autoCreated: boolean("auto_created").notNull().default(false),
   ...stamps(),
 }, (t) => [

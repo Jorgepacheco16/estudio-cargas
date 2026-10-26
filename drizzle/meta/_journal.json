@@ -43,6 +43,13 @@
       "when": 1793053747541,
       "tag": "0005_shift_days",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1793054069536,
+      "tag": "0006_position_operation",
+      "breakpoints": true
     }
   ]
 }
