@@ -7,6 +7,8 @@ import { activeStudyId } from "@/data/source";
 import { rateLimit } from "@/lib/ratelimit";
 import { googleGateway } from "@/server/sheets/gateway";
 import { NeedsConfirmation, connectSheet, listConnections, previewSync, syncNow } from "@/server/sheets/sync";
+import { withRls } from "@/db/client";
+import { syncEvents } from "@/db/schema";
 
 const back = (kind: "ok" | "error", msg: string): never => redirect(`/integraciones?${kind}=${encodeURIComponent(msg)}`);
 const isRedirect = (e: unknown) => (e as { digest?: string })?.digest?.startsWith("NEXT_REDIRECT");
@@ -45,8 +47,10 @@ export async function syncAction(fd: FormData) {
   if (study.role === "viewer") back("error", "Su rol es de solo lectura.");
   if (!rateLimit(`sync:${user.id}`, 3, 60_000).ok) back("error", "Espere un momento antes de sincronizar de nuevo.");
   let msg = "";
+  let connId: string | null = null;
   try {
     const conns = (await listConnections(getDb(), user.id, study.id)).filter((c) => c.mode !== "off");
+    connId = conns[0]?.id ?? null;
     if (!conns.length) back("error", "No hay una hoja conectada.");
     let created = 0, updated = 0, linked = 0, conflict = 0, rejected = 0, appended = 0, refreshed = 0;
     for (const c of conns) {
@@ -58,7 +62,9 @@ export async function syncAction(fd: FormData) {
   } catch (e) {
     if (isRedirect(e)) throw e;
     if (e instanceof NeedsConfirmation) back("error", `${e.message}. Marque «Confirmo aplicar las correcciones automáticas» y vuelva a sincronizar.`);
-    back("error", "La sincronización falló. Intente de nuevo; si persiste, revise la conexión.");
+    // Deja el motivo en el historial de Integraciones (texto corto, sin datos del estudio) para poder diagnosticar el fallo.
+    if (connId) await withRls(getDb(), { sub: user.id }, (tx) => tx.insert(syncEvents).values({ studyId: study.id, connectionId: connId!, direction: "app_to_sheet", originId: crypto.randomUUID(), sheetName: "*", payload: {}, status: "error", error: (e instanceof Error ? e.message : String(e)).slice(0, 300), processedAt: new Date() })).catch(() => undefined);
+    back("error", "La sincronización falló. Intente de nuevo; si persiste, revise la conexión (el motivo quedó en el historial).");
   }
   back("ok", msg);
 }

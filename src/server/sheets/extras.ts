@@ -8,11 +8,11 @@
 import { eq } from "drizzle-orm";
 import { withRls, type Db } from "../../db/client";
 import { positions } from "../../db/schema";
-import { indexToCol, colToIndex } from "../../domain/sheetmap";
+import { INTERNAL_HEADERS, indexToCol, colToIndex } from "../../domain/sheetmap";
 import { shiftLinesByPositionId, shiftTextByActivityId } from "../shifts";
 import type { Adapter } from "./adapters";
 import type { CellValue, SheetGateway } from "./gateway";
-import { findInternal, q, type Conn } from "./internal";
+import { q, type Conn } from "./internal";
 
 export const EXTRA_HEADERS = { shifts: "Turnos del cargo", operation: "Descripción de la operación", activityShifts: "Turnos en que se ejecuta" } as const;
 
@@ -43,9 +43,13 @@ export async function mirrorExtras(db: Db, conn: Conn, gw: SheetGateway, a: Adap
     ]
     : [{ header: EXTRA_HEADERS.activityShifts, value: (rec) => data.activityShifts.get(String(rec.id)) ?? "" }];
 
-  // Columnas por encabezado; las que falten se agregan al final (visibles) y se rotulan.
+  // Una sola lectura (encabezado y filas) para no gastar la cuota de la API de Google (60 lecturas por minuto): de ahí salen las columnas por encabezado,
+  // el vínculo de cada fila, las casillas de entrada y lo que ya hay en las columnas nuevas. Las columnas que falten se agregan al final (visibles) y se rotulan.
+  const first = s.firstDataRow, last = s.lastDataRow;
   const n = await gw.columnCount(name);
-  const header = ((await gw.read(`${q(name)}!A${s.headerRow}:${indexToCol(n)}${s.headerRow}`))[0] ?? []) as unknown[];
+  const grid = await gw.read(`${q(name)}!A${s.headerRow}:${indexToCol(n)}${last}`);
+  const header = (grid[0] ?? []) as unknown[];
+  const rowAt = (row: number) => (grid[row - s.headerRow] ?? []) as unknown[];
   const colOf = new Map<string, string>();
   const missing: ExtraCol[] = [];
   for (const d of defs) { const i = header.findIndex((h) => flat(h) === d.header); if (i >= 0) colOf.set(d.header, indexToCol(i + 1)); else missing.push(d); }
@@ -56,29 +60,23 @@ export async function mirrorExtras(db: Db, conn: Conn, gw: SheetGateway, a: Adap
     missing.forEach((d, i) => { const col = indexToCol(n + 1 + i); colOf.set(d.header, col); labels.push({ range: `${q(name)}!${col}${s.headerRow}`, values: [[d.header]] }); });
     await gw.write(labels);
   }
-
-  const internal = await findInternal(gw, a);
-  if (!internal) return 0; // la hoja aún no tiene vínculo con la app (primera sincronización pendiente)
-  const first = s.firstDataRow, last = s.lastDataRow;
-  const ids = await gw.read(`${q(name)}!${internal.idCol}${first}:${internal.idCol}${last}`);
-  const lastInput = Math.max(...Object.values(a.spec).map(([col]) => colToIndex(col)));
-  const block = await gw.read(`${q(name)}!A${first}:${indexToCol(lastInput)}${last}`);
+  const idIdx = header.findIndex((h) => flat(h) === INTERNAL_HEADERS.id);
+  if (idIdx < 0) return 0; // la hoja aún no tiene vínculo con la app (primera sincronización pendiente)
   const kindCol = a.spec.kind?.[0];
-  const dataCols = Object.values(a.spec).map(([col]) => col).filter((c) => c !== kindCol);
-  const cur = new Map<string, unknown[][]>();
-  for (const d of defs) { const c = colOf.get(d.header)!; cur.set(d.header, await gw.read(`${q(name)}!${c}${first}:${c}${last}`)); }
+  const dataIdx = Object.values(a.spec).map(([col]) => col).filter((c) => c !== kindCol).map((c) => colToIndex(c) - 1);
+  const cellOf = (row: number, col: string) => rowAt(row)[colToIndex(col) - 1];
   const byId = new Map(data.entries.map((e) => [e.rec.id, e.rec as Record<string, unknown>]));
 
   const updates: { range: string; values: CellValue[][] }[] = [];
   for (let row = first; row <= last; row++) {
-    const id = flat((ids[row - first] ?? [])[0]);
-    const hasData = dataCols.some((c) => !blank((block[row - first] ?? [])[colToIndex(c) - 1]));
+    const id = flat(rowAt(row)[idIdx]);
+    const hasData = dataIdx.some((i) => !blank(rowAt(row)[i]));
     const rec = id ? byId.get(id) : undefined;
     // Fila de otra persona (con datos pero sin vínculo): no se toca. Fila vacía o vinculada a un registro que ya no existe: se limpia.
     if (!id && hasData) continue;
     for (const d of defs) {
       const want = rec ? d.value(rec) : "";
-      const now = (cur.get(d.header)![row - first] ?? [])[0];
+      const now = cellOf(row, colOf.get(d.header)!);
       if (!same(now, want)) updates.push({ range: `${q(name)}!${colOf.get(d.header)}${row}`, values: [[want]] });
     }
   }

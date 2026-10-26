@@ -17,7 +17,27 @@ export interface SheetGateway {
   protect(sheetName: string, ranges: string[], description: string): Promise<void>;
 }
 
+/** ¿Google rechazó la llamada por cuota (60 lecturas por minuto y usuario)? */
+const isQuota = (e: unknown) => { const x = e as { code?: number; status?: number; message?: string }; return x?.code === 429 || x?.status === 429 || /quota|rate.?limit|too many requests/i.test(String(x?.message ?? "")); };
+/** Reintenta con espera cuando Google responde por cuota: una sincronización completa se acerca al límite por minuto. */
+async function withBackoff<T>(fn: () => Promise<T>): Promise<T> {
+  const waits = [4000, 12000];
+  for (let i = 0; ; i++) {
+    try { return await fn(); }
+    catch (e) { if (!isQuota(e) || i >= waits.length) throw e; await new Promise((r) => setTimeout(r, waits[i])); }
+  }
+}
+
 export function googleGateway(spreadsheetId: string): SheetGateway {
+  const raw = rawGateway(spreadsheetId);
+  return {
+    read: (r) => withBackoff(() => raw.read(r)), write: (u) => withBackoff(() => raw.write(u)), columnCount: (s) => withBackoff(() => raw.columnCount(s)),
+    appendHiddenColumns: (s, c) => withBackoff(() => raw.appendHiddenColumns(s, c)), appendColumns: (s, c) => withBackoff(() => raw.appendColumns(s, c)),
+    title: () => withBackoff(() => raw.title()), protect: (s, r, d) => withBackoff(() => raw.protect(s, r, d)),
+  };
+}
+
+function rawGateway(spreadsheetId: string): SheetGateway {
   const meta = async (sheetName: string) => {
     const r = await sheetsClient().spreadsheets.get({ spreadsheetId, fields: "sheets.properties(sheetId,title,gridProperties)" });
     const s = r.data.sheets?.find((x) => x.properties?.title === sheetName)?.properties;
