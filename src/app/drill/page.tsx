@@ -24,7 +24,7 @@ export default async function Drill({ searchParams }: { searchParams: Promise<Re
   if (sp.position) crumbs.push({ text: `${sp.position}${sp.site ? ` · ${sp.site}` : ""}`, href: `/drill?${q({ ...base, level: "position", area: sp.area, site: sp.site, position: sp.position, alert })}` });
   if (sp.code) crumbs.push({ text: sp.code, href: "#" });
 
-  const fmtMetric = (m: Metric, v: number | null | undefined) => (v === null || v === undefined ? "—" : m === "pct" ? fmtPct(v) : m === "incomplete" ? String(v) : fmt(v, 2));
+  const fmtMetric = (m: Metric, v: number | null | undefined) => (v === null || v === undefined ? "—" : m === "pct" ? fmtPct(v) : m === "incomplete" || m === "critical" || m === "singlePerson" || m === "noBackup" ? String(v) : fmt(v, 2));
   const extra = q({ config, level, area: sp.area, site: sp.site, position: sp.position, code: sp.code, alert });
 
   return (
