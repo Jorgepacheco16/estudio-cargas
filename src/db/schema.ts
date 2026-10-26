@@ -233,6 +233,8 @@ export const positionShifts = pgTable("position_shifts", {
   startTime: time("start_time"),
   endTime: time("end_time"),
   breakMinutes: smallint("break_minutes"),
+  /** Días en que aplica el turno (bits 0=lunes … 6=domingo). Vacío = todos los días. */
+  days: smallint("days"),
   sortOrder: integer("sort_order").notNull().default(0),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 }, (t) => [
@@ -242,6 +244,7 @@ export const positionShifts = pgTable("position_shifts", {
   index("position_shifts_position_idx").on(t.positionId),
   check("position_shifts_name_ck", sql`length(btrim(${t.name})) > 0`),
   check("position_shifts_break_ck", sql`${t.breakMinutes} is null or ${t.breakMinutes} between 0 and 240`),
+  check("position_shifts_days_ck", sql`${t.days} is null or ${t.days} between 1 and 127`),
 ]);
 /** Turnos concretos en que se ejecuta una actividad (cuando activities.all_shifts es falso). */
 export const activityShifts = pgTable("activity_shifts", {

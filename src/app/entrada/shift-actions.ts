@@ -29,7 +29,7 @@ export async function saveShiftAction(fd: FormData) {
   const positionId = str(fd, "positionId"), shiftId = str(fd, "shiftId") || undefined;
   if (!UUID.test(positionId) || (shiftId && !UUID.test(shiftId))) redirect("/cargos");
   let res;
-  try { res = await saveShift(getDb(), user.id, study.id, positionId, shiftId, { name: str(fd, "name"), start: str(fd, "start"), end: str(fd, "end"), breakMin: str(fd, "breakMin") }); }
+  try { res = await saveShift(getDb(), user.id, study.id, positionId, shiftId, { name: str(fd, "name"), start: str(fd, "start"), end: str(fd, "end"), breakMin: str(fd, "breakMin"), days: fd.getAll("days").map(String) }); }
   catch { redirect(`${to}?error=${encodeURIComponent("No se pudo guardar el turno. Intente de nuevo.")}#turnos`); }
   if (!res.ok) redirect(`${to}?error=${encodeURIComponent(res.errors.join(" "))}#turnos`);
   redirect(`${to}?ok=${encodeURIComponent(res.notices.join(" ") || "Turno guardado.")}#turnos`);

@@ -1,8 +1,9 @@
-import { ALL_SHIFTS, activityShiftsText, describeShift, grossMinutes, netHours, normTime, parseShift, reconcileSelection } from "../src/domain/shifts";
+import { ALL_SHIFTS, activityShiftsText, daysOf, describeDays, describeShift, maskFromDays, grossMinutes, netHours, normTime, parseShift, reconcileSelection } from "../src/domain/shifts";
 import { check, summary } from "./helpers";
 
 /** Turnos del cargo (D-67): validación, horas netas y selección de la actividad. Funciones puras. */
-const ok = (i: Partial<Parameters<typeof parseShift>[0]>) => parseShift({ name: "Apertura", start: "5:30", end: "13:00", breakMin: "30", ...i });
+const EVERY_DAY = ["0", "1", "2", "3", "4", "5", "6"];
+const ok = (i: Partial<Parameters<typeof parseShift>[0]>) => parseShift({ name: "Apertura", start: "5:30", end: "13:00", breakMin: "30", days: EVERY_DAY, ...i });
 const bad = (i: Partial<Parameters<typeof parseShift>[0]>) => { const r = ok(i); if (r.ok) throw new Error("debía rechazarse"); return r.errors.join(" | "); };
 
 async function main() {
@@ -34,6 +35,20 @@ async function main() {
     if (!bad({ start: "05:30", end: "5:30" }).includes("iguales")) throw new Error("iguales");
     for (const br of ["-5", "241", "10.5", "x"]) if (!bad({ breakMin: br }).includes("receso")) throw new Error(br);
     if (!bad({ start: "10:00", end: "10:20", breakMin: "30" }).includes("receso")) throw new Error("receso ≥ duración");
+  });
+
+  await check("Días del turno: los siete días = todos (null); L–S, solo domingo y días sueltos se describen y se recuperan de la máscara", () => {
+    if (maskFromDays(EVERY_DAY) !== null || describeDays(null) !== "Todos los días") throw new Error("todos");
+    const ls = maskFromDays(["0", "1", "2", "3", "4", "5"]); if (ls !== 63 || describeDays(ls) !== "L–S" || daysOf(ls).join() !== "0,1,2,3,4,5") throw new Error(String(ls));
+    const d = maskFromDays(["6"]); if (d !== 64 || describeDays(d) !== "Domingo") throw new Error(String(d));
+    const lxv = maskFromDays(["4", "0", "2", "2"]); if (describeDays(lxv) !== "L, X, V" || daysOf(lxv).join() !== "0,2,4") throw new Error(String(lxv));
+    if (describeDays(maskFromDays(["5", "6"])) !== "S, D") throw new Error("dos días seguidos se listan");
+  });
+
+  await check("parseShift exige al menos un día; los siete días quedan como «todos»; los días entran en la descripción solo si no son todos", () => {
+    if (!bad({ days: [] }).includes("al menos un día")) throw new Error("sin días");
+    const a = ok({}); if (!a.ok || a.values.days !== null) throw new Error("todos los días");
+    const b = ok({ days: ["6"] }); if (!b.ok || b.values.days !== 64 || !describeShift(b.values).startsWith("Apertura · Domingo · 05:30")) throw new Error(JSON.stringify(b));
   });
 
   await check("Descripción y texto de la actividad: «Todos los turnos» o la lista ordenada", () => {

@@ -18,7 +18,7 @@ const cells = (id: EntryId, byField: Record<string, string>) => {
   for (const [f, v] of Object.entries(byField)) { const x = d.fields.find((y) => y.field === f); if (!x) throw new Error(`${id}: no hay campo ${f}`); out[x.col] = v; }
   return out;
 };
-const T = (name: string, start = "", end = "", breakMin = "") => ({ name, start, end, breakMin });
+const T = (name: string, start = "", end = "", breakMin = "", days: string[] = ["0", "1", "2", "3", "4", "5", "6"]) => ({ name, start, end, breakMin, days });
 
 async function main() {
   const admin = createDb(URL_ADMIN, 2), app = createDb(URL_APP, 4);
@@ -62,9 +62,13 @@ async function main() {
     });
 
     await check("Editar un turno cambia sus datos y deja auditoría con origen «app»", async () => {
-      const r = await saveShift(app.db, owner, studyId, fiscal, ids["Cierre"], T("Cierre", "13:00", "20:30", "45"));
+      const r = await saveShift(app.db, owner, studyId, fiscal, ids["Cierre"], T("Cierre", "13:00", "20:30", "45", ["0", "1", "2", "3", "4", "5"]));
       if (!r.ok) throw new Error(JSON.stringify(r));
-      if ((await listShifts(app.db, owner, studyId, fiscal)).find((x) => x.name === "Cierre")?.breakMin !== 45) throw new Error("no cambió");
+      const c = (await listShifts(app.db, owner, studyId, fiscal)).find((x) => x.name === "Cierre");
+      if (c?.breakMin !== 45 || c.days !== 63) throw new Error(`no cambió: ${JSON.stringify(c)}`); // L–S = 63; los demás turnos siguen en todos los días (null)
+      if ((await listShifts(app.db, owner, studyId, fiscal)).find((x) => x.name === "Apertura")?.days !== null) throw new Error("Apertura debía aplicar todos los días");
+      const none = await saveShift(app.db, owner, studyId, fiscal, ids["Cierre"], T("Cierre", "13:00", "20:30", "45", []));
+      if (none.ok) throw new Error("aceptó un turno sin ningún día");
       const a = (await admin.db.execute(sql`select count(*)::int n from public.audit_log where study_id = ${studyId} and origin = 'app' and entity = 'position_shift'`)) as unknown as { n: number }[];
       if (a[0].n < 4) throw new Error(`auditoría ${a[0].n}`);
     });

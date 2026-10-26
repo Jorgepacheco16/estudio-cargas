@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import { ALL_SHIFTS, describeShift } from "@/domain/shifts";
 
-export interface PickerPosition { kind: string; area: string; site: string; position: string; shifts: { id: string; name: string; start: string | null; end: string | null; breakMin: number | null }[] }
+export interface PickerPosition { kind: string; area: string; site: string; position: string; shifts: { id: string; name: string; start: string | null; end: string | null; breakMin: number | null; days: number | null }[] }
 const norm = (s: string) => s.trim().toLowerCase().replace(/\s+/g, " ");
 
 /**
@@ -41,7 +41,7 @@ export function ShiftPicker({ positions, initial, cols, disabled }: { positions:
             <label style={{ display: "block", marginBottom: 6 }}><input type="checkbox" name="allShifts" checked={all} onChange={(e) => setAll(e.target.checked)} disabled={disabled} /> <b>{ALL_SHIFTS}</b> <span className="muted">(incluye los que se agreguen después)</span></label>
             {mine.shifts.map((s) => (
               <label key={s.id} style={{ display: "block", marginBottom: 4, opacity: all ? 0.55 : 1 }}>
-                <input type="checkbox" name="shift" value={s.id} checked={!all && chosen.has(s.id)} onChange={() => toggle(s.id)} disabled={disabled || all} /> {describeShift({ name: s.name, start: s.start, end: s.end, breakMin: s.breakMin })}
+                <input type="checkbox" name="shift" value={s.id} checked={!all && chosen.has(s.id)} onChange={() => toggle(s.id)} disabled={disabled || all} /> {describeShift({ name: s.name, start: s.start, end: s.end, breakMin: s.breakMin, days: s.days })}
               </label>
             ))}
           </>

@@ -1,5 +1,5 @@
 import { deleteShiftAction, saveShiftAction } from "@/app/entrada/shift-actions";
-import { describeShift } from "@/domain/shifts";
+import { DAY_NAMES, daysOf, describeShift } from "@/domain/shifts";
 import type { ShiftRow } from "@/server/shifts";
 
 /** Turnos de un cargo (D-67), dentro del editor de «Cargos y dotación». Informativos: no cambian ningún cálculo. */
@@ -16,6 +16,7 @@ export function ShiftsPanel({ positionId, entryId, shifts, canWrite, ok, error }
       <div className="field span-two"><label htmlFor={`n-${id}`}>Nombre del turno <span className="req" title="Obligatorio">*</span></label><input id={`n-${id}`} name="name" defaultValue={s?.name ?? ""} maxLength={60} required disabled={!canWrite} placeholder="Ej.: Apertura" /></div>
       <div className="field span-one"><label htmlFor={`s-${id}`}>Hora de inicio</label><input id={`s-${id}`} name="start" type="time" defaultValue={s?.start ?? ""} disabled={!canWrite} /></div>
       <div className="field span-one"><label htmlFor={`e-${id}`}>Hora de fin</label><input id={`e-${id}`} name="end" type="time" defaultValue={s?.end ?? ""} disabled={!canWrite} /></div>
+      <div className="field span-full"><span className="lbl" id={`d-${id}`}>Días en que aplica <span className="req" title="Obligatorio">*</span></span><div role="group" aria-labelledby={`d-${id}`} style={{ display: "flex", flexWrap: "wrap", gap: 14 }}>{DAY_NAMES.map((n, i) => <label key={n} style={{ display: "inline-flex", gap: 4, alignItems: "center" }}><input type="checkbox" name="days" value={i} defaultChecked={s ? daysOf(s.days).includes(i) : true} disabled={!canWrite} /> {n}</label>)}</div></div>
       <div className="field span-one"><label htmlFor={`b-${id}`}>Receso (minutos)</label><input id={`b-${id}`} name="breakMin" inputMode="numeric" defaultValue={s?.breakMin ?? ""} maxLength={3} disabled={!canWrite} placeholder="Ej.: 30" /></div>
     </div>
   );
@@ -28,7 +29,7 @@ export function ShiftsPanel({ positionId, entryId, shifts, canWrite, ok, error }
       {shifts.length === 0 && <div className="empty">Este cargo aún no tiene turnos.</div>}
       {shifts.map((s) => (
         <div key={s.id} style={{ borderTop: "1px solid var(--line, #e2e8f0)", paddingTop: 12, marginTop: 12 }}>
-          <p style={{ margin: "0 0 8px" }}><b>{describeShift({ name: s.name, start: s.start, end: s.end, breakMin: s.breakMin })}</b>{s.usedBy > 0 && <span className="muted"> · lo usan {s.usedBy} actividad(es)</span>}</p>
+          <p style={{ margin: "0 0 8px" }}><b>{describeShift({ name: s.name, start: s.start, end: s.end, breakMin: s.breakMin, days: s.days })}</b>{s.usedBy > 0 && <span className="muted"> · lo usan {s.usedBy} actividad(es)</span>}</p>
           {canWrite ? (
             <>
               <form action={saveShiftAction}>{hidden(s.id)}{fields(s.id, s)}<div className="form-actions"><button className="btn" type="submit">Guardar cambios del turno</button></div></form>

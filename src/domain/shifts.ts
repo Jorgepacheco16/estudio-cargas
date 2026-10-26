@@ -5,8 +5,33 @@
 export const ALL_SHIFTS = "Todos los turnos";
 export const NAME_MAX = 60;
 
-export interface ShiftInput { name: string; start: string; end: string; breakMin: string }
-export interface ShiftValues { name: string; start: string | null; end: string | null; breakMin: number | null }
+/** Días de la semana: la posición es el bit (0 = lunes … 6 = domingo). */
+export const DAY_NAMES = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"] as const;
+export const DAY_SHORT = ["L", "M", "X", "J", "V", "S", "D"] as const;
+const ALL_DAYS = 127;
+
+/** `days`: los días marcados en el formulario ("0".."6"); vacío no se admite aquí (lo valida parseShift). */
+export interface ShiftInput { name: string; start: string; end: string; breakMin: string; days: string[] }
+/** `days` null = todos los días. */
+export interface ShiftValues { name: string; start: string | null; end: string | null; breakMin: number | null; days: number | null }
+
+/** Máscara de días ← lista de días marcados. Los siete días se guardan como null (todos). */
+export function maskFromDays(days: string[]): number | null {
+  const mask = [...new Set(days)].reduce((m, d) => (/^[0-6]$/.test(d) ? m | (1 << Number(d)) : m), 0);
+  return mask === ALL_DAYS ? null : mask;
+}
+/** Días (0..6) incluidos en una máscara; null = todos. */
+export function daysOf(mask: number | null): number[] {
+  return [0, 1, 2, 3, 4, 5, 6].filter((d) => mask === null || (mask & (1 << d)) !== 0);
+}
+/** «Todos los días», «L–S», «D» o «L, X, V». */
+export function describeDays(mask: number | null): string {
+  if (mask === null) return "Todos los días";
+  const d = daysOf(mask);
+  if (d.length === 1) return DAY_NAMES[d[0]];
+  const contiguous = d.every((x, i) => i === 0 || x === d[i - 1] + 1);
+  return contiguous && d.length > 2 ? `${DAY_SHORT[d[0]]}–${DAY_SHORT[d[d.length - 1]]}` : d.map((x) => DAY_SHORT[x]).join(", ");
+}
 
 /** «5:30» o «05:30» → «05:30»; cualquier otra cosa → null. */
 export function normTime(s: string): string | null {
@@ -48,12 +73,14 @@ export function parseShift(i: ShiftInput): { ok: true; values: ShiftValues } | {
     else breakMin = n;
   }
   if (start && end && breakMin !== null && breakMin >= grossMinutes(start, end)) errors.push("El receso no puede ser igual o mayor que la duración del turno.");
-  return errors.length ? { ok: false, errors } : { ok: true, values: { name, start, end, breakMin } };
+  if (i.days.filter((d) => /^[0-6]$/.test(d)).length === 0) errors.push("Marque al menos un día en que aplica el turno.");
+  return errors.length ? { ok: false, errors } : { ok: true, values: { name, start, end, breakMin, days: maskFromDays(i.days) } };
 }
 
-/** «Apertura · 05:30–13:00 · receso 30 min · 7 h netas». */
-export function describeShift(v: ShiftValues): string {
+/** «Apertura · L–S · 05:30–13:00 · receso 30 min · 7 h netas» (los días solo aparecen si no son todos). */
+export function describeShift(v: Omit<ShiftValues, "days"> & { days?: number | null }): string {
   const parts = [v.name];
+  if (v.days !== undefined && v.days !== null) parts.push(describeDays(v.days));
   if (v.start && v.end) parts.push(`${v.start}–${v.end}`);
   if (v.breakMin) parts.push(`receso ${v.breakMin} min`);
   const h = netHours(v);

@@ -1,0 +1,2 @@
+ALTER TABLE "position_shifts" ADD COLUMN "days" smallint;--> statement-breakpoint
+ALTER TABLE "position_shifts" ADD CONSTRAINT "position_shifts_days_ck" CHECK ("position_shifts"."days" is null or "position_shifts"."days" between 1 and 127);

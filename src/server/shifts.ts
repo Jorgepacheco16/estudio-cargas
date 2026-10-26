@@ -5,9 +5,9 @@
 import { and, asc, eq, inArray, sql } from "drizzle-orm";
 import { withRls, type Db, type Tx } from "../db/client";
 import { activities, activityShifts, areas, auditLog, positionShifts, positions, sites } from "../db/schema";
-import { activityShiftsText, normTime, parseShift, reconcileSelection, type ShiftInput } from "../domain/shifts";
+import { activityShiftsText, describeDays, normTime, parseShift, reconcileSelection, type ShiftInput } from "../domain/shifts";
 
-export interface ShiftRow { id: string; positionId: string; name: string; start: string | null; end: string | null; breakMin: number | null; usedBy: number }
+export interface ShiftRow { id: string; positionId: string; name: string; start: string | null; end: string | null; breakMin: number | null; days: number | null; usedBy: number }
 export type ShiftResult = { ok: true; notices: string[] } | { ok: false; errors: string[] };
 
 const hhmm = (t: string | null) => (t ? normTime(t) : null);
@@ -20,7 +20,7 @@ export async function listShifts(db: Db, sub: string, studyId: string, positionI
     const rows = await tx.select().from(positionShifts).where(and(eq(positionShifts.studyId, studyId), eq(positionShifts.positionId, positionId))).orderBy(asc(positionShifts.sortOrder), asc(positionShifts.name));
     const uses = rows.length ? await tx.select({ shiftId: activityShifts.shiftId, n: sql<number>`count(*)::int` }).from(activityShifts).where(and(eq(activityShifts.studyId, studyId), inArray(activityShifts.shiftId, rows.map((r) => r.id)))).groupBy(activityShifts.shiftId) : [];
     const n = new Map(uses.map((u) => [u.shiftId, u.n]));
-    return rows.map((r) => ({ id: r.id, positionId: r.positionId, name: r.name, start: hhmm(r.startTime), end: hhmm(r.endTime), breakMin: r.breakMinutes, usedBy: n.get(r.id) ?? 0 }));
+    return rows.map((r) => ({ id: r.id, positionId: r.positionId, name: r.name, start: hhmm(r.startTime), end: hhmm(r.endTime), breakMin: r.breakMinutes, days: r.days, usedBy: n.get(r.id) ?? 0 }));
   });
 }
 
@@ -34,7 +34,7 @@ export async function saveShift(db: Db, sub: string, studyId: string, positionId
     if (!pos) return { ok: false as const, errors: ["El cargo ya no existe."] };
     const mine = await tx.select().from(positionShifts).where(and(eq(positionShifts.studyId, studyId), eq(positionShifts.positionId, positionId)));
     if (mine.some((s) => s.id !== shiftId && s.name.trim().toLowerCase() === v.name.toLowerCase())) return { ok: false as const, errors: [`Ya existe un turno llamado «${v.name}» en este cargo.`] };
-    const row = { name: v.name, startTime: v.start, endTime: v.end, breakMinutes: v.breakMin };
+    const row = { name: v.name, startTime: v.start, endTime: v.end, breakMinutes: v.breakMin, days: v.days };
     if (!shiftId) {
       const [ins] = await tx.insert(positionShifts).values({ studyId, positionId, ...row, sortOrder: Math.max(-1, ...mine.map((s) => s.sortOrder)) + 1 }).returning({ id: positionShifts.id });
       await audit(tx, studyId, sub, "insert", "position_shift", ins.id, { name: { from: null, to: v.name } });
@@ -48,6 +48,7 @@ export async function saveShift(db: Db, sub: string, studyId: string, positionId
     if (hhmm(cur.startTime) !== v.start) diff.startTime = { from: hhmm(cur.startTime), to: v.start };
     if (hhmm(cur.endTime) !== v.end) diff.endTime = { from: hhmm(cur.endTime), to: v.end };
     if (cur.breakMinutes !== v.breakMin) diff.breakMinutes = { from: cur.breakMinutes, to: v.breakMin };
+    if (cur.days !== v.days) diff.days = { from: describeDays(cur.days), to: describeDays(v.days) };
     if (Object.keys(diff).length) await audit(tx, studyId, sub, "update", "position_shift", shiftId, diff);
     return { ok: true as const, notices: [Object.keys(diff).length ? `Turno «${v.name}» actualizado.` : "Sin cambios."] };
   });
@@ -100,18 +101,18 @@ export async function setActivityShifts(db: Db, sub: string, studyId: string, ac
   });
 }
 
-export interface PositionShifts { kind: string; area: string; site: string; position: string; shifts: { id: string; name: string; start: string | null; end: string | null; breakMin: number | null }[] }
+export interface PositionShifts { kind: string; area: string; site: string; position: string; shifts: { id: string; name: string; start: string | null; end: string | null; breakMin: number | null; days: number | null }[] }
 /** Cargos con sus turnos, para el selector del formulario de actividades (solo cargos que tienen turnos). */
 export async function shiftsByPosition(db: Db, sub: string, studyId: string): Promise<PositionShifts[]> {
   return withRls(db, { sub }, async (tx) => {
-    const rows = await tx.select({ id: positionShifts.id, name: positionShifts.name, start: positionShifts.startTime, end: positionShifts.endTime, brk: positionShifts.breakMinutes, order: positionShifts.sortOrder, kind: positions.dataKind, area: areas.name, site: sites.name, position: positions.name })
+    const rows = await tx.select({ id: positionShifts.id, name: positionShifts.name, start: positionShifts.startTime, end: positionShifts.endTime, brk: positionShifts.breakMinutes, days: positionShifts.days, order: positionShifts.sortOrder, kind: positions.dataKind, area: areas.name, site: sites.name, position: positions.name })
       .from(positionShifts).innerJoin(positions, eq(positions.id, positionShifts.positionId)).innerJoin(areas, eq(areas.id, positions.areaId)).innerJoin(sites, eq(sites.id, positions.siteId))
       .where(eq(positionShifts.studyId, studyId)).orderBy(asc(positionShifts.sortOrder), asc(positionShifts.name));
     const out = new Map<string, PositionShifts>();
     for (const r of rows) {
       const k = `${r.kind}|${r.area}|${r.site}|${r.position}`;
       if (!out.has(k)) out.set(k, { kind: r.kind, area: r.area, site: r.site, position: r.position, shifts: [] });
-      out.get(k)!.shifts.push({ id: r.id, name: r.name, start: hhmm(r.start), end: hhmm(r.end), breakMin: r.brk });
+      out.get(k)!.shifts.push({ id: r.id, name: r.name, start: hhmm(r.start), end: hhmm(r.end), breakMin: r.brk, days: r.days });
     }
     return [...out.values()];
   });
@@ -120,9 +121,9 @@ export async function shiftsByPosition(db: Db, sub: string, studyId: string): Pr
 /** Texto de turnos por código de actividad (para el agente y las exportaciones): solo actividades que tienen turnos. */
 export async function shiftTextByActivityCode(tx: Tx, studyId: string): Promise<Map<string, string>> {
   const acts = await tx.select({ id: activities.id, code: activities.code, all: activities.allShifts }).from(activities).where(eq(activities.studyId, studyId));
-  const links = await tx.select({ activityId: activityShifts.activityId, name: positionShifts.name }).from(activityShifts).innerJoin(positionShifts, eq(positionShifts.id, activityShifts.shiftId)).where(eq(activityShifts.studyId, studyId));
+  const links = await tx.select({ activityId: activityShifts.activityId, name: positionShifts.name, days: positionShifts.days }).from(activityShifts).innerJoin(positionShifts, eq(positionShifts.id, activityShifts.shiftId)).where(eq(activityShifts.studyId, studyId));
   const names = new Map<string, string[]>();
-  for (const l of links) names.set(l.activityId, [...(names.get(l.activityId) ?? []), l.name]);
+  for (const l of links) names.set(l.activityId, [...(names.get(l.activityId) ?? []), l.days === null ? l.name : `${l.name} (${describeDays(l.days)})`]);
   const out = new Map<string, string>();
   for (const a of acts) { const t = activityShiftsText(a.all, names.get(a.id) ?? []); if (t) out.set(a.code, t); }
   return out;
