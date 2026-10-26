@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { analyze } from "../src/domain/summary";
-import { PRESETS, drillRows, type LevelKey } from "../src/domain/drill";
+import { PRESETS, drillRows, withRisks, type LevelKey } from "../src/domain/drill";
+import { computeRisk } from "../src/domain/calculators";
 import { SITE_DISPERSION_LIMIT, compareSites, comparablePositions, readSites } from "../src/domain/sites";
 import { drillConfig } from "../src/domain/contracts";
 import { tablesFor } from "../src/lib/tables";
@@ -18,8 +19,31 @@ const close = (x: number | null | undefined, y: number) => x != null && Math.abs
 
 async function main() {
   await check("Las configuraciones predefinidas cumplen el contrato drillConfig y recorren Estudio → Área → Cargo → Actividad", () => {
-    for (const c of Object.values(PRESETS)) { drillConfig.parse(c); if (c.levels.map((l) => l.key).join(">") !== "study>area>position>activity") throw new Error(c.id); }
+    for (const c of Object.values(PRESETS)) { drillConfig.parse(c); const path = c.levels.map((l) => l.key).join(">"); if (path !== (c.id === "riesgos-por-area" ? "study>area>activity" : "study>area>position>activity")) throw new Error(c.id); }
     if (drillConfig.safeParse({ ...PRESETS["carga-por-area"], extra: 1 }).success) throw new Error("aceptó campos desconocidos");
+  });
+
+  await check("riesgos-por-area (brief §15.2): Estudio → Área → Actividad, con criticidad, concentración y respaldo de la hoja 7; solo cuenta actividades con riesgo evaluado", () => {
+    const cfg = PRESETS["riesgos-por-area"];
+    const rk = (imp: number | null, prob: number | null, people: number | null) => computeRisk({ impOperational: imp, impEconomic: null, impLabor: null, impLegal: null, impService: null, probability: prob, peopleWhoCanExecute: people });
+    const [x0, x1, x2, x3] = a.activities;
+    const byCode = new Map([[x0.code, rk(5, 4, 1)], [x1.code, rk(2, 2, 3)], [x2.code, rk(3, 3, 1)]]); // Crítica/1 persona · Baja/3 · Alta/1 persona; x3 sin riesgo
+    const ar = withRisks(a, new Map([...byCode].map(([k, v]) => [k, { criticality: v.criticality, concentration: v.concentration, backup: v.backup }])));
+    if (byCode.get(x0.code)!.criticality !== "Crítica" || byCode.get(x2.code)!.criticality !== "Alta" || byCode.get(x2.code)!.backup !== "Requiere respaldo prioritario") throw new Error("datos de prueba");
+    if (ar.activities.find((x) => x.code === x3.code)?.risk) throw new Error("una actividad sin riesgo quedó con riesgo");
+    // Nivel Estudio: por área, los conteos suman lo evaluado
+    const study = drillRows(ar, cfg, "study", {});
+    const tot = (m: "critical" | "singlePerson" | "noBackup") => study.reduce((s, r) => s + (r.metrics[m] ?? 0), 0);
+    if (tot("critical") !== 2 || tot("singlePerson") !== 2 || tot("noBackup") !== 2) throw new Error(JSON.stringify(study.map((r) => [r.label, r.metrics])));
+    // Nivel Área: solo actividades con riesgo evaluado, enlace a la actividad, la más crítica primero
+    const rows = (["study"] as const).flatMap(() => study.flatMap((s) => drillRows(ar, cfg, "area", s.next!.filters)));
+    if (rows.length !== 3 || rows.some((r) => r.next?.level !== "activity" || !r.status)) throw new Error(JSON.stringify(rows.map((r) => [r.label, r.status])));
+    const first = drillRows(ar, cfg, "area", { area: x0.area });
+    if (first[0].status?.split(" · ")[0] === "Baja" && first.length > 1) throw new Error("el orden no pone lo crítico primero");
+    // Sin ninguna hoja 7 la vista queda vacía (nunca inventa riesgos)
+    for (const l of ["study", "area"] as const) if (drillRows(a, cfg, l, {}).some((r) => (r.metrics.critical ?? 0) + (r.metrics.noBackup ?? 0) + (r.metrics.singlePerson ?? 0) > 0 || l === "area")) throw new Error(`mostró riesgos inexistentes (${l})`);
+    // Evaluación incompleta: no se marca como crítica
+    if (rk(null, 4, 1).criticality !== "Evaluación incompleta") throw new Error("incompleta");
   });
 
   await check("Nivel Estudio: una fila por área con horas, capacidad y % idénticos a la hoja 4b, y enlace al nivel Área", () => {

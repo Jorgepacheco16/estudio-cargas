@@ -7,7 +7,8 @@ import {
 import { computeMeasurability, computeOpportunity, computePlan, computeRisk } from "../domain/calculators";
 import { buildDashboard, type ActivityMeta, type Dashboard } from "../domain/dashboard";
 import type { Params } from "../domain/engine";
-import { analyze, type Analysis, type Mode, type Thresholds } from "../domain/summary";
+import { withRisks } from "../domain/drill";
+import { analyze, type ActivityRisk, type Analysis, type Mode, type Thresholds } from "../domain/summary";
 import { loadStudyDataTx } from "./studies";
 
 const num = (x: string | number | null) => (x === null ? null : Number(x));
@@ -21,7 +22,7 @@ export interface StudyDashboard { analysis: Analysis; params: Params; thresholds
 
 export async function loadDashboardTx(tx: Tx, studyId: string, mode: Mode): Promise<StudyDashboard> {
   const d = await loadStudyDataTx(tx, studyId);
-  const analysis = analyze(d.staff, d.acts, d.params, d.thresholds, mode);
+  const analysis0 = analyze(d.staff, d.acts, d.params, d.thresholds, mode);
   const [p] = await tx.select().from(studyParameters).where(eq(studyParameters.studyId, studyId));
   const areaNames = (await tx.select({ name: areas.name }).from(areas).where(eq(areas.studyId, studyId)).orderBy(areas.sortOrder)).map((a) => a.name);
 
@@ -41,6 +42,15 @@ export async function loadDashboardTx(tx: Tx, studyId: string, mode: Mode): Prom
   const suit = s.map((x) => ({ kind: kindById.get(x.activityId) ?? "real", situation: x.situation }));
   const r = await tx.select().from(riskAssessments).where(eq(riskAssessments.studyId, studyId));
   const risks = r.map((x) => { const c = computeRisk({ impOperational: x.impactOperational, impEconomic: x.impactEconomic, impLabor: x.impactLabor, impLegal: x.impactLegal, impService: x.impactService, probability: x.probability, peopleWhoCanExecute: x.peopleWhoCanExecute }); return { kind: kindById.get(x.activityId) ?? "real", criticality: c.criticality, backup: c.backup }; });
+
+  const codeById = new Map(acts.map((a) => [a.id, a.code]));
+  const byCode = new Map<string, ActivityRisk>();
+  for (const x of r) {
+    const c = computeRisk({ impOperational: x.impactOperational, impEconomic: x.impactEconomic, impLabor: x.impactLabor, impLegal: x.impactLegal, impService: x.impactService, probability: x.probability, peopleWhoCanExecute: x.peopleWhoCanExecute });
+    const code = codeById.get(x.activityId);
+    if (code && c.criticality !== "Evaluación incompleta") byCode.set(code, { criticality: c.criticality, concentration: c.concentration, backup: c.backup });
+  }
+  const analysis = withRisks(analysis0, byCode);
 
   const hourlyCost = num(p.hourlyCostCop);
   const oppParams = { weeksPerYear: p.weeksPerYear, hourlyCost, wImpact: p.weightImpact, wEase: p.weightEase, wEffort: p.weightEffort, wCost: p.weightCost, wRisk: p.weightRisk };

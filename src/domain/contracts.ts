@@ -67,7 +67,7 @@ export const importReport = z.object({
 }).strict();
 
 /** Configuración de "drill-down" (navegación por niveles) del tablero. Cada nivel agrupa, mide y apunta al siguiente. */
-export const drillMetric = z.enum(["hours", "capacity", "pct", "incomplete", "unplanned", "rework", "wait", "seasonVariation"]);
+export const drillMetric = z.enum(["hours", "capacity", "pct", "incomplete", "unplanned", "rework", "wait", "seasonVariation", "critical", "singlePerson", "noBackup"]);
 export const drillConfig = z.object({
   id: z.string().min(3),
   levels: z.array(z.object({

@@ -5,7 +5,9 @@ export interface Thresholds { high: number; low: number }
 export type Mode = "real" | "demo" | "all";
 export type AlertLevel = "overload" | "low" | "ok" | "nodata";
 
-export interface ActivityRow { code: string; dataKind: string; area: string; site: string; position: string; secondaryPosition: string | null; secondaryArea?: string | null; secondarySite?: string | null; status: string; complete: boolean; hoursWeek: number | null; hoursMonth: number | null; result: ActivityResult }
+export interface ActivityRow { code: string; dataKind: string; area: string; site: string; position: string; secondaryPosition: string | null; secondaryArea?: string | null; secondarySite?: string | null; status: string; complete: boolean; hoursWeek: number | null; hoursMonth: number | null; result: ActivityResult; risk?: ActivityRisk }
+/** Resultado de la hoja 7 de una actividad (solo existe si tiene riesgo evaluado). */
+export interface ActivityRisk { criticality: string; concentration: string; backup: string }
 export interface PositionRow {
   dataKind: string; area: string; site: string; position: string; occupants: number; capacity: number; hours: number; pct: number | null;
   activities: number; complete: number; reading: string; level: AlertLevel;

@@ -5,11 +5,11 @@
  */
 import { drillConfig, type DrillConfig } from "./contracts";
 import { norm } from "./engine";
-import type { ActivityRow, Analysis, AlertLevel } from "./summary";
+import type { ActivityRisk, ActivityRow, Analysis, AlertLevel } from "./summary";
 
 export type Metric = DrillConfig["levels"][number]["metrics"][number];
 export type LevelKey = "study" | "area" | "position" | "activity";
-export const METRIC_ES: Record<Metric, string> = { hours: "Horas/sem", capacity: "Capacidad (h/sem)", pct: "% de capacidad", incomplete: "Incompletas", unplanned: "No planificadas (h/sem)", rework: "Reprocesos (h/sem)", wait: "Esperas (h/sem)", seasonVariation: "Variación de temporada (h/sem)" };
+export const METRIC_ES: Record<Metric, string> = { hours: "Horas/sem", capacity: "Capacidad (h/sem)", pct: "% de capacidad", incomplete: "Incompletas", unplanned: "No planificadas (h/sem)", rework: "Reprocesos (h/sem)", wait: "Esperas (h/sem)", seasonVariation: "Variación de temporada (h/sem)", critical: "Críticas o altas", singlePerson: "Una sola persona", noBackup: "Sin respaldo prioritario" };
 export const LEVEL_ES: Record<LevelKey, string> = { study: "Estudio", area: "Área", position: "Cargo y sede", activity: "Actividad" };
 
 /** Configuraciones predefinidas (validadas con el contrato drillConfig al cargar el módulo). */
@@ -34,18 +34,40 @@ export const PRESETS: Record<string, DrillConfig> = {
     ],
     filters: { kind: "real", alertOnly: "incomplete" },
   }),
+  /* Brief §15.2 [PROPUESTA]: Estudio → Área → Actividad crítica (criticidad, concentración, respaldo; hoja 7). */
+  "riesgos-por-area": drillConfig.parse({
+    id: "riesgos-por-area",
+    levels: [
+      { key: "study", groupBy: "area", metrics: ["critical", "singlePerson", "noBackup"], next: "area" },
+      { key: "area", groupBy: "activity", metrics: ["critical", "singlePerson", "noBackup", "hours"], next: "activity" },
+      { key: "activity", groupBy: null, metrics: ["critical", "singlePerson", "noBackup", "hours"], next: null },
+    ],
+    filters: { kind: "real" },
+  }),
 };
-export const PRESET_ES: Record<string, string> = { "carga-por-area": "Carga por área", "calidad-de-datos": "Calidad de datos" };
+export const PRESET_ES: Record<string, string> = { "carga-por-area": "Carga por área", "calidad-de-datos": "Calidad de datos", "riesgos-por-area": "Riesgos por área" };
+
+/** Asocia a cada actividad su resultado de la hoja 7 (por código). Las actividades sin riesgo evaluado quedan sin `risk`. */
+export function withRisks(a: Analysis, byCode: Map<string, ActivityRisk>): Analysis {
+  return { ...a, activities: a.activities.map((x) => { const r = byCode.get(x.code); return r ? { ...x, risk: r } : x; }) };
+}
+const CRIT_RANK: Record<string, number> = { "Crítica": 4, Alta: 3, Media: 2, Baja: 1 };
 
 export interface DrillFilters { area?: string; site?: string; position?: string; kind?: string; alertOnly?: "overload" | "lowLoad" | "incomplete" | "" }
 export interface DrillRow { key: string; label: string; detail?: string; metrics: Partial<Record<Metric, number | null>>; status?: string; level?: AlertLevel; next: { level: LevelKey; filters: DrillFilters } | null }
 
 const sum = (xs: (number | undefined)[]) => xs.reduce<number>((a, b) => a + (b ?? 0), 0);
+/** Conteos de la hoja 7: solo cuentan las actividades con riesgo evaluado (el riesgo no depende de que el tiempo esté completo). */
+function riskCounts(acts: ActivityRow[]): Partial<Record<Metric, number>> {
+  const r = acts.flatMap((x) => (x.risk ? [x.risk] : []));
+  return { critical: r.filter((x) => x.criticality === "Crítica" || x.criticality === "Alta").length, singlePerson: r.filter((x) => x.concentration === "Alta concentración").length, noBackup: r.filter((x) => x.backup === "Requiere respaldo prioritario").length };
+}
 function actMetrics(acts: ActivityRow[]): Partial<Record<Metric, number | null>> {
   const ok = acts.filter((x) => x.complete);
   return {
     hours: sum(ok.map((x) => x.result.hTotal)), incomplete: acts.length - ok.length, unplanned: sum(ok.map((x) => x.result.hUnplanned)), rework: sum(ok.map((x) => x.result.hRework)),
-    wait: sum(ok.map((x) => x.result.hWait)), seasonVariation: sum(ok.map((x) => (x.result.hHighTotal ?? 0) - (x.result.hLowTotal ?? 0))),
+    wait: sum(ok.map((x) => x.result.hWait)),
+    ...riskCounts(acts), seasonVariation: sum(ok.map((x) => (x.result.hHighTotal ?? 0) - (x.result.hLowTotal ?? 0))),
   };
 }
 const same = (a: { area: string; site?: string; position?: string }, f: DrillFilters) =>
@@ -65,6 +87,12 @@ export function drillRows(a: Analysis, cfg: DrillConfig, level: LevelKey, f: Dri
       const mine = acts.filter((x) => norm(x.area) === norm(ar.area));
       return { key: ar.area, label: ar.area, detail: `${ar.activities} actividad(es)`, metrics: pick({ ...actMetrics(mine), hours: ar.hours, capacity: ar.capacity, pct: ar.pct }), next: { level: "area" as const, filters: { area: ar.area } } };
     }).filter((r) => acts.some((x) => norm(x.area) === norm(r.key)) || (r.metrics.capacity ?? 0) > 0);
+  } else if (level === "area" && cfg.levels.find((l) => l.key === "area")?.groupBy === "activity") {
+    // Estudio → Área → Actividad (riesgos-por-area): solo actividades con riesgo evaluado, para bajar directo a la ficha.
+    rows = acts.filter((x) => x.risk && same(x, f)).map((x) => ({
+      key: x.code, label: x.code, detail: `${x.site} · ${x.position}`, status: `${x.risk!.criticality} · ${x.risk!.concentration} · ${x.risk!.backup}`,
+      metrics: pick({ ...actMetrics([x]), hours: x.complete ? x.hoursWeek : null }), next: { level: "activity" as const, filters: { area: x.area, site: x.site, position: x.position, ...{ code: x.code } as object } },
+    }));
   } else if (level === "area") {
     rows = poss.filter((p) => same(p, f)).map((p) => {
       const mine = acts.filter((x) => norm(x.area) === norm(p.area) && norm(x.site) === norm(p.site) && norm(x.position) === norm(p.position) && x.dataKind === p.dataKind);
@@ -90,5 +118,6 @@ export function drillRows(a: Analysis, cfg: DrillConfig, level: LevelKey, f: Dri
   if (alert === "incomplete") rows = rows.filter((r) => (r.metrics.incomplete ?? 0) > 0 || (r.status !== undefined && r.status !== "OK" && level !== "area"));
   if (alert === "overload") rows = rows.filter((r) => r.level === "overload" || (level === "study" && (r.metrics.pct ?? 0) > 1));
   if (alert === "lowLoad") rows = rows.filter((r) => r.level === "low");
+  if (metricsOf.has("critical")) { const rank = (r: DrillRow) => CRIT_RANK[r.status?.split(" · ")[0] ?? ""] ?? 0; return rows.sort((x, y) => (y.metrics.critical ?? 0) - (x.metrics.critical ?? 0) || (y.metrics.noBackup ?? 0) - (x.metrics.noBackup ?? 0) || rank(y) - rank(x) || (y.metrics.hours ?? 0) - (x.metrics.hours ?? 0) || x.label.localeCompare(y.label, "es")); }
   return rows.sort((x, y) => (y.metrics.hours ?? 0) - (x.metrics.hours ?? 0) || x.label.localeCompare(y.label, "es"));
 }

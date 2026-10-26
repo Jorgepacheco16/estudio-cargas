@@ -18,7 +18,7 @@ Lo que no está completo o depende de otra persona figura al final, sin maquilla
 | F4 | Prueba dorada con ≥ 3 variantes: 0 diferencias | `npm run test:golden` (870 valores, 3 variantes) | Cumplido |
 | F4 | Tablero idéntico al Excel (12 indicadores, top 10, conclusiones) | `scripts/verify-dashboard.ts` (192 valores, 0 diferencias) | Cumplido |
 | F4 | Cambiar un dato actualiza los resultados dependientes | `npm run test:f3`, `e2e/sesion.spec.ts` | Cumplido |
-| F4 | Drill-down básico | `npm run test:drill` (9) + E2E | Cumplido (configuración «riesgos-por-area» [PROPUESTA] pendiente) |
+| F4 | Drill-down básico | `npm run test:drill` (9) + E2E | Cumplido, incluida la configuración «riesgos-por-area» (D-66) |
 | F4 | Realtime | Reemplazado por refresco automático cada 45 s (D-56) | Parcial, decidido |
 | F5 | 0 diferencias en las columnas calculadas de las hojas 5–10 | `npm run test:oracle`: 9 478 valores, LibreOffice 25.8.7; encontró y corrigió el redondeo de la prioridad (D-47) | Cumplido |
 | F6 | Suite de seguridad verde | `test:rls`, `test:matrix`, `test:policies`, `test:arch`, `test:hook`, `test:webhook` | Cumplido |
@@ -43,6 +43,6 @@ Lo que no está completo o depende de otra persona figura al final, sin maquilla
 - Fijar en Supabase Auth el tiempo de vida de las sesiones (brief §16.3) y confirmar en el panel qué copias de seguridad ofrece el plan.
 
 **Pendiente técnico, de baja prioridad:**
-- Configuración de drill-down «riesgos-por-area» y la tabla `drill_presets` para configuraciones guardadas [PROPUESTA].
+- La tabla `drill_presets` para configuraciones guardadas [PROPUESTA].
 - COEP no se agrega (puede romper recursos externos). Dos alertas medias de ZAP aceptadas y explicadas.
 - Las propuestas de Dependabot (actualizaciones de las acciones de GitHub) están abiertas como pull requests para revisión: no se aplican solas.
