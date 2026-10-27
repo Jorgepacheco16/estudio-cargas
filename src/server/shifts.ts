@@ -5,7 +5,7 @@
 import { and, asc, eq, inArray, sql } from "drizzle-orm";
 import { withRls, type Db, type Tx } from "../db/client";
 import { activities, activityShifts, areas, auditLog, positionShifts, positions, sites } from "../db/schema";
-import { activityShiftsText, describeDays, describeShift, normTime, parseShift, reconcileSelection, type ShiftInput } from "../domain/shifts";
+import { activityShiftsText, describeDays, describeShift, normTime, parseShift, reconcileSelection, type ShiftInput, type ShiftValues } from "../domain/shifts";
 
 export interface ShiftRow { id: string; positionId: string; name: string; start: string | null; end: string | null; breakMin: number | null; days: number | null; usedBy: number }
 export type ShiftResult = { ok: true; notices: string[]; changed?: boolean } | { ok: false; errors: string[] };
@@ -28,8 +28,12 @@ export async function listShifts(db: Db, sub: string, studyId: string, positionI
 export async function saveShift(db: Db, sub: string, studyId: string, positionId: string, shiftId: string | undefined, input: ShiftInput): Promise<ShiftResult> {
   const p = parseShift(input);
   if (!p.ok) return p;
-  const v = p.values;
-  return withRls(db, { sub }, async (tx) => {
+  return withRls(db, { sub }, (tx) => saveShiftTx(tx, sub, studyId, positionId, shiftId, p.values));
+}
+
+/** Lo mismo dentro de una transacción ya abierta (la usa la carga masiva): recibe los valores ya validados con parseShift. */
+export async function saveShiftTx(tx: Tx, sub: string, studyId: string, positionId: string, shiftId: string | undefined, v: ShiftValues): Promise<ShiftResult> {
+  {
     const [pos] = await tx.select({ id: positions.id }).from(positions).where(and(eq(positions.id, positionId), eq(positions.studyId, studyId)));
     if (!pos) return { ok: false as const, errors: ["El cargo ya no existe."] };
     const mine = await tx.select().from(positionShifts).where(and(eq(positionShifts.studyId, studyId), eq(positionShifts.positionId, positionId)));
@@ -38,7 +42,7 @@ export async function saveShift(db: Db, sub: string, studyId: string, positionId
     if (!shiftId) {
       const [ins] = await tx.insert(positionShifts).values({ studyId, positionId, ...row, sortOrder: Math.max(-1, ...mine.map((s) => s.sortOrder)) + 1 }).returning({ id: positionShifts.id });
       await audit(tx, studyId, sub, "insert", "position_shift", ins.id, { name: { from: null, to: v.name } });
-      return { ok: true as const, notices: [`Turno «${v.name}» agregado.`] };
+      return { ok: true as const, notices: [`Turno «${v.name}» agregado.`], changed: true };
     }
     const cur = mine.find((s) => s.id === shiftId);
     if (!cur) return { ok: false as const, errors: ["El turno ya no existe (otra persona lo eliminó)."] };
@@ -50,8 +54,8 @@ export async function saveShift(db: Db, sub: string, studyId: string, positionId
     if (cur.breakMinutes !== v.breakMin) diff.breakMinutes = { from: cur.breakMinutes, to: v.breakMin };
     if (cur.days !== v.days) diff.days = { from: describeDays(cur.days), to: describeDays(v.days) };
     if (Object.keys(diff).length) await audit(tx, studyId, sub, "update", "position_shift", shiftId, diff);
-    return { ok: true as const, notices: [Object.keys(diff).length ? `Turno «${v.name}» actualizado.` : "Sin cambios."] };
-  });
+    return { ok: true as const, notices: [Object.keys(diff).length ? `Turno «${v.name}» actualizado.` : "Sin cambios."], changed: Object.keys(diff).length > 0 };
+  }
 }
 
 /**
@@ -84,7 +88,12 @@ export async function activityShiftSelection(db: Db, sub: string, studyId: strin
  * los que no lo sean (p. ej. porque cambió de cargo) se descartan y se avisa.
  */
 export async function setActivityShifts(db: Db, sub: string, studyId: string, activityId: string, sel: { all: boolean; ids: string[] }): Promise<ShiftResult> {
-  return withRls(db, { sub }, async (tx) => {
+  return withRls(db, { sub }, (tx) => setActivityShiftsTx(tx, sub, studyId, activityId, sel));
+}
+
+/** Lo mismo dentro de una transacción ya abierta (la usa la carga masiva). */
+export async function setActivityShiftsTx(tx: Tx, sub: string, studyId: string, activityId: string, sel: { all: boolean; ids: string[] }): Promise<ShiftResult> {
+  {
     const [a] = await tx.select({ id: activities.id, code: activities.code, positionId: activities.positionId, all: activities.allShifts }).from(activities).where(and(eq(activities.id, activityId), eq(activities.studyId, studyId)));
     if (!a) return { ok: false as const, errors: ["La actividad ya no existe."] };
     const valid = await tx.select({ id: positionShifts.id, name: positionShifts.name }).from(positionShifts).where(and(eq(positionShifts.studyId, studyId), eq(positionShifts.positionId, a.positionId)));
@@ -98,7 +107,7 @@ export async function setActivityShifts(db: Db, sub: string, studyId: string, ac
     const nameOf = new Map(valid.map((v) => [v.id, v.name]));
     await audit(tx, studyId, sub, "update", "activity_shifts", activityId, { shifts: { from: a.all ? "Todos los turnos" : before.map((b) => nameOf.get(b.id) ?? "?").join(", "), to: activityShiftsText(sel.all, kept.map((k) => nameOf.get(k) ?? "")) } });
     return { ok: true as const, notices: dropped.length ? [`Se descartaron ${dropped.length} turno(s) que no pertenecen al cargo de la actividad.`] : [], changed: true };
-  });
+  }
 }
 
 export interface PositionShifts { kind: string; area: string; site: string; position: string; shifts: { id: string; name: string; start: string | null; end: string | null; breakMin: number | null; days: number | null }[] }

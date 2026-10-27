@@ -15,6 +15,27 @@ export interface ShiftInput { name: string; start: string; end: string; breakMin
 /** `days` null = todos los días. */
 export interface ShiftValues { name: string; start: string | null; end: string | null; breakMin: number | null; days: number | null }
 
+const DAY_KEYS: Record<string, number> = { l: 0, lunes: 0, m: 1, martes: 1, x: 2, mi: 2, miercoles: 2, j: 3, jueves: 3, v: 4, viernes: 4, s: 5, sabado: 5, d: 6, domingo: 6 };
+/**
+ * Días escritos como texto (carga masiva): «Todos», «L-S», «lunes a viernes», «L, X, V», «Domingo». Vacío = todos los días.
+ * Devuelve los días como "0".."6" (0 = lunes) o null si el texto no se entiende.
+ */
+export function parseDaysText(raw: string): string[] | null {
+  const t = raw.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().trim();
+  if (t === "" || /^todos( los dias)?$/.test(t) || t === "lunes a domingo" || t === "l-d") return ["0", "1", "2", "3", "4", "5", "6"];
+  const days = new Set<number>();
+  for (const part of t.split(/[,;]|\sy\s/).map((s) => s.trim()).filter(Boolean)) {
+    const ends = part.split(/\s*(?:-|–|—|\sa\s)\s*/);
+    if (ends.length === 1) { const d = DAY_KEYS[part]; if (d === undefined) return null; days.add(d); }
+    else if (ends.length === 2) {
+      const [a, b] = [DAY_KEYS[ends[0]], DAY_KEYS[ends[1]]];
+      if (a === undefined || b === undefined) return null;
+      for (let i = a; ; i = (i + 1) % 7) { days.add(i); if (i === b) break; } // «S-L» da la vuelta a la semana
+    } else return null;
+  }
+  return days.size ? [...days].sort((x, y) => x - y).map(String) : null;
+}
+
 /** Máscara de días ← lista de días marcados. Los siete días se guardan como null (todos). */
 export function maskFromDays(days: string[]): number | null {
   const mask = [...new Set(days)].reduce((m, d) => (/^[0-6]$/.test(d) ? m | (1 << Number(d)) : m), 0);

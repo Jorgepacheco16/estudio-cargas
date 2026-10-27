@@ -1,4 +1,4 @@
-import { ALL_SHIFTS, activityShiftsText, daysOf, describeDays, describeShift, maskFromDays, grossMinutes, netHours, normTime, parseShift, reconcileSelection } from "../src/domain/shifts";
+import { ALL_SHIFTS, activityShiftsText, daysOf, describeDays, describeShift, maskFromDays, parseDaysText, grossMinutes, netHours, normTime, parseShift, reconcileSelection } from "../src/domain/shifts";
 import { check, summary } from "./helpers";
 
 /** Turnos del cargo (D-67): validación, horas netas y selección de la actividad. Funciones puras. */
@@ -43,6 +43,13 @@ async function main() {
     const d = maskFromDays(["6"]); if (d !== 64 || describeDays(d) !== "Domingo") throw new Error(String(d));
     const lxv = maskFromDays(["4", "0", "2", "2"]); if (describeDays(lxv) !== "L, X, V" || daysOf(lxv).join() !== "0,2,4") throw new Error(String(lxv));
     if (describeDays(maskFromDays(["5", "6"])) !== "S, D") throw new Error("dos días seguidos se listan");
+  });
+
+  await check("Días escritos como texto (carga masiva): todos, rangos, listas, nombres completos y valores no válidos", () => {
+    const eq = (t: string, want: string | null) => { const r = parseDaysText(t); const got = r === null ? null : r.join(""); if (got !== want) throw new Error(`«${t}» → ${got} (se esperaba ${want})`); };
+    for (const t of ["", "Todos", "todos los días", "L-D", "lunes a domingo"]) eq(t, "0123456");
+    eq("L-S", "012345"); eq("l–s", "012345"); eq("Lunes a Viernes", "01234"); eq("L, X, V", "024"); eq("l;m;j", "013"); eq("Domingo", "6"); eq("sábado y domingo", "56"); eq("S-L", "056"); // da la vuelta a la semana: sábado, domingo y lunes
+    for (const t of ["xyz", "L-Z", "L-M-X", "festivos"]) eq(t, null);
   });
 
   await check("parseShift exige al menos un día; los siete días quedan como «todos»; los días entran en la descripción solo si no son todos", () => {

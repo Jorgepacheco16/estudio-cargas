@@ -47,7 +47,12 @@ export async function EntrySection({ hoja, sp }: { hoja: EntryId; sp: Record<str
     <section className="card" id="registros" aria-label={`Registros de ${def.short}`}>
       <div style={{ display: "flex", flexWrap: "wrap", gap: 12, alignItems: "center", justifyContent: "space-between" }}>
         <h2>Registros capturados ({rows.length})</h2>
-        {canWrite && <Link className="btn solid" href={`${base}/nuevo`}>+ Agregar registro</Link>}
+        {canWrite && (
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+            {(hoja === "2" || hoja === "3") && <><a className="btn" href={`/api/plantilla/${hoja}`}>Descargar plantilla</a><Link className="btn" href={`${base}/carga`}>Carga masiva</Link></>}
+            <Link className="btn solid" href={`${base}/nuevo`}>+ Agregar registro</Link>
+          </div>
+        )}
       </div>
       {sp.ok && <div className="banner" role="status" style={{ background: "var(--blue-soft)", color: "var(--blue)", marginTop: 12 }}>{sp.ok}</div>}
       {sp.error && <div className="banner" role="alert" style={{ background: "var(--red-soft)", color: "var(--red-dark)", marginTop: 12 }}>{sp.error}</div>}

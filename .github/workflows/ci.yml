@@ -37,6 +37,7 @@ jobs:
       - run: npm run test:f3
       - run: npm run test:capture
       - run: npm run test:shiftsdb
+      - run: npm run test:bulkdb
       - run: npm run test:matrix
       - run: npm run test:policies
       - run: npm run test:backup

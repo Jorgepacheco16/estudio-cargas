@@ -7,6 +7,7 @@ import { LEGACY_REDIRECTS } from "./src/lib/entry-routes";
  */
 const config: NextConfig = {
   poweredByHeader: false,
+  experimental: { serverActions: { bodySizeLimit: "4mb" } }, // carga masiva: el archivo (hasta 1,5 MB) y su revisión viajan en la misma petición
   async redirects() { return LEGACY_REDIRECTS.map((r) => ({ ...r, permanent: false })); }, // rutas anteriores de «Datos de entrada»
   async headers() {
     return [{

@@ -14,7 +14,7 @@ import { LABELS } from "../../domain/labels";
 import { analyze, type Analysis } from "../../domain/summary";
 import { Report } from "../import/normalize";
 import { readRowFrom } from "../import/parse";
-import { adapterById, cellsOf, type Adapter, type Ctx, type Rec } from "../sheets/adapters";
+import { adapterById, cellsOf, type Ctx, type Rec } from "../sheets/adapters";
 import { googleGateway } from "../sheets/gateway";
 import { pushSheet, mirrorParameters } from "../sheets/mirror";
 import { listConnections } from "../sheets/sync";
@@ -163,18 +163,30 @@ function prepare(def: EntryDef, raw: Record<string, string>): Record<string, str
   return out;
 }
 
-export async function saveEntry(db: Db, sub: string, studyId: string, id: EntryId, raw: Record<string, string>, ref: { recId?: string; version?: number }): Promise<SaveResult> {
-  const def = entryDef(id); if (!def) return { ok: false, errors: ["Hoja desconocida"] };
+/** Valida lo capturado con las mismas reglas del libro, sin tocar la base de datos. */
+export function validateRaw(def: EntryDef, raw: Record<string, string>): { ok: true; row: ReturnType<typeof readRowFrom> } | { ok: false; errors: string[] } {
   const a = def.adapter, cells = prepare(def, raw), rep = new Report();
   const row = readRowFrom((col) => cells[col] ?? null, def.sheetName, 7, a.spec, rep);
   const header = (field: string) => def.fields.find((f) => f.field === field)?.header ?? field;
   const errors = rep.issues.filter((i) => i.severity !== "info").map((i) => `${header(i.field)}: ${friendly(i.message)}`);
   for (const f of def.fields.filter((x) => x.required)) if (cells[f.col] === null) errors.push(`${f.header}: es obligatorio`);
   if (errors.length) return { ok: false, errors };
+  return { ok: true, row };
+}
 
+export async function saveEntry(db: Db, sub: string, studyId: string, id: EntryId, raw: Record<string, string>, ref: { recId?: string; version?: number }): Promise<SaveResult> {
+  const def = entryDef(id); if (!def) return { ok: false, errors: ["Hoja desconocida"] };
+  const v = validateRaw(def, raw);
+  if (!v.ok) return v;
+  return withRls(db, { sub }, (tx) => persistEntry(tx, sub, studyId, def, v.row, ref));
+}
+
+/** Guarda un registro ya validado dentro de una transacción abierta. Con matchExisting, si la clave ya existe se actualiza ese registro (carga masiva). */
+export async function persistEntry(tx: Tx, sub: string, studyId: string, def: EntryDef, row: ReturnType<typeof readRowFrom>, ref: { recId?: string; version?: number; matchExisting?: boolean }): Promise<SaveResult> {
+  const a = def.adapter;
   const table = a.table as PgTable, k = getTableColumns(table) as Record<string, Parameters<typeof eq>[0]>;
   const hasCode = "code" in k;
-  return withRls(db, { sub }, async (tx): Promise<SaveResult> => {
+  {
     const c: Ctx = { tx, studyId, rep: new Report(), sheet: def.sheetName, rowNo: 0 };
     let existing: Rec | null = null;
     if (ref.recId) {
@@ -183,7 +195,8 @@ export async function saveEntry(db: Db, sub: string, studyId: string, id: EntryI
       if (existing.version !== ref.version) return { ok: false, errors: ["Conflicto (409): otra persona modificó este registro. Vuelva a abrirlo y repita el cambio."], conflict: true };
     } else {
       const dup = a.findRow ? await a.findRow(c, row) : await a.find(c, row.s("code") ?? "");
-      if (dup) return { ok: false, errors: ["Ya existe un registro con esa clave: ábralo desde la lista y edítelo."] };
+      if (dup && ref.matchExisting) existing = dup; // carga masiva: la clave ya existe y se actualiza ese registro
+      else if (dup) return { ok: false, errors: ["Ya existe un registro con esa clave: ábralo desde la lista y edítelo."] };
     }
     const built = await a.build(c, row, existing);
     if ("error" in built) return { ok: false, errors: [built.error] };
@@ -205,7 +218,7 @@ export async function saveEntry(db: Db, sub: string, studyId: string, id: EntryI
     if (upd.length !== 1) return { ok: false, errors: ["Conflicto (409): otra persona modificó este registro mientras se guardaba."], conflict: true };
     await audit("update", existing.id, Object.fromEntries(changed.map(([f, v]) => [f, { from: prev[f] ?? null, to: v }])));
     return { ok: true, recId: existing.id, result: "updated", notices };
-  });
+  }
 }
 
 export async function deleteEntry(db: Db, sub: string, studyId: string, id: EntryId, recId: string): Promise<{ ok: true } | { ok: false; error: string }> {
