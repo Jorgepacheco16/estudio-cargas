@@ -8,8 +8,14 @@ import { GUEST_COOKIE, guestConfigured, verifyGuest } from "@/lib/guest";
 import { getUser } from "@/lib/supabase/server";
 import { guestSignIn, signInWithGoogle, signInWithPassword } from "./actions";
 
-/** Inter (SemiBold) incluida en la aplicación (no se descarga de internet); solo para la frase de la imagen. Licencia: src/app/fonts/Inter-LICENSE.txt */
-const inter = localFont({ src: "../fonts/Inter-SemiBold.woff2", weight: "600", display: "swap" });
+/** Inter (SemiBold y SemiBold cursiva) incluida en la aplicación (no se descarga de internet); solo para la frase de la imagen. Licencia: src/app/fonts/Inter-LICENSE.txt */
+const inter = localFont({
+  src: [
+    { path: "../fonts/Inter-SemiBold.woff2", weight: "600", style: "normal" },
+    { path: "../fonts/Inter-SemiBoldItalic.woff2", weight: "600", style: "italic" },
+  ],
+  display: "swap",
+});
 
 export const metadata = { title: "Ingresar" };
 
@@ -34,7 +40,7 @@ export default async function Ingreso({ searchParams }: { searchParams: Promise<
         <div className="auth-card">
           <div className="auth-logo"><BalanceLogo size={48} /></div>
           <h1 id="auth-title">{invitado ? "Acceso de invitado" : "Ingresar"}</h1>
-          <p className="auth-sub">{invitado ? "Escriba el usuario y la clave de la demostración para ver la aplicación con datos de ejemplo." : "Estudio de actividades y cargas laborales. Entre con su cuenta."}</p>
+          <p className="auth-sub">{invitado ? "Escriba el usuario y la clave de la demostración para ver la aplicación con datos de ejemplo." : <>Estudio de actividades y cargas laborales.<br />Entre con su cuenta.</>}</p>
           {sp.requiere && guest && <div className="banner" role="status">Esa sección requiere una cuenta de usuario. Ingrese con su cuenta para continuar.</div>}
           {error && <div className="banner auth-error" role="alert">{error}</div>}
           {invitado ? (
