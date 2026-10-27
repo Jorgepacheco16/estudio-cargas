@@ -23,12 +23,11 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             <header className="topbar">
               <div className="topbar-in">
                 <div className="brand">
-                  <BalanceLogo size={42} />
+                  <BalanceLogo size={36} />
                   <div className="brand-name">Estudio de actividades y cargas laborales</div>
                 </div>
                 <div className="topbar-user">
                   <div className="client" aria-label={`Cliente: ${CLIENT.name}`}>
-                    <span className="client-label">Cliente</span>
                     <Image className="client-logo" src={CLIENT.logo} alt={CLIENT.name} width={CLIENT.logoWidth} height={CLIENT.logoHeight} priority />
                   </div>
                   <UserBadge />

@@ -1,13 +1,15 @@
 import Image from "next/image";
 import Link from "next/link";
+import localFont from "next/font/local";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { BalanceLogo } from "@/components/brand/BalanceLogo";
-import { LoginIllustration } from "@/components/brand/LoginIllustration";
-import { CLIENT } from "@/lib/client-theme";
 import { GUEST_COOKIE, guestConfigured, verifyGuest } from "@/lib/guest";
 import { getUser } from "@/lib/supabase/server";
 import { guestSignIn, signInWithGoogle, signInWithPassword } from "./actions";
+
+/** Inter (SemiBold) incluida en la aplicación (no se descarga de internet); solo para la frase de la imagen. Licencia: src/app/fonts/Inter-LICENSE.txt */
+const inter = localFont({ src: "../fonts/Inter-SemiBold.woff2", weight: "600", display: "swap" });
 
 export const metadata = { title: "Ingresar" };
 
@@ -30,7 +32,7 @@ export default async function Ingreso({ searchParams }: { searchParams: Promise<
     <main className="auth">
       <section className="auth-panel" aria-labelledby="auth-title">
         <div className="auth-card">
-          <div className="auth-logo"><BalanceLogo size={58} /></div>
+          <div className="auth-logo"><BalanceLogo size={48} /></div>
           <h1 id="auth-title">{invitado ? "Acceso de invitado" : "Ingresar"}</h1>
           <p className="auth-sub">{invitado ? "Escriba el usuario y la clave de la demostración para ver la aplicación con datos de ejemplo." : "Estudio de actividades y cargas laborales. Entre con su cuenta."}</p>
           {sp.requiere && guest && <div className="banner" role="status">Esa sección requiere una cuenta de usuario. Ingrese con su cuenta para continuar.</div>}
@@ -69,15 +71,13 @@ export default async function Ingreso({ searchParams }: { searchParams: Promise<
               <p className="auth-guest">¿Solo quiere conocer la aplicación? <Link className="auth-link" href="/ingreso?modo=invitado">Ingresar como invitado</Link></p>
             </>
           )}
-          <div className="auth-client">
-            <span>Estudio para</span>
-            <Image src={CLIENT.logo} alt={CLIENT.name} width={CLIENT.logoWidth} height={CLIENT.logoHeight} className="auth-client-logo" />
-          </div>
         </div>
       </section>
       <aside className="auth-art" aria-hidden="true">
-        <LoginIllustration />
-        <p className="auth-art-text">Equilibre la carga de trabajo con la capacidad de su equipo.</p>
+        <div className="auth-art-figure">
+          <Image src="/ingreso-equipo.webp" alt="" width={1536} height={1024} priority sizes="(max-width: 900px) 0px, 70vw" />
+        </div>
+        <p className={`auth-art-text ${inter.className}`}>Equilibre la carga de trabajo con la capacidad de su equipo.</p>
       </aside>
     </main>
   );
