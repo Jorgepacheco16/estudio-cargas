@@ -1,11 +1,13 @@
 /** Consolidaciones por actividad, cargo-sede y área (hojas 4a/4b del Excel). Funciones puras. */
-import { computeActivity, occupantsOf, capacityOf, norm, STATUS_ES, type ActivityInput, type ActivityResult, type Params, type StaffingInput } from "./engine";
+import { computeActivity, occupantsOf, capacityOf, norm, STATUS_ES, type PeriodKey, type ActivityInput, type ActivityResult, type Params, type StaffingInput } from "./engine";
 
 export interface Thresholds { high: number; low: number }
 export type Mode = "real" | "demo" | "all";
 export type AlertLevel = "overload" | "low" | "ok" | "nodata";
 
-export interface ActivityRow { code: string; dataKind: string; area: string; site: string; position: string; secondaryPosition: string | null; secondaryArea?: string | null; secondarySite?: string | null; status: string; complete: boolean; hoursWeek: number | null; hoursMonth: number | null; result: ActivityResult; risk?: ActivityRisk }
+export interface ActivityRow { code: string; dataKind: string; area: string; site: string; position: string; secondaryPosition: string | null; secondaryArea?: string | null; secondarySite?: string | null; status: string; complete: boolean; hoursWeek: number | null; hoursMonth: number | null; result: ActivityResult; risk?: ActivityRisk;
+  /** Datos de captura que la exportación de Actividades muestra tal como se registraron. */
+  capture?: { executions: number | null; period: PeriodKey | null; timeAvgMin: number | null } }
 /** Resultado de la hoja 7 de una actividad (solo existe si tiene riesgo evaluado). */
 export interface ActivityRisk { criticality: string; concentration: string; backup: string }
 export interface PositionRow {
@@ -37,6 +39,7 @@ export function analyze(staffAll: StaffingInput[], actsAll: ActivityInput[], prm
   const activities: ActivityRow[] = acts.map((a, i) => ({
     code: a.code, dataKind: a.dataKind, area: a.area, site: a.site, position: a.position, secondaryPosition: a.secondaryPosition ?? null, secondaryArea: a.secondaryArea ?? null, secondarySite: a.secondarySite ?? null, status: STATUS_ES[results[i].status], complete: results[i].status === "OK",
     hoursWeek: results[i].hTotal ?? null, hoursMonth: results[i].hMonth ?? null, result: results[i],
+    capture: { executions: a.executions, period: a.period, timeAvgMin: a.timeAvgMin },
   }));
 
   const keys = new Map<string, { dataKind: string; area: string; site: string; position: string }>();

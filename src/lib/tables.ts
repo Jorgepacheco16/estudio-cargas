@@ -37,15 +37,19 @@ export function areasTable(a: Analysis): Table {
   };
 }
 
-export function actividadesTable(a: Analysis): Table {
+const PERIOD_ES: Record<string, string> = { day: "Día", week: "Semana", fortnight: "Quincena", month: "Mes", quarter: "Trimestre", year: "Año" };
+
+/** Exportable de Actividades: código, nombre, centro de operaciones, cargo, ejecuciones por período, período, tiempo promedio (min) y horas por semana y por mes. `names`: nombre de cada actividad por código en minúsculas. */
+export function actividadesTable(a: Analysis, names?: Map<string, string>): Table {
   return {
     name: "Actividades",
     columns: [
-      { key: "code", header: "Código", width: 14 }, { key: "kind", header: "Tipo de dato", width: 12 }, { key: "area", header: "Área", width: 28 }, { key: "site", header: "Centro de operaciones", width: 18 },
-      { key: "position", header: "Cargo", width: 30 }, { key: "status", header: "Estado de captura", width: 44 },
+      { key: "code", header: "Código", width: 14 }, { key: "name", header: "Nombre de la actividad", width: 50 }, { key: "site", header: "Centro de operaciones", width: 22 }, { key: "position", header: "Cargo", width: 30 },
+      { key: "exec", header: "Cantidad de ejecuciones por período", fmt: "#,##0.##", width: 18 }, { key: "period", header: "Período de las ejecuciones", width: 16 },
+      { key: "time", header: "Tiempo promedio por ejecución o por unidad (min)", fmt: "#,##0.##", width: 22 },
       { key: "hw", header: "Horas por semana", fmt: "#,##0.00" }, { key: "hm", header: "Horas por mes", fmt: "#,##0.00" },
     ],
-    rows: a.activities.map((x) => ({ code: x.code, kind: KIND(x.dataKind), area: x.area, site: x.site, position: x.position, status: x.status, hw: r2(x.hoursWeek), hm: r2(x.hoursMonth) })),
+    rows: a.activities.map((x) => ({ code: x.code, name: names?.get(x.code.toLowerCase()) ?? null, site: x.site, position: x.position, exec: x.capture?.executions ?? null, period: x.capture?.period ? PERIOD_ES[x.capture.period] : null, time: x.capture?.timeAvgMin ?? null, hw: r2(x.hoursWeek), hm: r2(x.hoursMonth) })),
   };
 }
 
@@ -132,11 +136,11 @@ export function drillTable(a: Analysis, config: string, level: LevelKey, filters
 }
 
 export interface ViewQuery { area?: string; position?: string; config?: string; level?: string; site?: string; code?: string; alert?: string }
-export function tablesFor(view: View, a: Analysis, d: Dashboard, proposals: ProposalRow[] = [], q: ViewQuery = {}, mode: Mode = "all", reservePct = 0.1): { title: string; tables: Table[] } {
+export function tablesFor(view: View, a: Analysis, d: Dashboard, proposals: ProposalRow[] = [], q: ViewQuery = {}, mode: Mode = "all", reservePct = 0.1, names?: Map<string, string>): { title: string; tables: Table[] } {
   switch (view) {
     case "tablero": return { title: "Inicio", tables: [...dashboardTables(d).slice(0, 1), cargosTable(a), ...dashboardTables(d).slice(1)] };
     case "cargos": return { title: "Cargos y dotación", tables: [cargosTable(a)] };
-    case "actividades": return { title: "Actividades", tables: [actividadesTable(a)] };
+    case "actividades": return { title: "Actividades", tables: [actividadesTable(a, names)] };
     case "areas": return { title: "Áreas", tables: [areasTable(a)] };
     case "calculo": return { title: "Cálculo de tiempos", tables: [calculoTable(a)] };
     case "sedes": return { title: "Comparador de centros de operaciones", tables: [sedesTable(a, q.area ?? "", q.position ?? "", mode, reservePct)] };

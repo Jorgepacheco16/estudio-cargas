@@ -24,11 +24,13 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ view: strin
   const { dashboard, label } = loaded;
   // Las exportaciones respetan los filtros elegidos en pantalla (D-74): centro de operaciones, área, cargo, estado y búsqueda.
   let analysis = loaded.analysis;
+  let actNames: Map<string, string> | undefined;
   const fp = paramsToRecord(sp);
   if (view === "cargos") analysis = { ...analysis, positions: positionFilters(analysis.positions, fp).rows };
   if (view === "actividades" || view === "calculo") {
     let names: Map<string, string> | undefined;
-    if (view === "calculo" && loaded.source === "estudio") { const u = await getUser(); const s = u ? await activeStudyId(u.id) : null; if (u && s) names = await listActivityNames(getDb(), u.id, s.id); }
+    if ((view === "calculo" || view === "actividades") && loaded.source === "estudio") { const u = await getUser(); const s = u ? await activeStudyId(u.id) : null; if (u && s) names = await listActivityNames(getDb(), u.id, s.id); }
+    actNames = names;
     analysis = { ...analysis, activities: activityFilters(analysis.activities, fp, view === "calculo" ? "calculo" : "captura", names).rows };
   }
   const q = Object.fromEntries(["area", "position", "config", "level", "site", "code", "alert"].map((k) => [k, sp.get(k) ?? undefined]));
@@ -37,7 +39,7 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ view: strin
     const user = await getUser(); const study = user ? await activeStudyId(user.id) : null;
     if (user && study) proposals = (await listProposals(getDb(), user.id, study.id)).map((p) => ({ id: p.id, kind: p.kind, summary: p.summary, status: p.status, reviewedBy: p.reviewedBy ? "persona autorizada" : null, at: p.createdAt.toISOString().slice(0, 10) }));
   }
-  const { title, tables } = tablesFor(view, analysis, dashboard, proposals, q, loaded.mode, loaded.params.reservePct);
+  const { title, tables } = tablesFor(view, analysis, dashboard, proposals, q, loaded.mode, loaded.params.reservePct, actNames);
   const stamp = new Date().toISOString().slice(0, 10);
   const base = `estudio-cargas_${view}_${stamp}`;
 

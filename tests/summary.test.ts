@@ -116,5 +116,17 @@ async function main() {
     const act = tablesFor("actividades", a, dash).tables[0].rows.length, cargos = tablesFor("cargos", a, dash).tables[0].rows.length;
     if (act !== a.activities.length || cargos !== a.positions.length) throw new Error("exportable ≠ pantalla");
   });
+    await check(`El exportable de Actividades trae las columnas pedidas, con ejecuciones, período y tiempo tal como se capturaron`, () => {
+      const t = tablesFor("actividades", a, dash, [], {}, "all", 0.1, new Map([[a.activities[0].code.toLowerCase(), "Nombre de prueba"]])).tables[0];
+      const heads = t.columns.map((x) => x.header).join("|");
+      const want = "Código|Nombre de la actividad|Centro de operaciones|Cargo|Cantidad de ejecuciones por período|Período de las ejecuciones|Tiempo promedio por ejecución o por unidad (min)|Horas por semana|Horas por mes";
+      if (heads !== want) throw new Error(heads);
+      const i = a.activities.findIndex((x) => x.capture?.executions != null && x.capture?.period && x.capture?.timeAvgMin != null);
+      if (i < 0) throw new Error("sin actividad completa en el ejemplo");
+      const src = (fx.activities as ActivityInput[])[i], row = t.rows[i];
+      if (row.exec !== src.executions || row.time !== src.timeAvgMin) throw new Error("ejecuciones o tiempo no coinciden con lo capturado");
+      if (!["Día", "Semana", "Quincena", "Mes", "Trimestre", "Año"].includes(String(row.period))) throw new Error("período sin traducir: " + row.period);
+      if (t.rows[0].name !== "Nombre de prueba") throw new Error("falta el nombre de la actividad");
+    });
 }
 main().then(summary);
