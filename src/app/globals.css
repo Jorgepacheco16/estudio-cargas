@@ -315,7 +315,7 @@ tfoot td { background: var(--blue-soft); border-top: 2px solid var(--blue); bord
 @media (max-width: 900px) { .client { padding: 0 12px; } }
 
 /* ───── Página de ingreso ───── */
-.auth { min-height: 100vh; display: grid; grid-template-columns: minmax(320px, 420px) 1fr; background: var(--bg); }
+.auth { min-height: 100vh; display: grid; grid-template-columns: minmax(320px, 400px) 1fr; background: var(--bg); }
 .auth-panel { display: flex; align-items: center; justify-content: center; padding: 28px 24px; background: var(--card); box-shadow: 4px 0 24px rgba(0, 0, 0, .06); position: relative; z-index: 1; }
 .auth-card { width: 100%; max-width: 330px; display: flex; flex-direction: column; gap: 11px; }
 .auth-logo { display: flex; justify-content: center; margin-bottom: 2px; }
@@ -333,11 +333,9 @@ tfoot td { background: var(--blue-soft); border-top: 2px solid var(--blue); bord
 .auth-guest { margin: 2px 0 0; text-align: center; font-size: .8125rem; color: var(--muted); }
 .auth-error { background: var(--red-soft); color: var(--red-dark); }
 .auth .banner { font-size: .8125rem; padding: 10px 12px; }
-/* Panel de la imagen: la imagen se ve COMPLETA (sin recortar ni degradados) y ocupa todo su recuadro, que conserva la proporción 3:2 de la imagen y crece hasta el máximo que permite la pantalla. */
-.auth-art { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; padding: 24px 28px; background: color-mix(in srgb, var(--brand-secondary) 6%, white); }
-.auth-art-figure { width: min(100%, calc((100vh - 120px) * 1.5)); aspect-ratio: 3 / 2; border-radius: 18px; overflow: hidden; box-shadow: 0 10px 34px rgba(0, 41, 99, .18); }
-.auth-art-figure img { display: block; width: 100%; height: 100%; }
-.auth-art-text { margin: 0; text-align: center; white-space: nowrap; font-size: clamp(.8125rem, 1.35vw, 1.1875rem); font-weight: 600; letter-spacing: .015em; color: var(--blue-dark); }
-:root[data-theme="dark"] .auth-art { background: #121a26; }
-:root[data-theme="dark"] .auth-art-text { color: var(--ink); }
+/* Panel de la imagen: ocupa TODO el espacio de la derecha (a sangre, sin recuadro ni fondo); la imagen se ajusta para cubrirlo y la frase va encima, en blanco, para contrastar con el rojo y el azul. */
+.auth-art { position: relative; min-height: 100vh; overflow: hidden; background: #0f5aa6; }
+.auth-art-figure { position: absolute; inset: 0; }
+.auth-art-figure img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: 50% 55%; }
+.auth-art-text { position: absolute; left: 0; right: 0; bottom: clamp(18px, 4.5vh, 48px); margin: 0; padding: 0 24px; text-align: center; white-space: nowrap; font-size: clamp(.9375rem, 1.7vw, 1.5rem); font-weight: 600; letter-spacing: .02em; color: #fff; text-shadow: 0 1px 2px rgba(0, 20, 60, .55), 0 2px 14px rgba(0, 20, 60, .45); }
 @media (max-width: 900px) { .auth { grid-template-columns: 1fr; } .auth-art { display: none; } .auth-panel { box-shadow: none; } }
