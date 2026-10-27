@@ -4,11 +4,11 @@ import { activeStudyId } from "@/data/source";
 import { getUser } from "@/lib/supabase/server";
 import { basePath } from "@/lib/entry-routes";
 import { BULK_MAX_ROWS } from "@/server/entry/bulk-file";
-import { entryDef } from "@/server/entry/defs";
+import { entryDef, type EntryId } from "@/server/entry/defs";
 import { BulkUpload } from "@/components/entry/BulkUpload";
 
 /** Pantalla de carga masiva de una sección (D-72): descargar plantilla, subir el archivo, revisar y aplicar. */
-export async function BulkPage({ hoja }: { hoja: "2" | "3" }) {
+export async function BulkPage({ hoja }: { hoja: EntryId }) {
   const def = entryDef(hoja)!;
   const user = await getUser();
   if (!user) redirect("/login");
@@ -25,7 +25,7 @@ export async function BulkPage({ hoja }: { hoja: "2" | "3" }) {
       <section className="card">
         <h2>Cómo funciona</h2>
         <ol style={{ margin: "0 0 12px", paddingLeft: 20 }}>
-          <li>Descargue la plantilla y diligénciela (una fila por registro; los campos con * son obligatorios).{hoja === "2" ? " Los turnos de cada cargo van en la hoja «Turnos» y la descripción de la operación en una columna de «Datos»." : " Los turnos de cada actividad se escriben por su nombre (o «Todos los turnos»)."}</li>
+          <li>Descargue la plantilla y diligénciela (una fila por registro; los campos con * son obligatorios).{hoja === "2" ? " Los turnos de cada cargo van en la hoja «Turnos» y la descripción de la operación en una columna de «Datos»." : hoja === "3" ? " Los turnos de cada actividad se escriben por su nombre (o «Todos los turnos»)." : " Los códigos de actividad que cite deben existir ya en la aplicación."}</li>
           <li>Súbala aquí: la aplicación la <b>revisa sin guardar nada</b> y le dice qué se crearía, qué se actualizaría y qué errores hay.</li>
           <li>Si todo está bien, aplique la carga. Es <b>todo o nada</b>: con un solo error no se guarda nada. Si hay registros que ya existen, deberá marcar «Actualizar existentes».</li>
         </ol>

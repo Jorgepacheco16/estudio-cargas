@@ -19,8 +19,8 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ hoja: stri
   if (!study) return err(404, "NOT_FOUND", "Cree o seleccione un estudio primero.");
   if (study.role === "viewer") return err(403, "FORBIDDEN", "Su rol es de solo lectura.");
   const def = entryDef(hoja)!;
-  const { areas } = await entryOptions(getDb(), user.id, study.id);
-  const file = await buildTemplate(def, areas);
+  const { areas, activities } = await entryOptions(getDb(), user.id, study.id);
+  const file = await buildTemplate(def, areas, activities.map((a) => a.code));
   const name = `plantilla-${def.short.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "")}.xlsx`;
   return new NextResponse(new Uint8Array(file), { headers: { "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "Content-Disposition": `attachment; filename="${name}"`, "Cache-Control": "no-store" } });
 }

@@ -10,7 +10,7 @@ import { LONG_TEXT_MAX } from "../../domain/limits";
 import { ALL_SHIFTS, parseDaysText, parseShift } from "../../domain/shifts";
 import { saveShiftTx, setActivityShiftsTx } from "../shifts";
 import { BULK_MAX_ROWS, type BulkSheet, type ParsedUpload } from "./bulk-file";
-import { entryDef } from "./defs";
+import { entryDef, type EntryId } from "./defs";
 import { persistEntry, validateRaw } from "./service";
 
 export interface BulkRowReport { sheet: "Datos" | "Turnos"; rowNo: number; label: string; action: "create" | "update" | "unchanged" | "error"; messages: string[] }
@@ -22,7 +22,7 @@ export interface BulkReport {
   /** Hay registros que ya existen y falta marcar «Actualizar existentes». */
   needsUpdateConfirm: boolean;
   /** Hojas de Google que hay que refrescar tras guardar. */
-  mirror: ("2" | "3")[];
+  mirror: EntryId[];
 }
 
 class RowFail extends Error { constructor(public errors: string[]) { super("fila"); } }
@@ -41,7 +41,9 @@ export async function runBulk(db: Db, sub: string, studyId: string, hoja: BulkSh
   const report: BulkReport = { hoja, counts: empty(), shiftCounts: empty(), rows: [], fileErrors: [...parsed.fileErrors], committed: false, needsUpdateConfirm: false, mirror: [] };
   if (report.fileErrors.length) return report;
   const field = (name: string) => def.fields.find((f) => f.field === name)!.col;
-  const labelOf = (cells: Record<string, string>) => hoja === "2" ? [cells[field("area")], cells[field("site")], cells[field("position")]].filter(Boolean).join(" · ") || "(sin datos)" : [cells[field("code")], cells[field("name")]].filter(Boolean).join(" · ") || "(sin código)";
+  const labelOf = (cells: Record<string, string>) => hoja === "2" ? [cells[field("area")], cells[field("site")], cells[field("position")]].filter(Boolean).join(" · ") || "(sin datos)"
+    : hoja === "3" ? [cells[field("code")], cells[field("name")]].filter(Boolean).join(" · ") || "(sin código)"
+      : def.listFields.map((f) => cells[field(f)]).filter(Boolean).join(" · ") || "(sin datos)";
   const add = (sheet: "Datos" | "Turnos", rowNo: number, label: string, action: BulkRowReport["action"], messages: string[] = []) => {
     report.rows.push({ sheet, rowNo, label, action, messages });
     (sheet === "Datos" ? report.counts : report.shiftCounts)[action]++;
@@ -122,7 +124,7 @@ export async function runBulk(db: Db, sub: string, studyId: string, hoja: BulkSh
       report.committed = true;
     });
   } catch (e) { if (e !== ROLLBACK) throw e; }
-  if (report.committed) report.mirror = hoja === "2" ? (report.shiftCounts.create + report.shiftCounts.update > 0 ? ["2", "3"] : ["2"]) : ["3"];
+  if (report.committed) report.mirror = hoja === "2" ? (report.shiftCounts.create + report.shiftCounts.update > 0 ? ["2", "3"] : ["2"]) : [hoja];
   return report;
 }
 

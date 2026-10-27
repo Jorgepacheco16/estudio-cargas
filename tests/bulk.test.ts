@@ -1,6 +1,6 @@
 import ExcelJS from "exceljs";
-import { entryDef } from "../src/server/entry/defs";
-import { ACTIVITY_SHIFTS_HEADER, BULK_MAX_BYTES, OPERATION_HEADER, SHIFT_HEADERS, SHIFT_SHEET, buildTemplate, parseUpload } from "../src/server/entry/bulk-file";
+import { ENTRY_IDS, entryDef } from "../src/server/entry/defs";
+import { ACTIVITY_SHIFTS_HEADER, BULK_MAX_BYTES, BULK_MAX_ROWS, OPERATION_HEADER, SHIFT_HEADERS, SHIFT_SHEET, buildTemplate, parseUpload } from "../src/server/entry/bulk-file";
 import { check, summary } from "./helpers";
 
 /** Carga masiva (D-72): plantilla y lectura del archivo, sin base de datos. La validación y el guardado se prueban en bulk-db.test.ts. */
@@ -34,6 +34,27 @@ async function main() {
     const ws = wb.getWorksheet("Datos")!; const headers: string[] = []; ws.getRow(1).eachCell((c) => headers.push(String(c.value)));
     if (!headers.includes(ACTIVITY_SHIFTS_HEADER) || headers.includes(OPERATION_HEADER)) throw new Error(headers.join("|"));
     if (wb.getWorksheet(SHIFT_SHEET)) throw new Error("la plantilla de actividades no lleva la hoja de turnos");
+  });
+
+  await check("Fase 2: las 8 secciones tienen plantilla (Datos, Instrucciones y Listas); solo cargos lleva «Turnos» y solo cargos y actividades llevan columna adicional; los códigos de actividad son un desplegable", async () => {
+    for (const id of ENTRY_IDS) {
+      const d = entryDef(id)!;
+      const wb = await load(await buildTemplate(d, AREAS, ["F-1", "F-2"]));
+      const names = wb.worksheets.map((w) => w.name);
+      for (const n of ["Datos", "Instrucciones", "Listas"]) if (!names.includes(n)) throw new Error(`hoja ${id}: falta ${n}`);
+      if (names.includes(SHIFT_SHEET) !== (id === "2")) throw new Error(`hoja ${id}: la hoja de turnos solo es de cargos`);
+      const ws = wb.getWorksheet("Datos")!; const h: string[] = []; ws.getRow(1).eachCell((c) => h.push(String(c.value)));
+      const extra = id === "2" || id === "3" ? 1 : 0;
+      if (h.length !== d.fields.length + extra) throw new Error(`hoja ${id}: ${h.length} columnas y se esperaban ${d.fields.length + extra}`);
+      for (const f of d.fields.filter((x) => x.required)) if (!h.includes(`${f.header} *`)) throw new Error(`hoja ${id}: falta el asterisco de ${f.header}`);
+      const act = d.fields.find((f) => f.control === "activity");
+      if (act && ws.getCell(2, colOf(ws, act.header)).dataValidation?.type !== "list") throw new Error(`hoja ${id}: el código de actividad no tiene desplegable`);
+    }
+  });
+
+  await check("Capacidad por sección = filas de la hoja de Google (cargos 200; actividades, medibilidad, pertinencia y riesgos 400; oportunidades y plan 100; rediseño 60)", () => {
+    const want = { "2": 200, "3": 400, "5": 400, "6": 400, "7": 400, "8": 100, "9": 60, "10": 100 } as const;
+    for (const [id, n] of Object.entries(want)) if (BULK_MAX_ROWS[id as keyof typeof want] !== n) throw new Error(`${id}: ${BULK_MAX_ROWS[id as keyof typeof want]} ≠ ${n}`);
   });
 
   await check("Leer un archivo diligenciado: campos por columna, filas vacías omitidas, turnos y descripción", async () => {

@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { sql } from "drizzle-orm";
 import { createDb } from "../src/db/client";
 import { createStudy } from "../src/server/studies";
-import { entryDef } from "../src/server/entry/defs";
+import { entryDef, type EntryId } from "../src/server/entry/defs";
 import { runBulk } from "../src/server/entry/bulk";
 import type { ParsedRow, ParsedShift, ParsedUpload } from "../src/server/entry/bulk-file";
 import { check, summary, URL_ADMIN, URL_APP } from "./helpers";
@@ -32,7 +32,7 @@ async function main() {
     studyId = await createStudy(app.db, owner, "Estudio de prueba carga masiva");
     await admin.db.execute(sql`insert into public.memberships (study_id, user_id, role) values (${studyId}, ${viewer}, 'viewer')`);
     const count = async (table: string) => ((await admin.db.execute(sql.raw(`select count(*)::int n from public.${table} where study_id = '${studyId}'`))) as unknown as { n: number }[])[0].n;
-    const run = (hoja: "2" | "3", u: ParsedUpload, apply: boolean, allowUpdate = false, who = owner) => runBulk(app.db, who, studyId, hoja, u, { apply, allowUpdate });
+    const run = (hoja: EntryId, u: ParsedUpload, apply: boolean, allowUpdate = false, who = owner) => runBulk(app.db, who, studyId, hoja, u, { apply, allowUpdate });
 
     const fiscales = up([cargo(2, "Fiscal", "4", "Apertura con 5 cajas; cierre con 6.")], [turno(2, "Fiscal", "Apertura", "5:30", "13:00"), turno(3, "Fiscal", "Cierre", "13:00", "20:30", "L-S")]);
 
@@ -105,6 +105,33 @@ async function main() {
       if (!yes.committed) throw new Error(JSON.stringify(yes));
       const t = (await admin.db.execute(sql`select a.code, a.all_shifts, (select count(*)::int from public.activity_shifts s where s.activity_id = a.id) n from public.activities a where a.study_id = ${studyId} and a.code in ('F-1','F-2') order by a.code`)) as unknown as { code: string; all_shifts: boolean; n: number }[];
       if (t[0].n !== 1 || !t[1].all_shifts) throw new Error(JSON.stringify(t)); // F-1 quedó con 1 turno; F-2 (en blanco) conservó «Todos»
+    });
+
+    await check("Fase 2 · Medibilidad, Pertinencia y Riesgos (por código de actividad): crear, repetir = sin cambios, cambiar pide confirmación; un código de actividad que no existe es error y no se guarda nada", async () => {
+      const gen = (hoja: "5" | "6" | "7" | "8" | "9" | "10", by: Record<string, string>, rowNo = 2): ParsedRow => { const d = entryDef(hoja)!; return { rowNo, operation: "", shiftsText: "", cells: Object.fromEntries(Object.entries(by).map(([f, v]) => [col(d, f), v])) }; };
+      const base = { "5": { code: "F-1", direct: "Sí", hasIndicators: "Sí" }, "6": { code: "F-1", situation: "1. Corresponde al cargo, requiere capacitación" }, "7": { code: "F-1", impLegal: "5", probability: "3" } } as const;
+      for (const h of ["5", "6", "7"] as const) {
+        const a = await run(h, up([gen(h, base[h])]), true);
+        if (!a.committed || a.counts.create !== 1) throw new Error(`${h} crear: ${JSON.stringify(a)}`);
+        const b = await run(h, up([gen(h, base[h])]), true);
+        if (!b.committed || b.counts.unchanged !== 1) throw new Error(`${h} repetir: ${JSON.stringify(b)}`);
+        const miss = await run(h, up([gen(h, { ...base[h], code: "NO-EXISTE" })]), true);
+        if (miss.committed || miss.counts.error !== 1) throw new Error(`${h} código inexistente: ${JSON.stringify(miss)}`);
+      }
+      const chg = await run("7", up([gen("7", { code: "F-1", impLegal: "2", probability: "3" })]), true, false);
+      if (chg.committed || !chg.needsUpdateConfirm || chg.counts.update !== 1) throw new Error(JSON.stringify(chg));
+      if (!(await run("7", up([gen("7", { code: "F-1", impLegal: "2", probability: "3" })]), true, true)).committed) throw new Error("no actualizó con la casilla");
+      if ((await count("risk_assessments")) !== 1 || (await count("measurability_assessments")) !== 1 || (await count("suitability_assessments")) !== 1) throw new Error("conteos");
+
+      // Oportunidades (código), Rediseño (área + cargo) y Plan de acción (código)
+      const o = await run("8", up([gen("8", { code: "O-1", impact: "4", ease: "3", effort: "2", cost: "2", riskScore: "1", hours: "5" })]), true);
+      const r = await run("9", up([gen("9", { area: "Cajas", position: "Fiscal", hoursOut: "2" })]), true);
+      const p = await run("10", up([gen("10", { code: "P-1", action: "Capacitar", start: "2026-01-01", end: "2026-02-01" })]), true);
+      if (!o.committed || !r.committed || !p.committed) throw new Error(JSON.stringify([o.fileErrors, r.rows, p.rows]));
+      const again = await run("9", up([gen("9", { area: "Cajas", position: "Fiscal", hoursOut: "3" })]), true, false);
+      if (again.committed || !again.needsUpdateConfirm || again.counts.update !== 1 || (await count("redesign_proposals")) !== 1) throw new Error("rediseño: la clave área+cargo debía coincidir con el existente");
+      const bad = await run("10", up([gen("10", { code: "P-2", action: "x", start: "2026-02-01", end: "2026-01-01" }, 2), gen("10", { code: "P-3", action: "Otra", start: "2026-01-01", end: "2026-02-01" }, 3)]), true);
+      if (bad.committed || bad.counts.error !== 1 || (await count("action_items")) !== 1) throw new Error("plan de acción: debía ser todo o nada");
     });
 
     await check("Capacidad: más filas nuevas de las que admite la hoja de Google (200 en cargos) se rechazan antes de guardar", async () => {

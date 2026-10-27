@@ -9,12 +9,14 @@
 import ExcelJS from "exceljs";
 import { LABELS } from "../../domain/labels";
 import { ALL_SHIFTS } from "../../domain/shifts";
-import type { EntryDef } from "./defs";
+import { SYNCED_SHEETS } from "../../domain/sheetmap";
+import { ENTRY_IDS, type EntryDef, type EntryId } from "./defs";
 
-export type BulkSheet = "2" | "3";
-export const BULK_SHEETS: BulkSheet[] = ["2", "3"];
-/** Filas máximas por carga (coinciden con la capacidad de la hoja de Google de cada sección). */
-export const BULK_MAX_ROWS: Record<BulkSheet, number> = { "2": 200, "3": 400 };
+export type BulkSheet = EntryId;
+export const BULK_SHEETS: BulkSheet[] = ENTRY_IDS;
+/** Filas máximas por carga: la capacidad de la hoja de Google de cada sección (2: 200; 3, 5, 6 y 7: 400; 8 y 10: 100; 9: 60). */
+const capacityOf = (id: BulkSheet) => { const s = SYNCED_SHEETS.find((x) => x.target === (id === "3" ? "activities" : id)); return s ? s.lastDataRow - s.firstDataRow + 1 : 100; };
+export const BULK_MAX_ROWS = Object.fromEntries(ENTRY_IDS.map((id) => [id, capacityOf(id)])) as Record<BulkSheet, number>;
 export const BULK_MAX_BYTES = 1_500_000;
 
 export const OPERATION_HEADER = "Descripción de la operación";
@@ -29,11 +31,13 @@ export interface ParsedUpload { rows: ParsedRow[]; shifts: ParsedShift[]; fileEr
 /** Texto sin tildes, en minúsculas y sin el asterisco de «obligatorio»: para reconocer los encabezados aunque se hayan tocado. */
 const key = (s: unknown) => String(s ?? "").normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/\*/g, "").replace(/\s+/g, " ").trim().toLowerCase();
 
-const isBulkSheet = (id: string): id is BulkSheet => id === "2" || id === "3";
+const isBulkSheet = (id: string): id is BulkSheet => (ENTRY_IDS as string[]).includes(id);
 export const bulkEnabled = (id: string) => isBulkSheet(id);
 
-function optionsOf(f: EntryDef["fields"][number], areas: string[]): string[] {
-  if (f.control === "area") return areas;
+interface Lookups { areas: string[]; activities: string[] }
+function optionsOf(f: EntryDef["fields"][number], lk: Lookups): string[] {
+  if (f.control === "area") return lk.areas;
+  if (f.control === "activity") return lk.activities;
   if (f.control === "yesno") return ["Sí", "No"];
   if (f.control === "select" && f.list) return Object.keys(LABELS[f.list].map);
   return [];
@@ -41,8 +45,9 @@ function optionsOf(f: EntryDef["fields"][number], areas: string[]): string[] {
 
 const HEAD = { font: { bold: true, color: { argb: "FFFFFFFF" } }, fill: { type: "pattern", pattern: "solid", fgColor: { argb: "FF00529B" } }, alignment: { vertical: "middle", wrapText: true } } as const;
 
-/** Arma la plantilla de una sección. `areas` son las áreas del estudio (lista desplegable). */
-export async function buildTemplate(def: EntryDef, areas: string[]): Promise<Buffer> {
+/** Arma la plantilla de una sección. `areas` y `activities` (códigos) son las del estudio y alimentan las listas desplegables. */
+export async function buildTemplate(def: EntryDef, areas: string[], activities: string[] = []): Promise<Buffer> {
+  const lk: Lookups = { areas, activities };
   if (!isBulkSheet(def.id)) throw new Error("Esta sección aún no tiene carga masiva");
   const max = BULK_MAX_ROWS[def.id];
   const wb = new ExcelJS.Workbook();
@@ -52,7 +57,7 @@ export async function buildTemplate(def: EntryDef, areas: string[]): Promise<Buf
   const lists = wb.addWorksheet("Listas");
   const listRef = new Map<string, string>(); // campo → rango de la lista
   const kinds: { header: string; options: string[] }[] = [];
-  for (const f of def.fields) { const o = optionsOf(f, areas); if (o.length) kinds.push({ header: f.header, options: o }); }
+  for (const f of def.fields) { const o = optionsOf(f, lk); if (o.length) kinds.push({ header: f.header, options: o }); }
   kinds.push({ header: "Días (ejemplos)", options: ["Todos", "L-S", "L-V", "L, X, V", "Domingo"] });
   kinds.forEach((k, i) => {
     lists.getColumn(i + 1).width = Math.min(48, Math.max(14, k.header.length + 2));
@@ -64,12 +69,12 @@ export async function buildTemplate(def: EntryDef, areas: string[]): Promise<Buf
     const col = lists.getColumn(i + 1).letter;
     return `Listas!$${col}$2:$${col}$${kinds[i].options.length + 1}`;
   };
-  for (const f of def.fields) if (optionsOf(f, areas).length) listRef.set(f.col, rangeOf(f.header));
+  for (const f of def.fields) if (optionsOf(f, lk).length) listRef.set(f.col, rangeOf(f.header));
 
   /* Datos */
   const ws = wb.addWorksheet("Datos", { views: [{ state: "frozen", ySplit: 1 }] });
   const cols = [...def.fields.map((f) => ({ header: `${f.header}${f.required ? " *" : ""}`, hint: f.hint, width: Math.min(42, Math.max(16, f.header.length + 4)), ref: listRef.get(f.col), area: f.control === "textarea" })),
-    ...(def.id === "2" ? [{ header: OPERATION_HEADER, hint: "Texto libre: cómo se opera el cargo en la práctica (no escriba nombres de personas). Vacío = no cambia la descripción actual.", width: 50, ref: undefined, area: true }] : [{ header: ACTIVITY_SHIFTS_HEADER, hint: `«${ALL_SHIFTS}» o los nombres de los turnos del cargo separados por punto y coma (p. ej. Apertura; Cierre). Deben existir ya en el cargo. Vacío = no cambia los turnos actuales.`, width: 36, ref: undefined, area: false }])];
+    ...(def.id === "2" ? [{ header: OPERATION_HEADER, hint: "Texto libre: cómo se opera el cargo en la práctica (no escriba nombres de personas). Vacío = no cambia la descripción actual.", width: 50, ref: undefined, area: true }] : def.id === "3" ? [{ header: ACTIVITY_SHIFTS_HEADER, hint: `«${ALL_SHIFTS}» o los nombres de los turnos del cargo separados por punto y coma (p. ej. Apertura; Cierre). Deben existir ya en el cargo. Vacío = no cambia los turnos actuales.`, width: 36, ref: undefined, area: false }] : [])];
   cols.forEach((c, i) => {
     const col = ws.getColumn(i + 1);
     col.width = c.width; col.numFmt = "@";
@@ -101,7 +106,7 @@ export async function buildTemplate(def: EntryDef, areas: string[]): Promise<Buf
   const lines: string[] = [
     `Plantilla de carga masiva · ${def.short}`,
     "1. Diligencie la hoja «Datos»: una fila por registro. Los campos con * son obligatorios. No cambie ni borre los encabezados.",
-    def.id === "2" ? "2. Los turnos de cada cargo van en la hoja «Turnos» (una fila por turno), con el mismo tipo de dato, área, sede y cargo de «Datos»." : "2. Los turnos de la actividad se escriben con el nombre exacto del turno del cargo («Todos los turnos» o varios separados por punto y coma).",
+    def.id !== "2" && def.id !== "3" ? "2. Los códigos de actividad que cite la hoja deben existir ya en la aplicación; los demás valores se validan con las mismas reglas del formulario." : def.id === "2" ? "2. Los turnos de cada cargo van en la hoja «Turnos» (una fila por turno), con el mismo tipo de dato, área, sede y cargo de «Datos»." : "2. Los turnos de la actividad se escriben con el nombre exacto del turno del cargo («Todos los turnos» o varios separados por punto y coma).",
     "3. Suba el archivo en la sección: la aplicación lo revisa SIN guardar nada y le muestra qué se crearía, qué se actualizaría y qué errores hay.",
     "4. Todo o nada: si hay un solo error no se guarda nada; corrija el archivo y vuelva a subirlo. Si hay registros que ya existen, deberá marcar «Actualizar existentes» para continuar.",
     `5. Máximo ${max} filas por carga y 1,5 MB. Las columnas con fórmula del libro no aparecen: la aplicación las calcula.`,
@@ -111,7 +116,7 @@ export async function buildTemplate(def: EntryDef, areas: string[]): Promise<Buf
   const start = lines.length + 2;
   ["Campo", "Obligatorio", "Qué se registra", "Valores permitidos"].forEach((t, i) => { const c = ins.getCell(start, i + 1); c.value = t; Object.assign(c, HEAD); });
   def.fields.forEach((f, i) => {
-    const o = optionsOf(f, areas);
+    const o = optionsOf(f, lk);
     ins.getCell(start + 1 + i, 1).value = f.header; ins.getCell(start + 1 + i, 2).value = f.required ? "Sí" : "No";
     ins.getCell(start + 1 + i, 3).value = f.hint; ins.getCell(start + 1 + i, 4).value = o.length ? o.join(" · ") : f.control === "number" ? "Número" : f.control === "percent" ? "Porcentaje (p. ej. 50 % o 50)" : f.control === "date" ? "Fecha AAAA-MM-DD" : "Texto libre";
   });
@@ -169,7 +174,7 @@ export async function parseUpload(def: EntryDef, data: Buffer | ArrayBuffer): Pr
   const ws = wb.getWorksheet("Datos") ?? wb.worksheets[0];
   if (!ws) { out.fileErrors.push("El archivo no tiene hojas."); return out; }
   const byHeader = new Map(def.fields.map((f) => [key(f.header), f]));
-  const extraKey = key(def.id === "2" ? OPERATION_HEADER : ACTIVITY_SHIFTS_HEADER);
+  const extraKey = def.id === "2" ? key(OPERATION_HEADER) : def.id === "3" ? key(ACTIVITY_SHIFTS_HEADER) : "@@sin columna adicional@@";
   const colField = new Map<number, EntryDef["fields"][number] | "extra">();
   const seen = new Set<string>();
   ws.getRow(1).eachCell({ includeEmpty: false }, (c, n) => {

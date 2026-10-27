@@ -10,6 +10,7 @@ import { basePath } from "@/lib/entry-routes";
 import { deleteEntryAction } from "@/app/entrada/actions";
 import { formProps } from "@/app/entrada/form-props";
 import { ShiftsPanel } from "@/components/entry/ShiftsPanel";
+import { bulkEnabled } from "@/server/entry/bulk-file";
 import { OperationPanel } from "@/components/entry/OperationPanel";
 import { getOperation } from "@/server/operation";
 import { activityShiftSelection, listShifts, shiftsByPosition } from "@/server/shifts";
@@ -49,7 +50,7 @@ export async function EntrySection({ hoja, sp }: { hoja: EntryId; sp: Record<str
         <h2>Registros capturados ({rows.length})</h2>
         {canWrite && (
           <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-            {(hoja === "2" || hoja === "3") && <><a className="btn" href={`/api/plantilla/${hoja}`}>Descargar plantilla</a><Link className="btn" href={`${base}/carga`}>Carga masiva</Link></>}
+            {bulkEnabled(hoja) && <><a className="btn" href={`/api/plantilla/${hoja}`}>Descargar plantilla</a><Link className="btn" href={`${base}/carga`}>Carga masiva</Link></>}
             <Link className="btn solid" href={`${base}/nuevo`}>+ Agregar registro</Link>
           </div>
         )}

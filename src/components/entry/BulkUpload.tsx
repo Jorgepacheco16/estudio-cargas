@@ -15,7 +15,7 @@ function downloadErrors(rows: BulkRowReport[], fileErrors: string[]) {
   const a = document.createElement("a"); a.href = url; a.download = "informe-de-errores.csv"; a.click(); URL.revokeObjectURL(url);
 }
 
-export function BulkUpload({ hoja, base, title }: { hoja: "2" | "3"; base: string; title: string }) {
+export function BulkUpload({ hoja, base, title }: { hoja: string; base: string; title: string }) {
   const [state, action, pending] = useActionState<BulkState, FormData>(bulkAction, { stage: "idle" });
   // Marcas ligadas a la revisión vigente: al llegar una revisión nueva (otro `state`) se anulan solas.
   const [dirtyFor, setDirtyFor] = useState<BulkState | null>(null);      // se eligió otro archivo después de la revisión: hay que revisarlo de nuevo
