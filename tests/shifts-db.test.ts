@@ -81,7 +81,7 @@ async function main() {
       const s = await activityShiftSelection(app.db, owner, studyId, a1);
       if (s.all || s.ids.length !== 2) throw new Error(JSON.stringify(s));
       const txt = await withRls(app.db, { sub: owner }, (tx) => shiftTextByActivityCode(tx, studyId));
-      if (txt.get("F-1") !== "Apertura, Cierre" || txt.has("F-2")) throw new Error(JSON.stringify([...txt]));
+      if (txt.get("F-1") !== "Apertura, Cierre (L–S)" || txt.has("F-2")) throw new Error(JSON.stringify([...txt]));
     });
 
     await check("«Todos los turnos»: la actividad queda marcada y sin turnos sueltos; un turno agregado después también aplica", async () => {
