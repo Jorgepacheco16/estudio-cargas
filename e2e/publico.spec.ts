@@ -87,14 +87,14 @@ for (const ruta of ["/?modo=demo", "/login", "/cargos?modo=demo", "/actividades?
   });
 }
 
-test("el drill-down baja de nivel con un clic y el comparador de sedes se exporta", async ({ page }) => {
+test("el drill-down baja de nivel con un clic y el comparador de centros de operaciones se exporta", async ({ page }) => {
   await page.goto("/drill?modo=demo");
   await expect(page.getByRole("heading", { name: /Drill-down/ })).toBeVisible();
   await page.getByRole("table").first().getByRole("link").first().click();
   await expect(page).toHaveURL(/level=area/);
   await expect(page.getByRole("navigation", { name: "Ruta del drill-down" })).toContainText("Estudio");
   await page.goto("/sedes?modo=demo");
-  await expect(page.getByRole("heading", { name: "Comparador sedes" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Comparador de centros de operaciones" })).toBeVisible();
   const [d] = await Promise.all([page.waitForEvent("download"), page.getByRole("link", { name: "Exportar Excel" }).click()]);
   expect(d.suggestedFilename()).toMatch(/sedes.*\.xlsx$/);
 });
@@ -120,7 +120,7 @@ test("la pestaña de la hoja 4a muestra las columnas calculadas con los encabeza
   await page.goto("/calculo?modo=demo");
   await expect(page.getByRole("heading", { name: "Cálculo de tiempos" })).toBeVisible();
   await page.getByText("Detalle avanzado: todas las columnas del cálculo").click(); // el detalle completo está plegado por defecto
-  for (const h of ["Ejecuciones por semana", "Horas/sem TOTALES de la actividad en la sede", "Horas/mes equivalentes"]) await expect(page.getByRole("columnheader", { name: h })).toBeVisible();
+  for (const h of ["Ejecuciones por semana", "Horas/sem TOTALES de la actividad en el centro de operaciones", "Horas/mes equivalentes"]) await expect(page.getByRole("columnheader", { name: h })).toBeVisible();
   const [d] = await Promise.all([page.waitForEvent("download"), page.getByRole("link", { name: "Exportar Excel" }).click()]);
   expect(d.suggestedFilename()).toMatch(/calculo.*\.xlsx$/);
 });
