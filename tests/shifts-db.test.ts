@@ -126,6 +126,20 @@ async function main() {
       await rejects(setActivityShifts(app.db, viewer, studyId, a1, { all: true, ids: [] }), "42501");
     });
 
+    await check("Un cargo SIN turnos registrados también admite «Todos los turnos» en sus actividades (queda marcada y sale en el texto); sin marcar, queda sin turno", async () => {
+      const sinTurnos = await pos("Auxiliar sin turnos");
+      const a4 = await act("F-4", "Auxiliar sin turnos");
+      if ((await listShifts(app.db, owner, studyId, sinTurnos)).length !== 0) throw new Error("el cargo debía no tener turnos");
+      const none = await setActivityShifts(app.db, owner, studyId, a4, { all: false, ids: [] });
+      if (!none.ok || none.changed) throw new Error("sin marcar no debía cambiar nada");
+      const r = await setActivityShifts(app.db, owner, studyId, a4, { all: true, ids: [] });
+      if (!r.ok || !r.changed) throw new Error(JSON.stringify(r));
+      const txt = await withRls(app.db, { sub: owner }, (tx) => shiftTextByActivityCode(tx, studyId));
+      if (txt.get("F-4") !== "Todos los turnos") throw new Error(String(txt.get("F-4")));
+      const back = await setActivityShifts(app.db, owner, studyId, a4, { all: false, ids: [] });
+      if (!back.ok || !back.changed || (await withRls(app.db, { sub: owner }, (tx) => shiftTextByActivityCode(tx, studyId))).has("F-4")) throw new Error("desmarcar debía dejarla sin turno");
+    });
+
     await check("Descripción de la operación (D-69): se guarda, se lee, repetirla no cambia nada, se puede vaciar, se rechaza si es demasiado larga y el viewer no escribe", async () => {
       const txt = "Apertura con 5 cajas y cierre con 6; el resto se completa según el pronóstico de ventas.";
       const a = await saveOperation(app.db, owner, studyId, fiscal, txt);

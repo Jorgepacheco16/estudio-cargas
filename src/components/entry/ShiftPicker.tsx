@@ -33,12 +33,12 @@ export function ShiftPicker({ positions, initial, cols, disabled }: { positions:
     <div className="coverage-box" role="group" aria-labelledby="turnos-act-h">
       <h3 id="turnos-act-h">Turnos en que se ejecuta</h3>
       <input type="hidden" name="shiftsTouched" value="1" />
-      {!complete ? <p className="note" style={{ marginTop: 0 }}>Elija el área, la sede y el cargo responsable para ver los turnos de ese cargo.</p>
-        : !mine ? <p className="note" style={{ marginTop: 0 }}>Este cargo no tiene turnos registrados. Créelos en <b>Cargos y dotación</b> (editar el cargo → «Turnos de este cargo») y vuelva a esta actividad.</p>
+      <label style={{ display: "block", marginBottom: 6 }}><input type="checkbox" name="allShifts" checked={all} onChange={(e) => setAll(e.target.checked)} disabled={disabled} /> <b>{ALL_SHIFTS}</b> <span className="muted">(incluye los que se agreguen después al cargo)</span></label>
+      {!complete ? <p className="note" style={{ marginTop: 0 }}>Para elegir turnos concretos, indique primero el área, la sede y el cargo responsable. Si la actividad se hace en todos los turnos, marque «{ALL_SHIFTS}».</p>
+        : !mine ? <p className="note" style={{ marginTop: 0 }}>Este cargo aún no tiene turnos registrados, por eso solo puede marcar «{ALL_SHIFTS}» o dejarla sin turno. Para elegir turnos concretos, créelos en <b>Cargos y dotación</b> (editar el cargo → «Turnos de este cargo») y vuelva a esta actividad.</p>
         : (
           <>
-            <p className="note" style={{ marginTop: 0 }}>Marque en qué turnos del cargo se hace esta actividad. Es informativo: no cambia las horas.</p>
-            <label style={{ display: "block", marginBottom: 6 }}><input type="checkbox" name="allShifts" checked={all} onChange={(e) => setAll(e.target.checked)} disabled={disabled} /> <b>{ALL_SHIFTS}</b> <span className="muted">(incluye los que se agreguen después)</span></label>
+            <p className="note" style={{ marginTop: 0 }}>Marque en qué turnos del cargo se hace esta actividad, o «{ALL_SHIFTS}». Si no marca nada, queda sin turno asignado (no se asume que aplica a todos). Es informativo: no cambia las horas.</p>
             {mine.shifts.map((s) => (
               <label key={s.id} style={{ display: "block", marginBottom: 4, opacity: all ? 0.55 : 1 }}>
                 <input type="checkbox" name="shift" value={s.id} checked={!all && chosen.has(s.id)} onChange={() => toggle(s.id)} disabled={disabled || all} /> {describeShift({ name: s.name, start: s.start, end: s.end, breakMin: s.breakMin, days: s.days })}
