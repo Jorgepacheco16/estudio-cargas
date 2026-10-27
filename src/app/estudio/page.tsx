@@ -55,7 +55,7 @@ export default async function Estudio({ searchParams }: { searchParams: Promise<
             <div className="field">
               <label htmlFor="estudio-desc">Descripción (opcional)</label>
               <input id="estudio-desc" name="description" maxLength={300} />
-              <p className="hint">Para qué se hace el estudio, sede o período.</p>
+              <p className="hint">Para qué se hace el estudio, centro de operaciones o período.</p>
             </div>
             <div><button className="btn solid" type="submit">Crear estudio</button></div>
           </form>

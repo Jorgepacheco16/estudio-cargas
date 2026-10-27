@@ -13,9 +13,10 @@ export function ExportButtons({ view, mode, extra = "" }: { view: View; mode: Mo
   );
 }
 
-export function ModeForm({ mode }: { mode: Mode }) {
+export function ModeForm({ mode, keep = {} }: { mode: Mode; keep?: Record<string, string[]> }) {
   return (
     <form method="get" style={{ display: "flex", gap: 8, alignItems: "flex-end" }}>
+      {Object.entries(keep).flatMap(([k, vs]) => vs.map((v) => <input key={`${k}=${v}`} type="hidden" name={k} value={v} />))}
       <label className="f">Modo de análisis
         <select name="modo" defaultValue={mode}>
           <option value="demo">DEMO</option>

@@ -15,9 +15,9 @@ export interface SiteComparison {
 /** Texto de la lectura: idéntico a la fórmula de la celda F25 del libro. */
 export function readSites(count: number, dispersion: number | null): string {
   if (count === 0) return "Sin datos para el cargo y el modo seleccionados. Registre el cargo en la hoja 2 y sus actividades en la hoja 3.";
-  if (count < 2) return "El cargo está registrado en una sola sede: no hay base de comparación.";
-  if ((dispersion ?? 0) > SITE_DISPERSION_LIMIT) return "Diferencia relevante entre sedes: verifique si refleja una operación distinta, un método distinto o diferencias en el levantamiento (fuente y confianza).";
-  return "La carga por ocupante es similar entre sedes.";
+  if (count < 2) return "El cargo está registrado en un solo centro de operaciones: no hay base de comparación.";
+  if ((dispersion ?? 0) > SITE_DISPERSION_LIMIT) return "Diferencia relevante entre centros de operaciones: verifique si refleja una operación distinta, un método distinto o diferencias en el levantamiento (fuente y confianza).";
+  return "La carga por ocupante es similar entre centros de operaciones.";
 }
 
 const avg = (xs: number[]) => xs.reduce((a, b) => a + b, 0) / xs.length;

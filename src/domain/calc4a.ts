@@ -17,7 +17,7 @@ export const CALC_4A: CalcCol[] = [
   { key: "hsSel", header: "Horas/sem del escenario seleccionado", col: "AV", fmt: "#,##0.00" },
   { key: "occupants", header: "Ocupantes del cargo (hoja 2)", col: "AW", fmt: "0" },
   { key: "mult", header: "Multiplicador por alcance", col: "AX", fmt: "#,##0.00" },
-  { key: "hTotal", header: "Horas/sem TOTALES de la actividad en la sede", col: "AY", fmt: "#,##0.00" },
+  { key: "hTotal", header: "Horas/sem TOTALES de la actividad en el centro de operaciones", col: "AY", fmt: "#,##0.00" },
   { key: "hPrimary", header: "Horas/sem al cargo responsable", col: "AZ", fmt: "#,##0.00" },
   { key: "hSecondary", header: "Horas/sem al cargo que asume el resto", col: "BA", fmt: "#,##0.00" },
   { key: "hUnplanned", header: "Horas/sem no planificadas", col: "BB", fmt: "#,##0.00" },

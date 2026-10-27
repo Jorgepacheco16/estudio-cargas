@@ -24,7 +24,8 @@ import { entryDef, type EntryDef, type EntryId } from "./defs";
 
 type Cells = Record<string, string | number | null>;
 export type ComputedValue = string | number | null;
-export interface EntryRow { id: string; version: number; positionId?: string; cells: Cells; computed: Record<string, ComputedValue> }
+/** `facets`: valores con los que se filtra la fila (centro de operaciones, área, cargo y datos propios de la sección). */
+export interface EntryRow { id: string; version: number; positionId?: string; cells: Cells; computed: Record<string, ComputedValue>; facets: Record<string, string> }
 
 /* ───────── Contexto para los valores calculados ───────── */
 interface Context {
@@ -65,7 +66,7 @@ function computedFor(def: EntryDef, rec: Rec, extras: Record<string, unknown>, c
       out.P = key; out.Q = firstIdx === myIdx ? 1 : 0; out.R = h !== null && w !== null ? h * w * (1 - Number(ctx.prm.reservePct)) : "";
       out.S = r.employeeCode ? ctx.entries.slice(0, myIdx + 1).filter((e) => (e.rec as Record<string, unknown>).employeeCode).length : "";
       out.T = acts.length; out.U = acts.filter((x) => x.rec.formallyDocumented === "no" || x.rec.formallyDocumented === "partial").length;
-      out.V = !extras.area || !extras.site ? "Falta área o sede" : h === null ? "Falta cantidad de colaboradores" : w === null ? "Falta jornada semanal" : "OK";
+      out.V = !extras.area || !extras.site ? "Falta área o centro de operaciones" : h === null ? "Falta cantidad de colaboradores" : w === null ? "Falta jornada semanal" : "OK";
       break;
     }
     case "3": out.C = ctx.analysis.activities.find((x) => norm(x.code) === norm(String(r.code)))?.status ?? ""; break;
@@ -124,7 +125,7 @@ export async function listEntries(db: Db, sub: string, studyId: string, id: Entr
   return withRls(db, { sub }, async (tx) => {
     const ctx = await loadContext(tx, studyId);
     const items = await def.adapter.all(tx, studyId);
-    return { def, rows: items.map((it) => ({ id: it.rec.id, version: it.rec.version, positionId: (it.rec as { positionId?: string }).positionId, cells: cellsOf(def.adapter, it.rec, it.extras), computed: computedFor(def, it.rec, it.extras, ctx) })) };
+    return { def, rows: items.map((it) => { const cells = cellsOf(def.adapter, it.rec, it.extras); return { id: it.rec.id, version: it.rec.version, positionId: (it.rec as { positionId?: string }).positionId, cells, computed: computedFor(def, it.rec, it.extras, ctx), facets: facetsOf(def, it.extras, cells, ctx) }; }) };
   });
 }
 
@@ -132,6 +133,20 @@ export async function getEntry(db: Db, sub: string, studyId: string, id: EntryId
   const r = await listEntries(db, sub, studyId, id);
   const row = r?.rows.find((x) => x.id === recId);
   return r && row ? { def: r.def, row } : null;
+}
+
+/**
+ * Datos para filtrar una fila (D-74): centro de operaciones, área y cargo. En cargos y actividades salen del propio registro; en medibilidad, pertinencia
+ * y riesgos, de la actividad que citan; en oportunidades, rediseño y plan de acción, de sus propios campos (el centro de operaciones, de su dato propio).
+ */
+function facetsOf(def: EntryDef, x: Record<string, unknown>, cells: Cells, ctx: Context): Record<string, string> {
+  const s = (v: unknown) => (v === null || v === undefined ? "" : String(v));
+  const col = (field: string) => def.fields.find((f) => f.field === field)?.col;
+  switch (def.id) {
+    case "2": case "3": return { co: s(x.site), area: s(x.area), cargo: s(x.position) };
+    case "5": case "6": case "7": { const a = ctx.activities.get(s(x.code).trim().toLowerCase()); return { co: s(a?.extras.site), area: s(a?.extras.area), cargo: s(a?.extras.position) }; }
+    default: return { co: s(x.site), area: s(cells[col("area") ?? ""]), cargo: s(cells[col("position") ?? ""]), ...(def.id === "10" ? { end: s(x.end).slice(0, 10) } : {}) };
+  }
 }
 
 /** Opciones de las listas que dependen del estudio: áreas, sedes, cargos y códigos de actividad. */

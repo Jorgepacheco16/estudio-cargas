@@ -97,9 +97,9 @@ async function main() {
 
   await check("Comparador de sedes: textos idénticos a la fórmula F25 de la hoja 2b y dispersión = (máx − mín) ÷ promedio", () => {
     if (!readSites(0, null).startsWith("Sin datos para el cargo y el modo seleccionados")) throw new Error("sin datos");
-    if (readSites(1, null) !== "El cargo está registrado en una sola sede: no hay base de comparación.") throw new Error("una sede");
-    if (!readSites(2, SITE_DISPERSION_LIMIT + 0.01).startsWith("Diferencia relevante entre sedes")) throw new Error("diferencia");
-    if (readSites(2, SITE_DISPERSION_LIMIT) !== "La carga por ocupante es similar entre sedes.") throw new Error("el límite exacto (30 %) no cuenta como diferencia relevante");
+    if (readSites(1, null) !== "El cargo está registrado en un solo centro de operaciones: no hay base de comparación.") throw new Error("una sede");
+    if (!readSites(2, SITE_DISPERSION_LIMIT + 0.01).startsWith("Diferencia relevante entre centros de operaciones")) throw new Error("diferencia");
+    if (readSites(2, SITE_DISPERSION_LIMIT) !== "La carga por ocupante es similar entre centros de operaciones.") throw new Error("el límite exacto (30 %) no cuenta como diferencia relevante");
   });
 
   const staff: StaffingInput[] = [
@@ -124,12 +124,12 @@ async function main() {
     const similar = analyze(staff, acts, prm, TH, "real");
     const c = compareSites(similar, "Cajas", "Cajero", "real", 0.1);
     if (c.rows.length !== 3 || c.rows.some((r) => !close(r.perOccupant, 5) || !close(r.weeklyHours, 42))) throw new Error(JSON.stringify(c.rows));
-    if (c.dispersion !== 0 || c.reading !== "La carga por ocupante es similar entre sedes.") throw new Error(`${c.dispersion} ${c.reading}`);
+    if (c.dispersion !== 0 || c.reading !== "La carga por ocupante es similar entre centros de operaciones.") throw new Error(`${c.dispersion} ${c.reading}`);
     const uneven = analyze(staff, [mk("N-1", "Norte", 600), mk("S-1", "Sur", 3000), mk("C-1", "Centro", 600)], prm, TH, "real"); // Sur: 50/4 = 12,5 h por ocupante
     const u = compareSites(uneven, "Cajas", "Cajero", "real", 0.1);
     if (!close(u.average, (5 + 12.5 + 5) / 3) || !close(u.dispersion, (12.5 - 5) / ((5 + 12.5 + 5) / 3)) || !u.reading.startsWith("Diferencia relevante")) throw new Error(JSON.stringify(u));
     const one = compareSites(similar, "Cajas", "Supervisor", "real", 0.1);
-    if (one.reading !== "El cargo está registrado en una sola sede: no hay base de comparación.") throw new Error(one.reading);
+    if (one.reading !== "El cargo está registrado en un solo centro de operaciones: no hay base de comparación.") throw new Error(one.reading);
     if (compareSites(similar, "Cajas", "Inexistente", "real", 0.1).rows.length !== 0) throw new Error("cargo inexistente");
     if (comparablePositions(similar, "real")[0].sites !== 3) throw new Error("el selector debe listar primero el cargo con más sedes");
     const und = compareSites(similar, "Cajas", "Cajero", "real", 0.1, new Map([["real|cajas|sur|cajero", 2]]));
@@ -148,7 +148,7 @@ async function main() {
     const first = sheet.get(complete[0].code.toLowerCase())!; first.v.AY = (first.v.AY ?? 0) + 0.5;
     sheet.delete(complete[1].code.toLowerCase());
     const bad = compare4a(a.activities, occ, sheet);
-    if (bad.diffs.length !== 1 || bad.diffs[0].code !== complete[0].code || !bad.diffs[0].fields.includes("Horas/sem TOTALES de la actividad en la sede") || bad.missingInSheet.join() !== complete[1].code) throw new Error(JSON.stringify(bad));
+    if (bad.diffs.length !== 1 || bad.diffs[0].code !== complete[0].code || !bad.diffs[0].fields.includes("Horas/sem TOTALES de la actividad en el centro de operaciones") || bad.missingInSheet.join() !== complete[1].code) throw new Error(JSON.stringify(bad));
   });
 
   await check("Exportables: el drill-down y el comparador exportan lo mismo que muestran", () => {

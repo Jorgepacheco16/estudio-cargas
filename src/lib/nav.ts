@@ -23,7 +23,7 @@ export const MENU: NavEntry[] = [
       { href: "/diagnostico/plan-de-accion", label: "Plan de acción" },
     ],
   },
-  { href: "/sedes", label: "Comparador sedes" },
+  { href: "/sedes", label: "Comparador de centros de operaciones" },
   { href: "/historia", label: "Historia y desviaciones" },
   { href: "/integraciones", label: "Integraciones" },
   { href: "/agente", label: "Agente de IA" },

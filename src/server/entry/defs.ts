@@ -5,13 +5,14 @@
  */
 import { LABELS } from "../../domain/labels";
 import { SHEET_FIELDS } from "../../domain/sheetfields";
+import { ui } from "../../domain/terms";
 import { ADAPTERS, MIRROR_ADAPTERS, adapterById, type Adapter } from "../sheets/adapters";
 
 export type EntryId = "2" | "3" | "5" | "6" | "7" | "8" | "9" | "10";
 export const ENTRY_IDS: EntryId[] = ["2", "3", "5", "6", "7", "8", "9", "10"];
 export type Control = "text" | "textarea" | "select" | "yesno" | "number" | "percent" | "date" | "area" | "site" | "position" | "activity";
 
-export interface EntryField { col: string; field: string; header: string; hint: string; group: string; control: Control; list?: keyof typeof LABELS; required: boolean }
+export interface EntryField { col: string; field: string; header: string; /** Encabezado del libro de Excel (la plantilla de carga masiva también lo reconoce). */ libroHeader: string; hint: string; group: string; control: Control; list?: keyof typeof LABELS; required: boolean }
 export interface EntryComputed { col: string; header: string; format: "text" | "number" | "percent" }
 export interface EntryDef {
   id: EntryId; adapter: Adapter; sheetName: string; title: string; note: string; short: string;
@@ -51,10 +52,10 @@ function build(id: EntryId): EntryDef {
   const byCol = new Map(cat.columns.map((c) => [c.col, c]));
   const fields: EntryField[] = Object.entries(adapter.spec).flatMap(([field, [col, kind]]) => {
     const c = byCol.get(col); if (!c || !c.input) return [];
-    return [{ col, field, header: c.header, hint: c.hint, group: c.group, ...controlOf(id, field, kind), required: REQUIRED[id].includes(field) }];
+    return [{ col, field, header: ui(c.header), libroHeader: c.header, hint: ui(c.hint), group: c.group, ...controlOf(id, field, kind), required: REQUIRED[id].includes(field) }];
   }).sort((x, y) => cat.columns.findIndex((c) => c.col === x.col) - cat.columns.findIndex((c) => c.col === y.col));
-  const computed: EntryComputed[] = cat.columns.filter((c) => !c.input).map((c) => ({ col: c.col, header: c.header, format: "text" as const }));
-  return { id, adapter, sheetName: cat.sheetName, title: sentence(cat.title.replace(/^HOJA \d+ · /i, "")), note: cat.note, short: SHORT_TITLE[id], fields, computed, listFields: LIST_FIELDS[id] };
+  const computed: EntryComputed[] = cat.columns.filter((c) => !c.input).map((c) => ({ col: c.col, header: ui(c.header), format: "text" as const }));
+  return { id, adapter, sheetName: cat.sheetName, title: sentence(cat.title.replace(/^HOJA \d+ · /i, "")), note: ui(cat.note), short: SHORT_TITLE[id], fields, computed, listFields: LIST_FIELDS[id] };
 }
 
 let cache: Map<EntryId, EntryDef> | null = null;

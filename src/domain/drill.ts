@@ -10,7 +10,7 @@ import type { ActivityRisk, ActivityRow, Analysis, AlertLevel } from "./summary"
 export type Metric = DrillConfig["levels"][number]["metrics"][number];
 export type LevelKey = "study" | "area" | "position" | "activity";
 export const METRIC_ES: Record<Metric, string> = { hours: "Horas/sem", capacity: "Capacidad (h/sem)", pct: "% de capacidad", incomplete: "Incompletas", unplanned: "No planificadas (h/sem)", rework: "Reprocesos (h/sem)", wait: "Esperas (h/sem)", seasonVariation: "Variación de temporada (h/sem)", critical: "Críticas o altas", singlePerson: "Una sola persona", noBackup: "Sin respaldo prioritario" };
-export const LEVEL_ES: Record<LevelKey, string> = { study: "Estudio", area: "Área", position: "Cargo y sede", activity: "Actividad" };
+export const LEVEL_ES: Record<LevelKey, string> = { study: "Estudio", area: "Área", position: "Cargo y centro de operaciones", activity: "Actividad" };
 
 /** Configuraciones predefinidas (validadas con el contrato drillConfig al cargar el módulo). */
 export const PRESETS: Record<string, DrillConfig> = {

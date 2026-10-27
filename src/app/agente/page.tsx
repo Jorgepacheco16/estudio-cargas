@@ -59,7 +59,7 @@ export default async function Agente({ searchParams }: { searchParams: Promise<R
             <h2>Validar cobertura de un cargo</h2>
             <p className="note" style={{ marginTop: 0 }}>Compara las funciones formalmente asignadas al cargo (su perfil) con las actividades creadas para ese mismo cargo y avisa si alguna función no tiene actividad. Úsela al terminar de ingresar las actividades. Solo lee: no cambia ningún dato.</p>
             {cargos.length === 0 ? <div className="empty">Aún no hay cargos. Regístrelos en Cargos y dotación.</div> : <CoveragePanel options={cargos} />}
-            <p className="note">A la IA se envía únicamente el texto de las funciones del perfil y el código, nombre y descripción de las actividades de ese cargo; nunca nombres de personas ni documentos. Se valida un cargo concreto (área, sede y nombre), sin unir cargos de otras sedes. Tope de {COVERAGE_DAILY_LIMIT} validaciones por día y estudio.</p>
+            <p className="note">A la IA se envía únicamente el texto de las funciones del perfil y el código, nombre y descripción de las actividades de ese cargo; nunca nombres de personas ni documentos. Se valida un cargo concreto (área, centro de operaciones y nombre), sin unir cargos de otras sedes. Tope de {COVERAGE_DAILY_LIMIT} validaciones por día y estudio.</p>
           </section>
 
           <section className="card">

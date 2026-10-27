@@ -95,6 +95,20 @@ async function main() {
     const bad = await parseUpload(d3, await save(wb)); if (!bad.fileErrors.join().includes("Falta la columna obligatoria")) throw new Error(`encabezado: ${bad.fileErrors}`);
   });
 
+  await check("Plantillas descargadas antes de llamarlo «Centro de operaciones» siguen funcionando: se reconoce el encabezado del libro y «Sede» en la hoja de turnos", async () => {
+    const wb = await load(await buildTemplate(d2, AREAS)); const ws = wb.getWorksheet("Datos")!;
+    const site = d2.fields.find((x) => x.field === "site")!;
+    if (site.header !== "Centro de operaciones (CO)" || site.libroHeader !== "Punto de venta, sede o centro de operación") throw new Error(`${site.header} | ${site.libroHeader}`);
+    ws.getCell(1, colOf(ws, site.header)).value = site.libroHeader + " *"; // encabezado viejo
+    const f = (n: string) => d2.fields.find((x) => x.field === n)!;
+    ws.getCell(2, colOf(ws, f("area").header)).value = "Cajas"; ws.getCell(2, colOf(ws, site.libroHeader)).value = "Prado"; ws.getCell(2, colOf(ws, f("position").header)).value = "Fiscal";
+    const ts = wb.getWorksheet(SHIFT_SHEET)!; ts.getCell(1, 3).value = "Sede *"; // la hoja de turnos vieja decía «Sede»
+    const col = (n: string) => { let i = 0; ts.getRow(1).eachCell((c, k) => { if (String(c.value).replace(/ \*$/, "") === n) i = k; }); return i; };
+    ts.getCell(2, col("Área")).value = "Cajas"; ts.getCell(2, col("Sede")).value = "Prado"; ts.getCell(2, col("Cargo")).value = "Fiscal"; ts.getCell(2, col("Nombre del turno")).value = "Apertura";
+    const p = await parseUpload(d2, await save(wb));
+    if (p.fileErrors.length || p.rows.length !== 1 || p.rows[0].cells[site.col] !== "Prado" || p.shifts.length !== 1 || p.shifts[0].site !== "Prado") throw new Error(JSON.stringify(p));
+  });
+
   await check("Los encabezados se reconocen aunque cambien las mayúsculas, las tildes o el asterisco", async () => {
     const wb = await load(await buildTemplate(d3, AREAS)); const ws = wb.getWorksheet("Datos")!;
     const cc = colOf(ws, d3.fields.find((x) => x.field === "code")!.header);

@@ -92,7 +92,7 @@ export default async function Tablero({ searchParams }: { searchParams: Promise<
         <h2>C. Las 10 actividades que más horas consumen</h2>
         {d.top10.length === 0 ? <div className="empty">Aún no hay actividades con datos completos.</div> : (
           <div className="tbl-wrap" tabIndex={0} role="region" aria-label="Tabla desplazable"><table>
-            <thead><tr><th>Actividad</th><th>Código</th><th>Área</th><th>Cargo</th><th>Sede</th><th className="num">Horas/sem</th><th className="num">% del total</th></tr></thead>
+            <thead><tr><th>Actividad</th><th>Código</th><th>Área</th><th>Cargo</th><th>Centro de operaciones</th><th className="num">Horas/sem</th><th className="num">% del total</th></tr></thead>
             <tbody>{d.top10.map((t) => <tr key={t.code}><td>{t.name}</td><td><b>{t.code}</b></td><td>{t.area}</td><td>{t.position}</td><td>{t.site}</td><td className="num">{fmt(t.hours)}</td><td className="num">{fmtPct(t.pct)}</td></tr>)}</tbody>
           </table></div>
         )}

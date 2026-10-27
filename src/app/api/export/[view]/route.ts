@@ -8,6 +8,8 @@ import { listProposals } from "@/server/agent";
 import { toCsv, toXlsx } from "@/lib/export";
 import { toPdf } from "@/lib/pdf";
 import { rateLimit } from "@/lib/ratelimit";
+import { activityFilters, paramsToRecord, positionFilters } from "@/lib/page-filters";
+import { listActivityNames } from "@/server/studies";
 
 export async function GET(req: NextRequest, ctx: { params: Promise<{ view: string }> }) {
   const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "local";
@@ -19,7 +21,16 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ view: strin
   const fmtParam = sp.get("format");
   const format = fmtParam === "csv" ? "csv" : fmtParam === "pdf" ? "pdf" : "xlsx";
   const loaded = await loadAnalysis(parseMode(sp.get("modo") ?? undefined));
-  const { analysis, dashboard, label } = loaded;
+  const { dashboard, label } = loaded;
+  // Las exportaciones respetan los filtros elegidos en pantalla (D-74): centro de operaciones, área, cargo, estado y búsqueda.
+  let analysis = loaded.analysis;
+  const fp = paramsToRecord(sp);
+  if (view === "cargos") analysis = { ...analysis, positions: positionFilters(analysis.positions, fp).rows };
+  if (view === "actividades" || view === "calculo") {
+    let names: Map<string, string> | undefined;
+    if (view === "calculo" && loaded.source === "estudio") { const u = await getUser(); const s = u ? await activeStudyId(u.id) : null; if (u && s) names = await listActivityNames(getDb(), u.id, s.id); }
+    analysis = { ...analysis, activities: activityFilters(analysis.activities, fp, view === "calculo" ? "calculo" : "captura", names).rows };
+  }
   const q = Object.fromEntries(["area", "position", "config", "level", "site", "code", "alert"].map((k) => [k, sp.get(k) ?? undefined]));
   let proposals: ProposalRow[] = [];
   if (view === "agente") {

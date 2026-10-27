@@ -4,6 +4,9 @@ import { getDb } from "@/db/server";
 import { getUser } from "@/lib/supabase/server";
 import { activeStudyId, loadAnalysis, parseMode } from "@/data/source";
 import { ExportButtons, ModeForm, fmt, fmtPct } from "@/components/Tools";
+import { FilterBar } from "@/components/FilterBar";
+import { filterQuery } from "@/domain/filters";
+import { activityFilters, type RawParams } from "@/lib/page-filters";
 import { CALC_4A, calcValue, compare4a, type Compare4a } from "@/domain/calc4a";
 import { googleGateway } from "@/server/sheets/gateway";
 import { read4a } from "@/server/sheets/read4a";
@@ -11,8 +14,9 @@ import { listConnections } from "@/server/sheets/sync";
 import { listActivityNames } from "@/server/studies";
 
 export const metadata = { title: "Cálculo de tiempos" };
-export default async function Calculo({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
-  const sp = await searchParams;
+export default async function Calculo({ searchParams }: { searchParams: Promise<RawParams> }) {
+  const raw = await searchParams;
+  const sp = Object.fromEntries(Object.entries(raw).map(([k, v]) => [k, Array.isArray(v) ? v[0] : v])) as Record<string, string | undefined>;
   const loaded = await loadAnalysis(parseMode(sp.modo));
   const { analysis: a, mode } = loaded;
   const occ = (x: (typeof a.activities)[number]) => a.positions.find((p) => p.dataKind === x.dataKind && p.area === x.area && p.site === x.site && p.position === x.position)?.occupants ?? 0;
@@ -30,18 +34,21 @@ export default async function Calculo({ searchParams }: { searchParams: Promise<
   /* Nombre de cada actividad (solo en un estudio real; los datos de demostración traen únicamente el código). */
   let names = new Map<string, string>();
   if (loaded.source === "estudio") { const u = await getUser(); const s = u ? await activeStudyId(u.id) : null; if (u && s) names = await listActivityNames(getDb(), u.id, s.id); }
-  const done = a.activities.filter((x) => x.complete), pending = a.activities.filter((x) => !x.complete);
+  const af = activityFilters(a.activities, raw, "calculo", names);
+  const list = af.rows; // lo que se ve, los totales y el detalle responden a los filtros elegidos
+  const done = list.filter((x) => x.complete), pending = list.filter((x) => !x.complete);
   const totalWeek = done.reduce((s, x) => s + (x.hoursWeek ?? 0), 0), totalMonth = done.reduce((s, x) => s + (x.hoursMonth ?? 0), 0);
-  const rows = sp.orden === "horas" ? [...a.activities].sort((x, y) => (y.hoursWeek ?? -1) - (x.hoursWeek ?? -1)) : a.activities;
+  const rows = sp.orden === "horas" ? [...list].sort((x, y) => (y.hoursWeek ?? -1) - (x.hoursWeek ?? -1)) : list;
   const bad = new Map((cmp?.diffs ?? []).map((d) => [d.code.toLowerCase(), d.fields]));
-  const qs = `modo=${mode}`;
+  const qs = [`modo=${mode}`, filterQuery(af.current)].filter(Boolean).join("&");
 
   return (
     <main>
       <div className="head">
         <div><h1>Cálculo de tiempos</h1><Purpose k="calculo" /><div className="sub">{loaded.label} · horas por semana de cada actividad según los datos de Actividades</div></div>
-        <div className="tools"><ModeForm mode={mode} /><ExportButtons view="calculo" mode={mode} /></div>
+        <div className="tools"><ModeForm mode={mode} keep={af.current} /><ExportButtons view="calculo" mode={mode} extra={filterQuery(af.current)} /></div>
       </div>
+      {a.activities.length > 0 && <FilterBar key={filterQuery(af.current)} fields={af.fields} triples={af.triples} current={af.current} search shown={list.length} total={a.activities.length} hidden={{ modo: mode, ...(sp.orden ? { orden: sp.orden } : {}) }} clearHref={`/calculo?modo=${mode}${sp.orden ? `&orden=${sp.orden}` : ""}`} />}
 
       {hasSheet && (
         <details className="adv" open={sp.comparar === "1"}><summary>Detalle avanzado: comparar con la hoja de Google</summary><div className="adv-body"><section className="card" aria-label="Comparación con la hoja de Google">
@@ -60,8 +67,8 @@ export default async function Calculo({ searchParams }: { searchParams: Promise<
       )}
 
       <section className="grid-kpi" aria-label="Resumen del cálculo">
-        <div className="card"><div className="lbl">Actividades registradas</div><div className="kpi">{a.activities.length}</div><div className="note">En el modo de análisis seleccionado</div></div>
-        <div className="card"><div className="lbl">Con datos completos</div><div className="kpi">{done.length} <small>de {a.activities.length}</small></div><div className="note">Solo estas suman horas</div></div>
+        <div className="card"><div className="lbl">Actividades registradas</div><div className="kpi">{list.length}</div><div className="note">{af.active > 0 ? `De ${a.activities.length}, según los filtros elegidos` : "En el modo de análisis seleccionado"}</div></div>
+        <div className="card"><div className="lbl">Con datos completos</div><div className="kpi">{done.length} <small>de {list.length}</small></div><div className="note">Solo estas suman horas</div></div>
         <div className="card"><div className="lbl">Horas por semana</div><div className="kpi">{fmt(totalWeek, 2)}</div><div className="note">Suma de las actividades completas</div></div>
         <div className="card"><div className="lbl">Horas por mes</div><div className="kpi">{fmt(totalMonth, 2)}</div><div className="note">Equivalente mensual de las horas por semana</div></div>
       </section>
@@ -78,8 +85,8 @@ export default async function Calculo({ searchParams }: { searchParams: Promise<
             <Link href={`/calculo?${qs}&orden=horas`} className={sp.orden === "horas" ? "on" : ""}>Por horas (mayor a menor)</Link>
           </div>
         </div>
-        <p className="note" style={{ marginTop: 8 }}>Cada fila es una actividad. «Veces por semana» es cuántas veces se hace; «Horas por semana» es el tiempo total que consume en la sede, sumando a todas las personas que la ejecutan.</p>
-        {a.activities.length === 0 ? <div className="empty">Aún no hay actividades en este modo. Regístrelas en <Link href="/actividades">Actividades</Link>.</div> : (
+        <p className="note" style={{ marginTop: 8 }}>Cada fila es una actividad. «Veces por semana» es cuántas veces se hace; «Horas por semana» es el tiempo total que consume en el centro de operaciones, sumando a todas las personas que la ejecutan.</p>
+        {a.activities.length === 0 ? <div className="empty">Aún no hay actividades en este modo. Regístrelas en <Link href="/actividades">Actividades</Link>.</div> : list.length === 0 ? <div className="empty">Ninguna actividad cumple los filtros elegidos. Cambie o limpie los filtros.</div> : (
           <div className="tbl-wrap" tabIndex={0} role="region" aria-label="Tabla desplazable">
             <table style={{ minWidth: 980 }}>
               <thead><tr><th>Código</th><th>Actividad</th><th>Cargo y sede</th><th>Estado</th>{cmp && <th>Hoja de Google</th>}<th className="num">Veces por semana</th><th className="num">Horas por semana</th><th className="num">Horas por mes</th><th style={{ minWidth: 150 }}>% del total de horas</th></tr></thead>
@@ -114,7 +121,7 @@ export default async function Calculo({ searchParams }: { searchParams: Promise<
             <li><b>Veces por semana</b> = cuántas veces se ejecuta la actividad en su período (día, semana, mes…) llevado a una semana de trabajo.</li>
             <li><b>Horas por ejecución</b> = tiempo promedio de cada vez (por evento o por unidad) + desplazamientos, esperas y reprocesos si los hay, multiplicado por las personas que participan a la vez.</li>
             <li><b>Horas por semana de una persona</b> = veces por semana × horas por ejecución, según el escenario elegido en Parámetros (base, temporada alta o baja, tiempo mínimo o máximo).</li>
-            <li><b>Horas por semana totales en la sede</b> = lo anterior × el número de ocupantes del cargo, si la actividad la hace cada colaborador; si es del conjunto del cargo, no se multiplica.</li>
+            <li><b>Horas por semana totales en el centro de operaciones</b> = lo anterior × el número de ocupantes del cargo, si la actividad la hace cada colaborador; si es del conjunto del cargo, no se multiplica.</li>
             <li><b>Reparto entre cargos:</b> si la actividad se comparte, el cargo responsable recibe su porcentaje y el cargo que asume el resto recibe lo demás.</li>
             <li><b>Horas por mes</b> = horas por semana × semanas por mes (52 ÷ 12).</li>
           </ol>
@@ -126,11 +133,11 @@ export default async function Calculo({ searchParams }: { searchParams: Promise<
         <summary>Detalle avanzado: todas las columnas del cálculo ({CALC_4A.length} columnas)</summary>
         <div className="adv-body">
           <p className="note" style={{ marginTop: 0 }}>Incluye los escenarios de temporada, tiempos mínimo y máximo, el reparto entre cargos y las horas no planificadas, de reproceso y de espera. Pase el cursor sobre un encabezado para ver su columna en el libro de Google.</p>
-          {a.activities.length === 0 ? <div className="empty">Aún no hay actividades.</div> : (
+          {list.length === 0 ? <div className="empty">{a.activities.length === 0 ? "Aún no hay actividades." : "Ninguna actividad cumple los filtros elegidos."}</div> : (
             <div className="tbl-wrap" tabIndex={0} role="region" aria-label="Tabla detallada desplazable">
               <table style={{ minWidth: 1900 }}>
-                <thead><tr><th>Código</th><th>Cargo y sede</th><th>Estado</th>{CALC_4A.map((c) => <th key={c.col} className="num" title={`Columna ${c.col} del libro de Google`}>{c.header}</th>)}</tr></thead>
-                <tbody>{a.activities.map((x) => (
+                <thead><tr><th>Código</th><th>Cargo y centro de operaciones</th><th>Estado</th>{CALC_4A.map((c) => <th key={c.col} className="num" title={`Columna ${c.col} del libro de Google`}>{c.header}</th>)}</tr></thead>
+                <tbody>{list.map((x) => (
                   <tr key={x.code + x.dataKind}>
                     <td><b>{x.code}</b>{x.dataKind === "demo" ? " · DEMO" : ""}</td><td>{x.position} · {x.site}</td>
                     <td><span className={`pill ${x.complete ? "ok" : "low"}`}>{x.complete ? "OK" : "Incompleta"}</span>{x.complete ? "" : <span className="muted">{x.status}</span>}</td>

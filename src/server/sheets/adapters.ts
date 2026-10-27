@@ -105,7 +105,7 @@ const activitiesAdapter: Adapter = {
       const sec = r.s("secondaryPosition");
       secondaryPositionId = null;
       if (sec) { const q = await resolveSecondary(c, kind, area, site, sec); if ("error" in q) return q; secondaryPositionId = q.id; }
-    } else if (!existing) return { error: `Falta ${[!area && "área", !site && "sede", !pos && "cargo"].filter(Boolean).join(", ")}; sin cargo no se puede guardar la actividad` };
+    } else if (!existing) return { error: `Falta ${[!area && "área", !site && "centro de operaciones", !pos && "cargo"].filter(Boolean).join(", ")}; sin cargo no se puede guardar la actividad` };
     return { values: { dataKind: kind, positionId, secondaryPositionId, ...activityFields(r) } };
   },
   async all(tx, studyId) {

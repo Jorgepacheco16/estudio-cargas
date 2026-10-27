@@ -22,7 +22,7 @@ export const BULK_MAX_BYTES = 1_500_000;
 export const OPERATION_HEADER = "Descripción de la operación";
 export const ACTIVITY_SHIFTS_HEADER = "Turnos en que se ejecuta";
 export const SHIFT_SHEET = "Turnos";
-export const SHIFT_HEADERS = { kind: "Tipo de dato", area: "Área", site: "Sede", position: "Cargo", name: "Nombre del turno", start: "Hora de inicio", end: "Hora de fin", breakMin: "Receso (minutos)", days: "Días" } as const;
+export const SHIFT_HEADERS = { kind: "Tipo de dato", area: "Área", site: "Centro de operaciones", position: "Cargo", name: "Nombre del turno", start: "Hora de inicio", end: "Hora de fin", breakMin: "Receso (minutos)", days: "Días" } as const;
 
 export interface ParsedRow { rowNo: number; cells: Record<string, string>; operation: string; shiftsText: string; error?: string }
 export interface ParsedShift { rowNo: number; kind: string; area: string; site: string; position: string; name: string; start: string; end: string; breakMin: string; days: string }
@@ -175,14 +175,15 @@ export async function parseUpload(def: EntryDef, data: Buffer | ArrayBuffer): Pr
   if (!ws) { out.fileErrors.push("El archivo no tiene hojas."); return out; }
   const byHeader = new Map(def.fields.map((f) => [key(f.header), f]));
   const extraKey = def.id === "2" ? key(OPERATION_HEADER) : def.id === "3" ? key(ACTIVITY_SHIFTS_HEADER) : "@@sin columna adicional@@";
+  for (const f of def.fields) byHeader.set(key(f.libroHeader), f); // plantillas descargadas antes de llamarlo «Centro de operaciones»
   const colField = new Map<number, EntryDef["fields"][number] | "extra">();
   const seen = new Set<string>();
   ws.getRow(1).eachCell({ includeEmpty: false }, (c, n) => {
     const k = key(cellText(c, undefined).text);
     if (k === extraKey) { colField.set(n, "extra"); seen.add(k); }
-    else if (byHeader.has(k)) { colField.set(n, byHeader.get(k)!); seen.add(k); }
+    else if (byHeader.has(k)) { const f = byHeader.get(k)!; colField.set(n, f); seen.add(f.field); }
   });
-  for (const f of def.fields) if (f.required && !seen.has(key(f.header))) out.fileErrors.push(`Falta la columna obligatoria «${f.header}» en la hoja «${ws.name}». Use la plantilla sin cambiar los encabezados.`);
+  for (const f of def.fields) if (f.required && !seen.has(f.field)) out.fileErrors.push(`Falta la columna obligatoria «${f.header}» en la hoja «${ws.name}». Use la plantilla sin cambiar los encabezados.`);
   if (out.fileErrors.length) return out;
   if (ws.rowCount > max + 50) { out.fileErrors.push(`La hoja «${ws.name}» tiene demasiadas filas (máximo ${max} registros por carga).`); return out; }
 
@@ -206,6 +207,7 @@ export async function parseUpload(def: EntryDef, data: Buffer | ArrayBuffer): Pr
     if (ts) {
       const idx = new Map<string, number>();
       ts.getRow(1).eachCell({ includeEmpty: false }, (c, n) => idx.set(key(cellText(c, undefined).text), n));
+      if (!idx.has(key(SHIFT_HEADERS.site)) && idx.has("sede")) idx.set(key(SHIFT_HEADERS.site), idx.get("sede")!); // plantillas anteriores
       const need = [SHIFT_HEADERS.area, SHIFT_HEADERS.site, SHIFT_HEADERS.position, SHIFT_HEADERS.name];
       const missing = need.filter((h) => !idx.has(key(h)));
       if (missing.length) { out.fileErrors.push(`En la hoja «${SHIFT_SHEET}» faltan las columnas: ${missing.join(", ")}.`); return out; }

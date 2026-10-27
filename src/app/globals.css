@@ -281,3 +281,15 @@ details.adv > .adv-body > .card { box-shadow: none; border: 0; padding: 0; margi
 .stack-form .field input, .stack-form .field select { width: 100%; }
 .grid-kpi + .banner { margin-top: 16px; }
 tfoot td { background: var(--blue-soft); border-top: 2px solid var(--blue); border-bottom: 0; }
+
+/* ───── Filtros de las secciones (D-74) ───── */
+.filters { margin: 0 0 14px; background: var(--card, #fff); border: 1px solid var(--line, #d8dee6); border-radius: 10px; padding: 8px 14px; }
+.filters > summary { cursor: pointer; font-weight: 700; padding: 4px 0; }
+.filters-body { display: flex; flex-wrap: wrap; gap: 12px 16px; align-items: flex-end; padding: 10px 0 6px; }
+.ms { position: relative; }
+.ms > summary { cursor: pointer; list-style: none; padding: 8px 12px; border: 1px solid var(--line, #d8dee6); border-radius: 8px; background: var(--card, #fff); font-weight: 600; font-size: .875rem; white-space: nowrap; }
+.ms > summary::-webkit-details-marker { display: none; }
+.ms[open] > summary { border-color: var(--blue); }
+.ms-list { position: absolute; z-index: 20; top: calc(100% + 4px); left: 0; min-width: 240px; max-width: 360px; max-height: 280px; overflow: auto; display: grid; gap: 6px; padding: 10px 12px; background: var(--card, #fff); border: 1px solid var(--line, #d8dee6); border-radius: 8px; box-shadow: 0 8px 24px rgba(0, 0, 0, .12); }
+.ms-list label { display: flex; gap: 8px; align-items: center; font-weight: 400; font-size: .875rem; }
+.filters-actions { display: flex; gap: 8px; margin-left: auto; }

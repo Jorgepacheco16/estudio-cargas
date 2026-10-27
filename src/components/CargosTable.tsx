@@ -10,7 +10,7 @@ export function CargosTable({ rows }: { rows: PositionRow[] }) {
     <div className="tbl-wrap" tabIndex={0} role="region" aria-label="Tabla desplazable">
       <table>
         <thead>
-          <tr><th>Cargo y sede</th><th className="num">Ocupantes</th><th className="num">Horas/sem</th><th className="num">Capacidad</th><th>% de capacidad</th><th>Lectura</th></tr>
+          <tr><th>Cargo y centro de operaciones</th><th className="num">Ocupantes</th><th className="num">Horas/sem</th><th className="num">Capacidad</th><th>% de capacidad</th><th>Lectura</th></tr>
         </thead>
         <tbody>
           {rows.map((p) => (

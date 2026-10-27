@@ -18,7 +18,7 @@ export function cargosTable(a: Analysis): Table {
   return {
     name: "Cargos",
     columns: [
-      { key: "kind", header: "Tipo de dato", width: 12 }, { key: "area", header: "Área", width: 28 }, { key: "site", header: "Sede", width: 18 }, { key: "position", header: "Cargo", width: 30 },
+      { key: "kind", header: "Tipo de dato", width: 12 }, { key: "area", header: "Área", width: 28 }, { key: "site", header: "Centro de operaciones", width: 18 }, { key: "position", header: "Cargo", width: 30 },
       { key: "occupants", header: "Ocupantes", fmt: "0" }, { key: "capacity", header: "Capacidad (h/sem)", fmt: "#,##0.00" }, { key: "hours", header: "Horas (h/sem)", fmt: "#,##0.00" },
       { key: "pct", header: "% de capacidad", fmt: "0.0%" }, { key: "acts", header: "Actividades", fmt: "0" }, { key: "complete", header: "Completas", fmt: "0" }, { key: "reading", header: "Lectura", width: 70 },
     ],
@@ -41,7 +41,7 @@ export function actividadesTable(a: Analysis): Table {
   return {
     name: "Actividades",
     columns: [
-      { key: "code", header: "Código", width: 14 }, { key: "kind", header: "Tipo de dato", width: 12 }, { key: "area", header: "Área", width: 28 }, { key: "site", header: "Sede", width: 18 },
+      { key: "code", header: "Código", width: 14 }, { key: "kind", header: "Tipo de dato", width: 12 }, { key: "area", header: "Área", width: 28 }, { key: "site", header: "Centro de operaciones", width: 18 },
       { key: "position", header: "Cargo", width: 30 }, { key: "status", header: "Estado de captura", width: 44 },
       { key: "hw", header: "Horas por semana", fmt: "#,##0.00" }, { key: "hm", header: "Horas por mes", fmt: "#,##0.00" },
     ],
@@ -77,7 +77,7 @@ export function dashboardTables(d: Dashboard): Table[] {
   };
   const top: Table = {
     name: "Top 10 actividades",
-    columns: [{ key: "n", header: "#", fmt: "0" }, { key: "name", header: "Actividad", width: 60 }, { key: "code", header: "Código", width: 14 }, { key: "area", header: "Área", width: 30 }, { key: "pos", header: "Cargo", width: 30 }, { key: "site", header: "Sede", width: 18 }, { key: "hours", header: "Horas/sem", fmt: "#,##0.00" }, { key: "pct", header: "% del total", fmt: "0.0%" }],
+    columns: [{ key: "n", header: "#", fmt: "0" }, { key: "name", header: "Actividad", width: 60 }, { key: "code", header: "Código", width: 14 }, { key: "area", header: "Área", width: 30 }, { key: "pos", header: "Cargo", width: 30 }, { key: "site", header: "Centro de operaciones", width: 18 }, { key: "hours", header: "Horas/sem", fmt: "#,##0.00" }, { key: "pct", header: "% del total", fmt: "0.0%" }],
     rows: d.top10.map((t, i) => ({ n: i + 1, name: t.name, code: t.code, area: t.area, pos: t.position, site: t.site, hours: r2(t.hours), pct: pct4(t.pct) })),
   };
   const cov: Table = { name: "Cobertura y calidad", columns: [{ key: "i", header: "Indicador", width: 70 }, { key: "v", header: "Valor", width: 16 }, { key: "n", header: "Nota", width: 80 }], rows: d.coverage.map((c) => ({ i: c.label, v: c.value, n: c.note })) };
@@ -100,7 +100,7 @@ export function calculoTable(a: Analysis): Table {
   const occ = (x: Analysis["activities"][number]) => a.positions.find((p) => p.dataKind === x.dataKind && p.area === x.area && p.site === x.site && p.position === x.position)?.occupants ?? 0;
   return {
     name: "Cálculo de tiempos",
-    columns: [{ key: "kind", header: "Tipo de dato", width: 12 }, { key: "code", header: "Código", width: 14 }, { key: "area", header: "Área", width: 26 }, { key: "site", header: "Sede", width: 18 }, { key: "position", header: "Cargo", width: 28 }, { key: "status", header: "Estado de captura", width: 44 },
+    columns: [{ key: "kind", header: "Tipo de dato", width: 12 }, { key: "code", header: "Código", width: 14 }, { key: "area", header: "Área", width: 26 }, { key: "site", header: "Centro de operaciones", width: 18 }, { key: "position", header: "Cargo", width: 28 }, { key: "status", header: "Estado de captura", width: 44 },
       ...CALC_4A.map((c) => ({ key: c.col, header: c.header, fmt: c.fmt, width: 18 }))],
     rows: a.activities.map((x) => ({ kind: KIND(x.dataKind), code: x.code, area: x.area, site: x.site, position: x.position, status: x.status, ...Object.fromEntries(CALC_4A.map((c) => [c.col, r2x(calcValue(x, c.key, occ(x)))])) })),
   };
@@ -112,7 +112,7 @@ export function sedesTable(a: Analysis, area: string, position: string, mode: Mo
   const c = compareSites(a, area, position, mode, reservePct, undocumented);
   return {
     name: "Comparador de sedes",
-    columns: [{ key: "site", header: "Sede", width: 26 }, { key: "occ", header: "Ocupantes", fmt: "0" }, { key: "wh", header: "Jornada semanal (h)", fmt: "#,##0.0" }, { key: "cap", header: "Capacidad (h/sem)", fmt: "#,##0.00" }, { key: "hours", header: "Horas/sem asignadas", fmt: "#,##0.00" },
+    columns: [{ key: "site", header: "Centro de operaciones", width: 26 }, { key: "occ", header: "Ocupantes", fmt: "0" }, { key: "wh", header: "Jornada semanal (h)", fmt: "#,##0.0" }, { key: "cap", header: "Capacidad (h/sem)", fmt: "#,##0.00" }, { key: "hours", header: "Horas/sem asignadas", fmt: "#,##0.00" },
       { key: "pct", header: "% de capacidad", fmt: "0.0%" }, { key: "per", header: "Horas/sem por ocupante", fmt: "#,##0.00" }, { key: "acts", header: "Actividades registradas", fmt: "0" }, { key: "und", header: "No documentadas formalmente", fmt: "0" }, { key: "read", header: "Alerta o lectura de la sede", width: 70 }],
     rows: [...c.rows.map((r) => ({ site: r.site, occ: r.occupants, wh: r2(r.weeklyHours), cap: r2(r.capacity), hours: r2(r.hours), pct: pctOf(r.pct), per: r2(r.perOccupant), acts: r.activities, und: r.undocumented, read: r.reading })),
       { site: "Dispersión (máx − mín) ÷ promedio", occ: null, wh: null, cap: null, hours: null, pct: pctOf(c.dispersion), per: r2(c.average), acts: null, und: null, read: c.reading }],
@@ -139,7 +139,7 @@ export function tablesFor(view: View, a: Analysis, d: Dashboard, proposals: Prop
     case "actividades": return { title: "Actividades", tables: [actividadesTable(a)] };
     case "areas": return { title: "Áreas", tables: [areasTable(a)] };
     case "calculo": return { title: "Cálculo de tiempos", tables: [calculoTable(a)] };
-    case "sedes": return { title: "Comparador sedes", tables: [sedesTable(a, q.area ?? "", q.position ?? "", mode, reservePct)] };
+    case "sedes": return { title: "Comparador de centros de operaciones", tables: [sedesTable(a, q.area ?? "", q.position ?? "", mode, reservePct)] };
     case "drill": { const lv = (["study", "area", "position", "activity"] as const).find((x) => x === q.level) ?? "study"; return { title: "Drill-down", tables: [drillTable(a, q.config ?? "carga-por-area", lv, { area: q.area, site: q.site, position: q.position, alertOnly: (q.alert as DrillFilters["alertOnly"]) ?? "", ...(q.code ? { code: q.code } : {}) } as DrillFilters)] }; }
     case "agente": return { title: "Agente de IA", tables: [agenteTable(proposals)] };
   }

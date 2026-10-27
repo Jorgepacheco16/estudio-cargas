@@ -107,7 +107,7 @@ async function run(tx: Tx, sub: string, studyId: string, p: Parsed): Promise<Imp
   const staffRows: (typeof staffingEntries.$inferInsert)[] = [];
   for (const r of p.staff) {
     const [area, site, name] = [r.s("area"), r.s("site"), r.s("position")];
-    if (!area || !site || !name) { c(SH2).rejected++; issue(SH2, r.row, "clave", "MISSING_KEY", "error", `Falta ${[!area && "área", !site && "sede", !name && "cargo"].filter(Boolean).join(", ")}; la fila no se puede identificar y no se importó`); continue; }
+    if (!area || !site || !name) { c(SH2).rejected++; issue(SH2, r.row, "clave", "MISSING_KEY", "error", `Falta ${[!area && "área", !site && "centro de operaciones", !name && "cargo"].filter(Boolean).join(", ")}; la fila no se puede identificar y no se importó`); continue; }
     const kind = kindOf(r, SH2);
     const pos = await ensurePosition(kind, area, site, name, { regional: r.s("regional"), boss: r.s("boss"), objective: r.s("objective"), functions: r.s("functions") }, false, { sheet: SH2, row: r.row });
     for (const f of [["boss", "boss"], ["objective", "objective"], ["functions", "functions"]] as const) {
@@ -130,7 +130,7 @@ async function run(tx: Tx, sub: string, studyId: string, p: Parsed): Promise<Imp
     seen.add(k);
     if (actIds.has(k)) { c(SH3).skipped++; issue(SH3, r.row, "code", "ALREADY_IMPORTED", "info", "La actividad ya existía en el estudio; se omitió (D-11)"); continue; }
     const [area, site, pos, name] = [r.s("area"), r.s("site"), r.s("position"), r.s("name")];
-    if (!area || !site || !pos) { c(SH3).rejected++; issue(SH3, r.row, "clave", "MISSING_KEY", "error", `Falta ${[!area && "área", !site && "sede", !pos && "cargo"].filter(Boolean).join(", ")}; sin cargo no se puede guardar la actividad`); continue; }
+    if (!area || !site || !pos) { c(SH3).rejected++; issue(SH3, r.row, "clave", "MISSING_KEY", "error", `Falta ${[!area && "área", !site && "centro de operaciones", !pos && "cargo"].filter(Boolean).join(", ")}; sin cargo no se puede guardar la actividad`); continue; }
     if (!name) { c(SH3).rejected++; issue(SH3, r.row, "name", "MISSING_NAME", "error", "La actividad no tiene nombre; no se inventa uno y no se importó"); continue; }
     const kind = kindOf(r, SH3);
     const primary = await ensurePosition(kind, area, site, pos, {}, true, { sheet: SH3, row: r.row });

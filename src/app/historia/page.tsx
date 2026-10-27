@@ -11,7 +11,7 @@ import { addMeasurementAction, deleteMeasurementAction, detectAction, deviationS
 
 const VISTAS = [["linea", "Línea de tiempo"], ["productividad", "Productividad real"], ["desviaciones", "Desviaciones"]] as const;
 const LANES: [string, string][] = [["app", "Aplicación"], ["sheet", "Hoja de Google"], ["import", "Importación"], ["autocorrect", "Autocorrector"], ["agent", "Agente de IA"]];
-const RULES: Record<string, string> = { R1: "Estimado vs medido", R2: "Cruce de umbral", R3: "Salto sin respaldo", R4: "Pérdida de calidad", R5: "Dispersión entre sedes", R6: "Plan vencido reincidente", R7: "Más actividades incompletas", R8: "Conflictos recurrentes" };
+const RULES: Record<string, string> = { R1: "Estimado vs medido", R2: "Cruce de umbral", R3: "Salto sin respaldo", R4: "Pérdida de calidad", R5: "Dispersión entre centros de operaciones", R6: "Plan vencido reincidente", R7: "Más actividades incompletas", R8: "Conflictos recurrentes" };
 const ST: Record<string, string> = { open: "Abierta", acknowledged: "Reconocida", dismissed: "Descartada" };
 const nf = (n: number | null, d = 2) => (n === null ? "—" : n.toLocaleString("es-CO", { minimumFractionDigits: 0, maximumFractionDigits: d }));
 const when = (d: Date) => d.toLocaleString("es-CO", { timeZone: "America/Bogota", dateStyle: "short", timeStyle: "short" });

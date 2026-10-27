@@ -6,7 +6,7 @@ export interface PickerPosition { kind: string; area: string; site: string; posi
 const norm = (s: string) => s.trim().toLowerCase().replace(/\s+/g, " ");
 
 /**
- * «Turnos en que se ejecuta» (D-67): casillas con los turnos del cargo responsable de la actividad. Lee el área, la sede y el cargo que se están
+ * «Turnos en que se ejecuta» (D-67): casillas con los turnos del cargo responsable de la actividad. Lee el área, el centro de operaciones y el cargo que se están
  * escribiendo en el formulario (columnas D, E y F de la hoja 3, y A para REAL/DEMO) y se actualiza cuando cambian.
  */
 export function ShiftPicker({ positions, initial, cols, disabled }: { positions: PickerPosition[]; initial: { all: boolean; ids: string[] }; cols: { kind: string; area: string; site: string; position: string }; disabled: boolean }) {
@@ -34,7 +34,7 @@ export function ShiftPicker({ positions, initial, cols, disabled }: { positions:
       <h3 id="turnos-act-h">Turnos en que se ejecuta</h3>
       <input type="hidden" name="shiftsTouched" value="1" />
       <label style={{ display: "block", marginBottom: 6 }}><input type="checkbox" name="allShifts" checked={all} onChange={(e) => setAll(e.target.checked)} disabled={disabled} /> <b>{ALL_SHIFTS}</b> <span className="muted">(incluye los que se agreguen después al cargo)</span></label>
-      {!complete ? <p className="note" style={{ marginTop: 0 }}>Para elegir turnos concretos, indique primero el área, la sede y el cargo responsable. Si la actividad se hace en todos los turnos, marque «{ALL_SHIFTS}».</p>
+      {!complete ? <p className="note" style={{ marginTop: 0 }}>Para elegir turnos concretos, indique primero el área, el centro de operaciones y el cargo responsable. Si la actividad se hace en todos los turnos, marque «{ALL_SHIFTS}».</p>
         : !mine ? <p className="note" style={{ marginTop: 0 }}>Este cargo aún no tiene turnos registrados, por eso solo puede marcar «{ALL_SHIFTS}» o dejarla sin turno. Para elegir turnos concretos, créelos en <b>Cargos y dotación</b> (editar el cargo → «Turnos de este cargo») y vuelva a esta actividad.</p>
         : (
           <>

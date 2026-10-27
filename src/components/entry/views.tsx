@@ -11,6 +11,9 @@ import { deleteEntryAction } from "@/app/entrada/actions";
 import { formProps } from "@/app/entrada/form-props";
 import { ShiftsPanel } from "@/components/entry/ShiftsPanel";
 import { bulkEnabled } from "@/server/entry/bulk-file";
+import { FilterBar } from "@/components/FilterBar";
+import { entryFilters } from "@/server/entry/filters";
+import { filterQuery } from "@/domain/filters";
 import { OperationPanel } from "@/components/entry/OperationPanel";
 import { getOperation } from "@/server/operation";
 import { activityShiftSelection, listShifts, shiftsByPosition } from "@/server/shifts";
@@ -35,19 +38,25 @@ const EMPTY: Record<string, string> = {
 };
 
 /** Lista de los registros de una sección con su botón «Agregar» (siempre visible) y las acciones editar / eliminar. Va dentro de la página de la sección. */
-export async function EntrySection({ hoja, sp }: { hoja: EntryId; sp: Record<string, string | undefined> }) {
+/** `bar`: dibuja la barra de filtros de la sección. Las páginas de Cargos y Actividades llevan su propia barra (con los filtros de sus resultados) y aquí solo aplican los filtros. */
+export async function EntrySection({ hoja, sp: rawSp, bar = true }: { hoja: EntryId; sp: Record<string, string | string[] | undefined>; bar?: boolean }) {
+  const first = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v);
+  const sp = { ok: first(rawSp.ok), error: first(rawSp.error) };
   const def = entryDef(hoja)!;
   const viewer = await getUser();
   if (!viewer) return <section className="card" aria-label={`Registros de ${def.short}`}><h2>Registros capturados</h2><div className="empty">Inicie sesión para ver y capturar los registros de esta sección. <Link href="/login">Ingresar</Link></div></section>; // las vistas de demostración son públicas
   const { user, study } = await session();
   const base = basePath(hoja);
   const canWrite = !!study && study.role !== "viewer";
-  const rows = study ? (await listEntries(getDb(), user.id, study.id, hoja))?.rows ?? [] : [];
+  const allRows = study ? (await listEntries(getDb(), user.id, study.id, hoja))?.rows ?? [] : [];
+  const ef = entryFilters(def, allRows, rawSp);
+  const rows = ef.rows;
+  const modo = first(rawSp.modo);
   const listCols = def.listFields.map((f) => def.fields.find((x) => x.field === f)).filter((x): x is NonNullable<typeof x> => !!x);
   return (
     <section className="card" id="registros" aria-label={`Registros de ${def.short}`}>
       <div style={{ display: "flex", flexWrap: "wrap", gap: 12, alignItems: "center", justifyContent: "space-between" }}>
-        <h2>Registros capturados ({rows.length})</h2>
+        <h2>Registros capturados ({rows.length}{rows.length !== allRows.length ? ` de ${allRows.length}` : ""})</h2>
         {canWrite && (
           <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
             {bulkEnabled(hoja) && <><a className="btn" href={`/api/plantilla/${hoja}`}>Descargar plantilla</a><Link className="btn" href={`${base}/carga`}>Carga masiva</Link></>}
@@ -57,7 +66,9 @@ export async function EntrySection({ hoja, sp }: { hoja: EntryId; sp: Record<str
       </div>
       {sp.ok && <div className="banner" role="status" style={{ background: "var(--blue-soft)", color: "var(--blue)", marginTop: 12 }}>{sp.ok}</div>}
       {sp.error && <div className="banner" role="alert" style={{ background: "var(--red-soft)", color: "var(--red-dark)", marginTop: 12 }}>{sp.error}</div>}
+      {bar && allRows.length > 0 && <div style={{ marginTop: 12 }}><FilterBar key={filterQuery(ef.current) + (ef.range?.from ?? "") + (ef.range?.to ?? "")} fields={ef.fields} triples={ef.triples} current={ef.current} search={hoja === "3"} range={ef.range} shown={rows.length} total={allRows.length} hidden={modo ? { modo } : {}} clearHref={modo ? `${base}?modo=${encodeURIComponent(modo)}` : base} /></div>}
       {!study ? <div className="empty">Para capturar datos primero cree o seleccione un estudio en <Link href="/estudio">Estudio</Link>.</div>
+        : allRows.length > 0 && rows.length === 0 ? <div className="empty">Ningún registro cumple los filtros elegidos. Cambie o limpie los filtros.</div>
         : rows.length === 0 ? (
           <div className="empty">
             <p style={{ margin: 0 }}>Aún no hay registros en esta sección.</p>
