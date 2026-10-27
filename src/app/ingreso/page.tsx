@@ -82,8 +82,8 @@ export default async function Ingreso({ searchParams }: { searchParams: Promise<
       <aside className="auth-art" aria-hidden="true">
         <div className="auth-art-figure">
           <Image src="/ingreso-equipo.webp" alt="" fill priority unoptimized sizes="70vw" />
+          <p className={`auth-art-text ${inter.className}`}>Equilibre la carga de trabajo con la capacidad de su equipo.</p>
         </div>
-        <p className={`auth-art-text ${inter.className}`}>Equilibre la carga de trabajo con la capacidad de su equipo.</p>
       </aside>
     </main>
   );
