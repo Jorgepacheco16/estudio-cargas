@@ -1,4 +1,5 @@
 import { Purpose } from "@/components/Purpose";
+import { PagedTable } from "@/components/PagedTable";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getDb } from "@/db/server";
@@ -118,13 +119,10 @@ export default async function Historia({ searchParams }: { searchParams: Promise
         <section className="card">
           <h2>Productividad real por actividad</h2>
           <div className="banner" style={{ marginTop: 12 }}>El Excel solo trae tiempos estimados. Mientras una actividad no tenga mediciones se muestra «Sin mediciones», nunca un número. El índice (real ÷ estándar) se calcula con al menos {inp.minN} mediciones con unidades.</div>
-          <div className="tbl-wrap" tabIndex={0} role="region" aria-label="Tabla desplazable"><table>
-            <thead><tr><th>Actividad</th><th>Mediciones</th><th className="num">Estándar por hora</th><th className="num">Real por hora</th><th className="num">Índice</th><th>Lectura</th></tr></thead>
-            <tbody>{inp.rows.map((r) => {
+          <PagedTable head={<tr><th>Actividad</th><th>Mediciones</th><th className="num">Estándar por hora</th><th className="num">Real por hora</th><th className="num">Índice</th><th>Lectura</th></tr>} rows={inp.rows.map((r) => {
               const p = productivity({ calcMode: r.calcMode, timeAvgMin: r.timeAvgMin }, r.measures, inp.minN);
               return <tr key={r.id}><td><b>{r.code}</b> <span className="muted">{r.name.slice(0, 50)}</span></td><td>{p.n}/{r.measures.length}</td><td className="num">{nf(p.standardPerHour)}</td><td className="num">{nf(p.realPerHour)}</td><td className="num">{p.index === null ? "—" : nf(p.index)}</td><td className="muted">{p.message}</td></tr>;
-            })}</tbody>
-          </table></div>
+            })} />
         </section>
         <section className="card">
           <h2>Registrar una medición</h2>
@@ -140,11 +138,8 @@ export default async function Historia({ searchParams }: { searchParams: Promise
         </section>
         <section className="card">
           <h2>Mediciones registradas ({ms.length})</h2>
-          {ms.length === 0 ? <div className="empty">Sin mediciones.</div> : <div className="tbl-wrap" tabIndex={0} role="region" aria-label="Tabla desplazable"><table>
-            <thead><tr><th>Fecha</th><th>Actividad</th><th className="num">Unidades</th><th className="num">Horas-persona</th><th>Método</th><th>Observador</th><th /></tr></thead>
-            <tbody>{ms.map((m) => <tr key={m.id}><td>{when(m.observedAt)}</td><td>{code.get(m.activityId)}</td><td className="num">{nf(m.unitsProcessed === null ? null : Number(m.unitsProcessed))}</td><td className="num">{nf(Number(m.personHours))}</td><td>{optionsOf("L_Fuente").find((o) => o.code === m.method)?.label}</td><td>{m.observer ?? ""}</td>
-              <td><form action={deleteMeasurementAction}><input type="hidden" name="id" value={m.id} /><button className="btn danger" type="submit" disabled={!canWrite}>Eliminar</button></form></td></tr>)}</tbody>
-          </table></div>}
+          {ms.length === 0 ? <div className="empty">Sin mediciones.</div> : <PagedTable head={<tr><th>Fecha</th><th>Actividad</th><th className="num">Unidades</th><th className="num">Horas-persona</th><th>Método</th><th>Observador</th><th /></tr>} rows={ms.map((m) => <tr key={m.id}><td>{when(m.observedAt)}</td><td>{code.get(m.activityId)}</td><td className="num">{nf(m.unitsProcessed === null ? null : Number(m.unitsProcessed))}</td><td className="num">{nf(Number(m.personHours))}</td><td>{optionsOf("L_Fuente").find((o) => o.code === m.method)?.label}</td><td>{m.observer ?? ""}</td>
+              <td><form action={deleteMeasurementAction}><input type="hidden" name="id" value={m.id} /><button className="btn danger" type="submit" disabled={!canWrite}>Eliminar</button></form></td></tr>)} />}
         </section>
       </main>
     );
@@ -159,9 +154,7 @@ export default async function Historia({ searchParams }: { searchParams: Promise
         <h2>Desviaciones ({devs.filter((d) => d.status === "open").length} abiertas)</h2>
         <form action={detectAction} style={{ marginTop: 12 }}><button className="btn solid" type="submit" disabled={!canWrite}>Detectar desviaciones ahora</button></form>
         <p className="note">Ocho reglas explícitas (R1 a R8) comparan fotos, mediciones y el plan. Los umbrales (diferencia estimado vs medido, mínimo de mediciones, salto de horas y mínimo de historia) se editan en <Link href="/parametros">Parámetros</Link> y son provisionales. Una desviación descartada no vuelve a aparecer durante 30 días; una abierta o reconocida no se duplica.</p>
-        {devs.length === 0 ? <div className="empty">Sin desviaciones.</div> : <div className="tbl-wrap" tabIndex={0} role="region" aria-label="Tabla desplazable"><table>
-          <thead><tr><th>Regla</th><th>Qué se detectó</th><th>Base → observado</th><th>Estado</th><th>Explicación del agente</th><th>Acciones</th></tr></thead>
-          <tbody>{devs.map((d) => {
+        {devs.length === 0 ? <div className="empty">Sin desviaciones.</div> : <PagedTable head={<tr><th>Regla</th><th>Qué se detectó</th><th>Base → observado</th><th>Estado</th><th>Explicación del agente</th><th>Acciones</th></tr>} rows={devs.map((d) => {
             const b = d.baseline as Record<string, unknown>, msg = String(b._message ?? ""), clean = Object.fromEntries(Object.entries(b).filter(([k]) => !k.startsWith("_")));
             return (
               <tr key={d.id}>
@@ -180,8 +173,7 @@ export default async function Historia({ searchParams }: { searchParams: Promise
                 </td>
               </tr>
             );
-          })}</tbody>
-        </table></div>}
+          })} />}
       </section>
     </main>
   );

@@ -212,3 +212,15 @@ test("la pestaña de la hoja 4a muestra las columnas calculadas con los encabeza
   const [d] = await Promise.all([page.waitForEvent("download"), page.getByRole("link", { name: "Exportar Excel" }).click()]);
   expect(d.suggestedFilename()).toMatch(/calculo.*\.xlsx$/);
 });
+test("las listas se muestran de 10 en 10, con «Filas por página» y navegación entre páginas", async ({ page }) => {
+  await page.goto("/calculo?modo=demo");
+  const filas = page.getByRole("region", { name: "Tabla desplazable" }).first().locator("tbody tr");
+  await expect(filas).toHaveCount(10);
+  await expect(page.getByText("Filas por página:").first()).toBeVisible();
+  await expect(page.getByText(/^1–10 de \d+$/).first()).toBeVisible();
+  await expect(page.getByRole("button", { name: "Página anterior" }).first()).toBeDisabled();
+  await page.getByRole("button", { name: "Página siguiente" }).first().click();
+  await expect(page.getByText(/^11–15 de 15$/).first()).toBeVisible();
+  await page.getByLabel("Filas por página:").first().selectOption("25");
+  await expect(page.getByText(/^1–15 de 15$/).first()).toBeVisible();
+});

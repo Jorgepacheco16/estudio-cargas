@@ -1,4 +1,5 @@
 import { Purpose } from "@/components/Purpose";
+import { PagedTable } from "@/components/PagedTable";
 import Link from "next/link";
 import { loadAnalysis, parseMode } from "@/data/source";
 import { ExportButtons, ModeForm, fmt, fmtPct } from "@/components/Tools";
@@ -42,17 +43,17 @@ export default async function Drill({ searchParams }: { searchParams: Promise<Re
         </nav>
         <div className="muted" style={{ marginTop: 6 }}>Nivel: {LEVEL_ES[level]} · Filtro: {([["", "todos"], ["overload", "solo sobrecarga"], ["lowLoad", "solo carga baja"], ["incomplete", "solo incompletos"]] as const).map(([v, t]) => <Link key={v} href={`/drill?${q({ ...base, level, area: sp.area, site: sp.site, position: sp.position, code: sp.code, alert: v })}`} style={{ marginLeft: 8, textDecoration: v === alert ? "none" : "underline", fontWeight: v === alert ? 700 : 400 }}>{t}</Link>)}</div>
         {rows.length === 0 ? <div className="empty">No hay filas para este nivel y filtro.</div> : (
-          <div className="tbl-wrap" tabIndex={0} role="region" aria-label="Tabla desplazable"><table>
-            <thead><tr><th>{LEVEL_ES[level]}</th><th>Detalle</th>{metrics.map((m) => <th key={m} className="num">{METRIC_ES[m]}</th>)}<th>Lectura o estado</th></tr></thead>
-            <tbody>{rows.map((r) => (
+          <PagedTable
+            head={<tr><th>{LEVEL_ES[level]}</th><th>Detalle</th>{metrics.map((m) => <th key={m} className="num">{METRIC_ES[m]}</th>)}<th>Lectura o estado</th></tr>}
+            rows={rows.map((r) => (
               <tr key={r.key}>
                 <td>{r.next ? <Link href={`/drill?${q({ ...base, level: r.next.level, ...(r.next.filters as Record<string, string | undefined>), alert })}`} style={{ textDecoration: "underline" }}><b>{r.label}</b></Link> : <b>{r.label}</b>}</td>
                 <td className="muted">{r.detail ?? ""}</td>
                 {metrics.map((m) => <td key={m} className="num">{fmtMetric(m, r.metrics[m])}</td>)}
                 <td className="muted">{r.status && r.status !== "OK" ? r.status : r.level ? { overload: "Sobrecarga", low: "Carga baja (validar)", ok: "Dentro del rango", nodata: "Sin datos suficientes" }[r.level] : ""}</td>
               </tr>
-            ))}</tbody>
-          </table></div>
+            ))}
+          />
         )}
       </section>
     </main>

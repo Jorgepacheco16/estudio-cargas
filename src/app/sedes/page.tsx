@@ -1,4 +1,5 @@
 import { Purpose } from "@/components/Purpose";
+import { PagedTable } from "@/components/PagedTable";
 import { getDb } from "@/db/server";
 import { getUser } from "@/lib/supabase/server";
 import { activeStudyId, loadAnalysis, parseMode } from "@/data/source";
@@ -36,13 +37,13 @@ export default async function Sedes({ searchParams }: { searchParams: Promise<Re
           {c && (
             <section className="card">
               <h2>{chosen!.area} · {chosen!.position}</h2>
-              <div className="tbl-wrap" tabIndex={0} role="region" aria-label="Tabla desplazable"><table>
-                <thead><tr><th>Centro de operaciones</th><th className="num">Ocupantes</th><th className="num">Jornada (h)</th><th className="num">Capacidad (h/sem)</th><th className="num">Horas/sem asignadas</th><th className="num">% de capacidad</th><th className="num">Horas/sem por ocupante</th><th className="num">Actividades</th><th className="num">No documentadas</th><th>Lectura de la sede</th></tr></thead>
-                <tbody>{c.rows.map((r) => (
+              <PagedTable
+                head={<tr><th>Centro de operaciones</th><th className="num">Ocupantes</th><th className="num">Jornada (h)</th><th className="num">Capacidad (h/sem)</th><th className="num">Horas/sem asignadas</th><th className="num">% de capacidad</th><th className="num">Horas/sem por ocupante</th><th className="num">Actividades</th><th className="num">No documentadas</th><th>Lectura de la sede</th></tr>}
+                rows={c.rows.map((r) => (
                   <tr key={r.site + r.kind}><td><b>{r.site}</b>{r.kind === "demo" ? " · DEMO" : ""}</td><td className="num">{r.occupants}</td><td className="num">{r.weeklyHours === null ? "—" : fmt(r.weeklyHours)}</td><td className="num">{fmt(r.capacity, 2)}</td><td className="num">{fmt(r.hours, 2)}</td>
                     <td className="num">{fmtPct(r.pct)}</td><td className="num">{r.perOccupant === null ? "—" : fmt(r.perOccupant, 2)}</td><td className="num">{r.activities}</td><td className="num">{r.undocumented === null ? "—" : r.undocumented}</td><td className="muted">{r.reading}</td></tr>
-                ))}</tbody>
-              </table></div>
+                ))}
+              />
               <div style={{ display: "flex", gap: 24, flexWrap: "wrap", marginTop: 12 }}>
                 <div><div className="lbl">Promedio por ocupante</div><div className="kpi" style={{ fontSize: "1.25rem" }}>{c.average === null ? "—" : fmt(c.average, 2)}</div></div>
                 <div><div className="lbl">Mínimo</div><div className="kpi" style={{ fontSize: "1.25rem" }}>{c.min === null ? "—" : fmt(c.min, 2)}</div></div>

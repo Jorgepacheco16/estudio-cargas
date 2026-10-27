@@ -1,5 +1,6 @@
 import type { PositionRow } from "@/domain/summary";
 import { fmt, fmtPct } from "./Tools";
+import { PagedTable } from "@/components/PagedTable";
 
 const BAR: Record<string, string> = { overload: "var(--red)", low: "var(--amber)", ok: "var(--blue)", nodata: "var(--line)" };
 const LABEL: Record<string, string> = { overload: "ALERTA", low: "VALIDAR", ok: "En rango", nodata: "Sin datos" };
@@ -7,13 +8,9 @@ const LABEL: Record<string, string> = { overload: "ALERTA", low: "VALIDAR", ok: 
 export function CargosTable({ rows }: { rows: PositionRow[] }) {
   if (rows.length === 0) return <div className="empty">No hay cargos en este modo de análisis.</div>;
   return (
-    <div className="tbl-wrap" tabIndex={0} role="region" aria-label="Tabla desplazable">
-      <table>
-        <thead>
-          <tr><th>Cargo y centro de operaciones</th><th className="num">Ocupantes</th><th className="num">Horas/sem</th><th className="num">Capacidad</th><th>% de capacidad</th><th>Lectura</th></tr>
-        </thead>
-        <tbody>
-          {rows.map((p) => (
+    <PagedTable
+      head={<tr><th>Cargo y centro de operaciones</th><th className="num">Ocupantes</th><th className="num">Horas/sem</th><th className="num">Capacidad</th><th>% de capacidad</th><th>Lectura</th></tr>}
+      rows={rows.map((p) => (
             <tr key={`${p.dataKind}|${p.area}|${p.site}|${p.position}`}>
               <td><b>{p.position}</b><div className="muted">{p.area} · {p.site} · {p.dataKind === "real" ? "REAL" : "DEMO"}</div></td>
               <td className="num">{fmt(p.occupants, 0)}</td>
@@ -29,9 +26,7 @@ export function CargosTable({ rows }: { rows: PositionRow[] }) {
               </td>
               <td><span className={`pill ${p.level}`}>{LABEL[p.level]}</span><span className="muted">{p.reading}</span></td>
             </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+      ))}
+    />
   );
 }

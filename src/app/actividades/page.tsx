@@ -1,3 +1,4 @@
+import { PagedTable } from "@/components/PagedTable";
 import { Purpose } from "@/components/Purpose";
 import { loadAnalysis, parseMode } from "@/data/source";
 import { ExportButtons, ModeForm, fmt } from "@/components/Tools";
@@ -23,11 +24,9 @@ export default async function Actividades({ searchParams }: { searchParams: Prom
       <EntrySection hoja="3" sp={raw} bar={false} />
       <section className="card">
         {a.activities.length === 0 ? <div className="empty">No hay actividades en este modo de análisis.</div> : af.rows.length === 0 ? <div className="empty">Ninguna actividad cumple los filtros elegidos. Cambie o limpie los filtros.</div> : (
-          <div className="tbl-wrap" tabIndex={0} role="region" aria-label="Tabla desplazable">
-            <table>
-              <thead><tr><th>Código</th><th>Área · centro de operaciones · cargo</th><th>Estado de captura</th><th className="num">Horas/sem</th><th className="num">Horas/mes</th></tr></thead>
-              <tbody>
-                {af.rows.map((x) => (
+          <PagedTable
+            head={<tr><th>Código</th><th>Área · centro de operaciones · cargo</th><th>Estado de captura</th><th className="num">Horas/sem</th><th className="num">Horas/mes</th></tr>}
+            rows={af.rows.map((x) => (
                   <tr key={`${x.dataKind}|${x.code}`}>
                     <td><b>{x.code}</b></td>
                     <td>{x.position}<div className="muted">{x.area} · {x.site}</div></td>
@@ -36,9 +35,7 @@ export default async function Actividades({ searchParams }: { searchParams: Prom
                     <td className="num">{fmt(x.hoursMonth, 2)}</td>
                   </tr>
                 ))}
-              </tbody>
-            </table>
-          </div>
+          />
         )}
         <p className="note">Una actividad con datos faltantes se conserva y no suma carga hasta completarse; la aplicación nunca rellena un vacío por su cuenta.</p>
       </section>

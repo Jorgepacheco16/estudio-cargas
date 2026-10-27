@@ -1,4 +1,5 @@
 import { Purpose } from "@/components/Purpose";
+import { PagedTable } from "@/components/PagedTable";
 import Link from "next/link";
 import { getDb } from "@/db/server";
 import { getUser } from "@/lib/supabase/server";
@@ -87,10 +88,11 @@ export default async function Calculo({ searchParams }: { searchParams: Promise<
         </div>
         <p className="note" style={{ marginTop: 8 }}>Cada fila es una actividad. «Veces por semana» es cuántas veces se hace; «Horas por semana» es el tiempo total que consume en el centro de operaciones, sumando a todas las personas que la ejecutan.</p>
         {a.activities.length === 0 ? <div className="empty">Aún no hay actividades en este modo. Regístrelas en <Link href="/actividades">Actividades</Link>.</div> : list.length === 0 ? <div className="empty">Ninguna actividad cumple los filtros elegidos. Cambie o limpie los filtros.</div> : (
-          <div className="tbl-wrap" tabIndex={0} role="region" aria-label="Tabla desplazable">
-            <table style={{ minWidth: 980 }}>
-              <thead><tr><th>Código</th><th>Actividad</th><th>Cargo y sede</th><th>Estado</th>{cmp && <th>Hoja de Google</th>}<th className="num">Veces por semana</th><th className="num">Horas por semana</th><th className="num">Horas por mes</th><th style={{ minWidth: 150 }}>% del total de horas</th></tr></thead>
-              <tbody>{rows.map((x) => {
+          <PagedTable
+            minWidth={980}
+            head={<tr><th>Código</th><th>Actividad</th><th>Cargo y sede</th><th>Estado</th>{cmp && <th>Hoja de Google</th>}<th className="num">Veces por semana</th><th className="num">Horas por semana</th><th className="num">Horas por mes</th><th style={{ minWidth: 150 }}>% del total de horas</th></tr>}
+            foot={done.length > 0 && <tfoot><tr><td colSpan={cmp ? 6 : 5} style={{ fontWeight: 700 }}>Total de las actividades completas</td><td className="num"><b>{fmt(totalWeek, 2)}</b></td><td className="num"><b>{fmt(totalMonth, 2)}</b></td><td /></tr></tfoot>}
+            rows={rows.map((x) => {
                 const diff = bad.get(x.code.toLowerCase());
                 const share = x.complete && totalWeek > 0 ? (x.hoursWeek ?? 0) / totalWeek : null;
                 return (
@@ -106,10 +108,8 @@ export default async function Calculo({ searchParams }: { searchParams: Promise<
                     <td>{share === null ? "—" : <div style={{ display: "flex", gap: 8, alignItems: "center" }}><div className="bar" style={{ flex: 1 }}><span style={{ width: `${Math.min(100, share * 100)}%`, background: "var(--blue)" }} /></div><span style={{ minWidth: 48, textAlign: "right" }}>{fmtPct(share)}</span></div>}</td>
                   </tr>
                 );
-              })}</tbody>
-              {done.length > 0 && <tfoot><tr><td colSpan={cmp ? 6 : 5} style={{ fontWeight: 700 }}>Total de las actividades completas</td><td className="num"><b>{fmt(totalWeek, 2)}</b></td><td className="num"><b>{fmt(totalMonth, 2)}</b></td><td /></tr></tfoot>}
-            </table>
-          </div>
+              })}
+          />
         )}
         <p className="note">Una actividad incompleta no suma horas: la aplicación nunca rellena un dato que falta por su cuenta.</p>
       </section>
@@ -134,18 +134,18 @@ export default async function Calculo({ searchParams }: { searchParams: Promise<
         <div className="adv-body">
           <p className="note" style={{ marginTop: 0 }}>Incluye los escenarios de temporada, tiempos mínimo y máximo, el reparto entre cargos y las horas no planificadas, de reproceso y de espera. Pase el cursor sobre un encabezado para ver su columna en el libro de Google.</p>
           {list.length === 0 ? <div className="empty">{a.activities.length === 0 ? "Aún no hay actividades." : "Ninguna actividad cumple los filtros elegidos."}</div> : (
-            <div className="tbl-wrap" tabIndex={0} role="region" aria-label="Tabla detallada desplazable">
-              <table style={{ minWidth: 1900 }}>
-                <thead><tr><th>Código</th><th>Cargo y centro de operaciones</th><th>Estado</th>{CALC_4A.map((c) => <th key={c.col} className="num" title={`Columna ${c.col} del libro de Google`}>{c.header}</th>)}</tr></thead>
-                <tbody>{list.map((x) => (
+            <PagedTable
+              label="Tabla detallada desplazable"
+              minWidth={1900}
+              head={<tr><th>Código</th><th>Cargo y centro de operaciones</th><th>Estado</th>{CALC_4A.map((c) => <th key={c.col} className="num" title={`Columna ${c.col} del libro de Google`}>{c.header}</th>)}</tr>}
+              rows={list.map((x) => (
                   <tr key={x.code + x.dataKind}>
                     <td><b>{x.code}</b>{x.dataKind === "demo" ? " · DEMO" : ""}</td><td>{x.position} · {x.site}</td>
                     <td><span className={`pill ${x.complete ? "ok" : "low"}`}>{x.complete ? "OK" : "Incompleta"}</span>{x.complete ? "" : <span className="muted">{x.status}</span>}</td>
                     {CALC_4A.map((c) => { const v = calcValue(x, c.key, occ(x)); return <td key={c.col} className="num">{v === null ? "—" : c.key === "occupants" ? String(v) : fmt(v, c.key === "hoursPerExec" ? 4 : 2)}</td>; })}
                   </tr>
-                ))}</tbody>
-              </table>
-            </div>
+                ))}
+            />
           )}
         </div>
       </details>

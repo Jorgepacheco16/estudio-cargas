@@ -1,4 +1,5 @@
 import { Purpose } from "@/components/Purpose";
+import { PagedTable } from "@/components/PagedTable";
 import { redirect } from "next/navigation";
 import { getDb } from "@/db/server";
 import { getUser } from "@/lib/supabase/server";
@@ -69,20 +70,14 @@ export default async function Integraciones({ searchParams }: { searchParams: Pr
           <section className="card">
             <h2>Eventos recientes ({events.length})</h2>
             {events.length === 0 ? <div className="empty">Sin eventos.</div> : (
-              <div className="tbl-wrap" tabIndex={0} role="region" aria-label="Tabla desplazable"><table>
-                <thead><tr><th>Cuándo</th><th>Sentido</th><th>Hoja</th><th>Estado</th><th>Detalle</th></tr></thead>
-                <tbody>{events.map((e) => <tr key={e.id}><td>{when(e.createdAt)}</td><td>{e.direction === "sheet_to_app" ? "Hoja → app" : "App → hoja"}</td><td>{e.sheetName}</td><td><span className={`pill ${e.status === "error" ? "overload" : e.status === "processed" ? "ok" : "low"}`}>{e.status}</span></td><td className="muted">{e.error ?? ""}</td></tr>)}</tbody>
-              </table></div>
+              <PagedTable head={<tr><th>Cuándo</th><th>Sentido</th><th>Hoja</th><th>Estado</th><th>Detalle</th></tr>} rows={events.map((e) => <tr key={e.id}><td>{when(e.createdAt)}</td><td>{e.direction === "sheet_to_app" ? "Hoja → app" : "App → hoja"}</td><td>{e.sheetName}</td><td><span className={`pill ${e.status === "error" ? "overload" : e.status === "processed" ? "ok" : "low"}`}>{e.status}</span></td><td className="muted">{e.error ?? ""}</td></tr>)} />
             )}
           </section>
 
           <section className="card">
             <h2>Calidad de datos · hallazgos abiertos ({issues.length})</h2>
             {issues.length === 0 ? <div className="empty">Sin hallazgos abiertos.</div> : (
-              <div className="tbl-wrap" tabIndex={0} role="region" aria-label="Tabla desplazable"><table>
-                <thead><tr><th>Regla</th><th>Gravedad</th><th>Hoja · fila</th><th>Mensaje</th></tr></thead>
-                <tbody>{issues.map((i) => { const v = (i.suggestedValue ?? {}) as { sheet?: string; row?: number; message?: string }; return <tr key={i.id}><td>{i.ruleCode}</td><td>{i.severity}</td><td>{v.sheet} · {v.row}</td><td>{v.message}</td></tr>; })}</tbody>
-              </table></div>
+              <PagedTable head={<tr><th>Regla</th><th>Gravedad</th><th>Hoja · fila</th><th>Mensaje</th></tr>} rows={issues.map((i) => { const v = (i.suggestedValue ?? {}) as { sheet?: string; row?: number; message?: string }; return <tr key={i.id}><td>{i.ruleCode}</td><td>{i.severity}</td><td>{v.sheet} · {v.row}</td><td>{v.message}</td></tr>; })} />
             )}
           </section>
         </>
