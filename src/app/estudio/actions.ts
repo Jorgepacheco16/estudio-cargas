@@ -39,7 +39,7 @@ const opt = <const T extends [string, ...string[]]>(values: T) => z.preprocess((
 
 export async function signOutAction() {
   await (await createClient()).auth.signOut();
-  redirect("/");
+  redirect("/ingreso");
 }
 
 export async function createStudyAction(fd: FormData) {

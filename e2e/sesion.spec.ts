@@ -237,7 +237,7 @@ test("detalle del cargo: «Validar cobertura de funciones» avisa con claridad (
 test("cerrar sesión devuelve al ingreso y protege las páginas de captura", async () => {
   await open("/");
   await page.getByRole("button", { name: "Salir" }).click();
-  await expect(page.getByRole("link", { name: "Ingresar" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Ingresar" })).toBeVisible();
   await open("/estudio");
-  await expect(page).toHaveURL(/\/login/);
+  await expect(page).toHaveURL(/\/ingreso/);
 });

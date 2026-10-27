@@ -11,3 +11,17 @@ export function rateLimit(key: string, max: number, windowMs: number, now = Date
   h.n++;
   return h.n <= max ? { ok: true, retryAfter: 0 } : { ok: false, retryAfter: Math.ceil((h.reset - now) / 1000) };
 }
+
+/**
+ * Límite solo de intentos FALLIDOS (ingreso, D-76): entrar bien no gasta intentos, así que quien ingresa correctamente muchas veces seguidas no se bloquea,
+ * pero quien adivina claves queda detenido después de `max` fallos en la ventana.
+ */
+export function isBlocked(key: string, max: number, now = Date.now()): boolean {
+  const h = hits.get(key);
+  return !!h && h.reset > now && h.n >= max;
+}
+export function recordFailure(key: string, windowMs: number, now = Date.now()): void {
+  const h = hits.get(key);
+  if (!h || h.reset <= now) hits.set(key, { n: 1, reset: now + windowMs });
+  else h.n++;
+}

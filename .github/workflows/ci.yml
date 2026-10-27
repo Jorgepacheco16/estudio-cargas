@@ -79,7 +79,17 @@ jobs:
       - run: npm ci
       - run: npx playwright install --with-deps chromium
       - run: npm run build
-      - name: Pruebas de navegador públicas (sin credenciales; la aplicación muestra datos DEMO)
+      - name: Usuario y clave de demostración solo para esta ejecución (aleatorios; no son secretos del proyecto)
+        run: |
+          node -e '
+          const c = require("crypto");
+          const pw = c.randomBytes(12).toString("hex"), salt = c.randomBytes(16);
+          console.log("DEMO_USER=ci-demo");
+          console.log("E2E_DEMO_PASSWORD=" + pw);
+          console.log("DEMO_PASSWORD_HASH=scrypt$" + salt.toString("hex") + "$" + c.scryptSync(pw, salt, 32).toString("hex"));
+          console.log("GUEST_SESSION_SECRET=" + c.randomBytes(32).toString("hex"));
+          ' >> "$GITHUB_ENV"
+      - name: Pruebas de navegador (ingreso, puerta de entrada y demostración como invitado)
         run: npx playwright test e2e/publico.spec.ts
   restore:
     runs-on: ubuntu-latest

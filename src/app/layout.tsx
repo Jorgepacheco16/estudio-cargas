@@ -1,29 +1,44 @@
 import type { Metadata } from "next";
 import Image from "next/image";
+import { headers } from "next/headers";
 import "./globals.css";
 import { Nav } from "@/components/Nav";
 import { UserBadge } from "@/components/UserBadge";
+import { BalanceLogo } from "@/components/brand/BalanceLogo";
+import { APP, CLIENT } from "@/lib/client-theme";
 
 export const metadata: Metadata = {
-  title: { default: "Estudio de Actividades y Cargas Laborales", template: "%s · Estudio de cargas" },
-  description: "Estudio de actividades, cargas laborales y rediseño de cargos",
+  title: { default: `${APP.name} · ${APP.tagline}`, template: `%s · ${APP.name}` },
+  description: "BalanceAPP: estudio de actividades, cargas laborales y rediseño de cargos",
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  // La página de ingreso se muestra sola, sin encabezado ni menú (el proxy entrega la ruta en x-pathname).
+  const bare = ((await headers()).get("x-pathname") ?? "").startsWith("/ingreso");
   return (
     <html lang="es">
       <body>
-        <header className="topbar">
-          <div className="topbar-in">
-            <div className="brand">
-              <Image className="logo" src="/logo-megatiendas.png" alt="Megatiendas" width={170} height={62} priority />
-              <div className="brand-name">Estudio de actividades y cargas laborales</div>
-            </div>
-            <div className="topbar-user"><UserBadge /></div>
-          </div>
-        </header>
-        <Nav />
-        <div className="wrap">{children}</div>
+        {bare ? children : (
+          <>
+            <header className="topbar">
+              <div className="topbar-in">
+                <div className="brand">
+                  <BalanceLogo size={42} />
+                  <div className="brand-name">Estudio de actividades y cargas laborales</div>
+                </div>
+                <div className="topbar-user">
+                  <div className="client" aria-label={`Cliente: ${CLIENT.name}`}>
+                    <span className="client-label">Cliente</span>
+                    <Image className="client-logo" src={CLIENT.logo} alt={CLIENT.name} width={CLIENT.logoWidth} height={CLIENT.logoHeight} priority />
+                  </div>
+                  <UserBadge />
+                </div>
+              </div>
+            </header>
+            <Nav />
+            <div className="wrap">{children}</div>
+          </>
+        )}
       </body>
     </html>
   );

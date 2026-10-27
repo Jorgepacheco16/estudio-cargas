@@ -10,5 +10,5 @@ export async function GET(req: NextRequest) {
     const { error } = await (await createClient()).auth.exchangeCodeForSession(code);
     if (!error) return NextResponse.redirect(`${origin}/estudio`);
   }
-  return NextResponse.redirect(`${origin}/login?error=oauth`);
+  return NextResponse.redirect(`${origin}/ingreso?error=oauth`);
 }
