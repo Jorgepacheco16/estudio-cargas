@@ -30,10 +30,15 @@ test("[anónimo] la página de ingreso muestra la marca, el ingreso con usuario 
   await expect(page.getByRole("button", { name: "Entrar", exact: true })).toBeEnabled();
   await expect(page.getByRole("button", { name: "Entrar con Google" })).toBeEnabled();
   await expect(page.getByRole("link", { name: "Ingresar como invitado" })).toBeVisible();
-  await expect(page.getByText("Equilibre la carga de trabajo con la capacidad de su equipo.")).toBeVisible();
   const img = page.locator(".auth-art-figure img");
-  await expect(img).toBeVisible();
-  expect(await img.evaluate((e) => (e as HTMLImageElement).naturalWidth), "la imagen del ingreso debe cargar (no la bloquea la puerta de entrada)").toBeGreaterThan(300);
+  if ((page.viewportSize()?.width ?? 0) > 900) {
+    // En pantallas anchas se ve la imagen con su frase; en el teléfono el ingreso muestra solo el formulario.
+    await expect(page.getByText("Equilibre la carga de trabajo con la capacidad de su equipo.")).toBeVisible();
+    await expect(img).toBeVisible();
+    expect(await img.evaluate((e) => (e as HTMLImageElement).naturalWidth), "la imagen del ingreso debe cargar (no la bloquea la puerta de entrada)").toBeGreaterThan(300);
+  } else {
+    await expect(img).toBeHidden();
+  }
   await expect(page.getByRole("navigation", { name: "Principal" })).toHaveCount(0); // sin menú: solo el ingreso
   expect(await page.content()).not.toMatch(/service_role|sb_secret|postgres:\/\/|DEMO_PASSWORD|GUEST_SESSION_SECRET/i);
   await page.goto("/login");
