@@ -283,16 +283,57 @@ details.adv > .adv-body > .card { box-shadow: none; border: 0; padding: 0; margi
 tfoot td { background: var(--blue-soft); border-top: 2px solid var(--blue); border-bottom: 0; }
 
 /* ───── Filtros de las secciones (D-74) ───── */
-.filters { margin: 0 0 14px; background: var(--card, #fff); border: 1px solid var(--line, #d8dee6); border-radius: 10px; padding: 8px 14px; }
-.filters > summary { cursor: pointer; font-weight: 700; padding: 4px 0; }
-.filters-body { display: flex; flex-wrap: wrap; gap: 12px 16px; align-items: flex-end; padding: 10px 0 6px; }
+.filters { margin: 0 0 14px; background: var(--card); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow); }
+.filters > summary { display: flex; align-items: center; gap: 8px; cursor: pointer; list-style: none; padding: 11px 16px; font-weight: 700; color: var(--ink); }
+.filters > summary::-webkit-details-marker { display: none; }
+.filters > summary:focus-visible { outline: 3px solid var(--blue); outline-offset: -3px; border-radius: 12px; }
+.filters > summary .fb-chev { margin-left: 4px; color: var(--muted); transition: transform .15s; }
+.filters[open] > summary .fb-chev { transform: rotate(180deg); }
+.filters[open] > summary { border-bottom: 1px solid var(--line); }
+.fb-ico { color: var(--blue); flex: none; }
+.fb-title { font-size: .9375rem; }
+.fb-count { margin-left: auto; font-weight: 400; font-size: .8125rem; color: var(--muted); }
+.fb-count b { color: var(--ink); }
+.fb-badge { display: inline-flex; align-items: center; justify-content: center; min-width: 20px; height: 20px; padding: 0 6px; border-radius: 999px; background: var(--blue); color: var(--card); font-size: .75rem; font-weight: 700; }
+.fb-badge.sm { min-width: 18px; height: 18px; font-size: .6875rem; }
+.filters-body { padding: 14px 16px 14px; display: grid; gap: 12px; }
+.fb-row { display: flex; flex-wrap: wrap; gap: 12px 14px; align-items: flex-end; }
+.fb-field { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.fb-label { font-size: .6875rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
+.fb-field input[type="search"], .fb-field input[type="date"] { height: 38px; padding: 0 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--card); color: var(--ink); font: inherit; font-size: .875rem; }
+.fb-search { flex: 1 1 220px; max-width: 360px; }
+.fb-search input { width: 100%; }
+.fb-daterow { display: flex; align-items: center; gap: 6px; color: var(--muted); }
+.fb-field input:focus-visible { outline: 3px solid var(--blue); outline-offset: 1px; }
 .ms { position: relative; }
-.ms > summary { cursor: pointer; list-style: none; padding: 8px 12px; border: 1px solid var(--line, #d8dee6); border-radius: 8px; background: var(--card, #fff); font-weight: 600; font-size: .875rem; white-space: nowrap; }
+.ms > summary { display: flex; align-items: center; gap: 8px; min-width: 170px; max-width: 260px; height: 38px; padding: 0 10px 0 12px; cursor: pointer; list-style: none; border: 1px solid var(--line); border-radius: 8px; background: var(--card); color: var(--ink); font-size: .875rem; font-weight: 400; }
 .ms > summary::-webkit-details-marker { display: none; }
-.ms[open] > summary { border-color: var(--blue); }
-.ms-list { position: absolute; z-index: 20; top: calc(100% + 4px); left: 0; min-width: 240px; max-width: 360px; max-height: 280px; overflow: auto; display: grid; gap: 6px; padding: 10px 12px; background: var(--card, #fff); border: 1px solid var(--line, #d8dee6); border-radius: 8px; box-shadow: 0 8px 24px rgba(0, 0, 0, .12); }
-.ms-list label { display: flex; gap: 8px; align-items: center; font-weight: 400; font-size: .875rem; }
+.ms > summary:hover { border-color: var(--muted); }
+.ms > summary.has { border-color: var(--blue); background: var(--blue-soft); font-weight: 600; }
+.ms[open] > summary { border-color: var(--blue); box-shadow: 0 0 0 3px var(--blue-soft); }
+.ms > summary:focus-visible { outline: 3px solid var(--blue); outline-offset: 1px; }
+.ms-text { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ms > summary .fb-chev { flex: none; color: var(--muted); transition: transform .15s; }
+.ms[open] > summary .fb-chev { transform: rotate(180deg); }
+.ms-pop { position: absolute; z-index: 30; top: calc(100% + 6px); left: 0; width: max(100%, 260px); max-width: 360px; display: grid; gap: 6px; padding: 8px; background: var(--card); border: 1px solid var(--line); border-radius: 10px; box-shadow: 0 10px 30px rgba(0, 0, 0, .16); }
+.ms-find { width: 100%; height: 34px; padding: 0 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--card); color: var(--ink); font: inherit; font-size: .8125rem; }
+.ms-tools { display: flex; justify-content: space-between; padding: 0 2px; }
+.ms-tools button { border: 0; background: none; padding: 2px 4px; color: var(--blue); font: inherit; font-size: .75rem; font-weight: 700; cursor: pointer; border-radius: 4px; }
+.ms-tools button:hover:not(:disabled) { text-decoration: underline; }
+.ms-tools button:disabled { color: var(--muted); opacity: .6; cursor: default; }
+.ms-list { max-height: 252px; overflow: auto; display: grid; align-content: start; gap: 1px; }
+.ms-list label { display: flex; gap: 9px; align-items: center; padding: 7px 8px; border-radius: 6px; cursor: pointer; font-weight: 400; font-size: .875rem; color: var(--ink); }
+.ms-list label:hover { background: var(--bg); }
+.ms-list label.on { background: var(--blue-soft); font-weight: 600; }
+.ms-list input { accent-color: var(--blue); width: 16px; height: 16px; min-height: 0; padding: 0; flex: none; }
 .filters-actions { display: flex; gap: 8px; margin-left: auto; }
+.fb-chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; padding: 10px 0 0; list-style: none; border-top: 1px dashed var(--line); }
+.fb-chips li { display: inline-flex; align-items: center; gap: 2px; max-width: 100%; padding: 3px 4px 3px 10px; border-radius: 999px; background: var(--blue-soft); color: var(--blue); font-size: .8125rem; font-weight: 600; }
+.fb-chips li span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fb-chips button { width: 20px; height: 20px; border: 0; border-radius: 50%; background: transparent; color: inherit; font-size: 1rem; line-height: 1; cursor: pointer; }
+.fb-chips button:hover { background: var(--blue); color: var(--card); }
+.fb-chips button:focus-visible { outline: 2px solid var(--blue); outline-offset: 1px; }
+@media (max-width: 640px) { .fb-count { display: none; } .fb-field, .fb-search { flex: 1 1 100%; max-width: none; } .ms > summary { max-width: none; width: 100%; } .filters-actions { margin-left: 0; width: 100%; } }
 
 /* ───── Marca BalanceAPP (toma los colores del cliente) ───── */
 :root { --brand-primary: var(--red); --brand-secondary: var(--blue); }
