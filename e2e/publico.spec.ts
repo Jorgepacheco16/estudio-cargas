@@ -36,6 +36,9 @@ test("[anónimo] la página de ingreso muestra la marca, el ingreso con usuario 
     await expect(page.getByText("Equilibre la carga de trabajo con la capacidad de su equipo.")).toBeVisible();
     await expect(img).toBeVisible();
     expect(await img.evaluate((e) => (e as HTMLImageElement).naturalWidth), "la imagen del ingreso debe cargar (no la bloquea la puerta de entrada)").toBeGreaterThan(300);
+    // La imagen debe cubrir TODO el panel (si no, se vería el fondo de reserva). Con el tamaño de pantalla de la prueba (1280×720) falló una vez por una altura automática del panel.
+    const cubre = await page.evaluate(`(() => { const a = document.querySelector(".auth-art").getBoundingClientRect(), f = document.querySelector(".auth-art-figure").getBoundingClientRect(); return f.width >= a.width - 1 && f.height >= a.height - 1; })()`);
+    expect(cubre, "la imagen debe cubrir todo el panel").toBe(true);
   } else {
     await expect(img).toBeHidden();
   }
