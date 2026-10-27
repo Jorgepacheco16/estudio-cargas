@@ -20,8 +20,9 @@ export default async function Cargos({ searchParams }: { searchParams: Promise<R
         <div className="tools"><ModeForm mode={mode} keep={pf.current} /><ExportButtons view="cargos" mode={mode} extra={filterQuery(pf.current)} /></div>
       </div>
       {a.positions.length > 0 && <FilterBar key={filterQuery(pf.current)} fields={pf.fields} triples={pf.triples} current={pf.current} shown={pf.rows.length} total={a.positions.length} hidden={{ modo: mode }} clearHref={`/cargos?modo=${mode}`} />}
-      <section className="card">{a.positions.length > 0 && pf.rows.length === 0 ? <div className="empty">Ningún cargo cumple los filtros elegidos. Cambie o limpie los filtros.</div> : <CargosTable rows={pf.rows} />}</section>
+      {/* Primero los registros capturados (lo que se edita); debajo, el cuadro de resultados calculados (solo lectura). */}
       <EntrySection hoja="2" sp={raw} bar={false} />
+      <section className="card">{a.positions.length > 0 && pf.rows.length === 0 ? <div className="empty">Ningún cargo cumple los filtros elegidos. Cambie o limpie los filtros.</div> : <CargosTable rows={pf.rows} />}</section>
     </main>
   );
 }
