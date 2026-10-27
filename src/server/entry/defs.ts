@@ -12,7 +12,12 @@ export type EntryId = "2" | "3" | "5" | "6" | "7" | "8" | "9" | "10";
 export const ENTRY_IDS: EntryId[] = ["2", "3", "5", "6", "7", "8", "9", "10"];
 export type Control = "text" | "textarea" | "select" | "yesno" | "number" | "percent" | "date" | "area" | "site" | "position" | "activity";
 
-export interface EntryField { col: string; field: string; header: string; /** Encabezado del libro de Excel (la plantilla de carga masiva también lo reconoce). */ libroHeader: string; hint: string; group: string; control: Control; list?: keyof typeof LABELS; required: boolean }
+/** Hojas cuyo registro lleva el dato «Centro de operaciones» (D-75): no existe en el libro de Excel; se guarda aparte y se espeja a una columna adicional de la hoja de Google. */
+export const SITE_FIELD_SHEETS: EntryId[] = ["8", "9", "10"];
+/** Clave del campo «Centro de operaciones» en los formularios y las plantillas (no es una columna del libro). */
+export const SITE_COL = "CO";
+
+export interface EntryField { col: string; field: string; header: string; /** Encabezado del libro de Excel (la plantilla de carga masiva también lo reconoce). */ libroHeader: string; hint: string; group: string; control: Control; list?: keyof typeof LABELS; required: boolean; /** Campo propio de la aplicación (no es una casilla del libro de Excel). */ extra?: boolean }
 export interface EntryComputed { col: string; header: string; format: "text" | "number" | "percent" }
 export interface EntryDef {
   id: EntryId; adapter: Adapter; sheetName: string; title: string; note: string; short: string;
@@ -26,7 +31,7 @@ const REQUIRED: Record<EntryId, string[]> = {
 const SHORT_TITLE: Record<EntryId, string> = { "2": "Cargos y dotación", "3": "Actividades", "5": "Medibilidad", "6": "Pertinencia", "7": "Riesgos", "8": "Oportunidades", "9": "Rediseño", "10": "Plan de acción" };
 /** Campos de la lista (tabla) de cada hoja, además de los calculados. */
 const LIST_FIELDS: Record<EntryId, string[]> = {
-  "2": ["area", "site", "position", "headcount", "weeklyHours"], "3": ["code", "area", "position", "name"], "5": ["code"], "6": ["code"], "7": ["code"], "8": ["code", "type"], "9": ["area", "position"], "10": ["code", "action"],
+  "2": ["area", "site", "position", "headcount", "weeklyHours"], "3": ["code", "area", "position", "name"], "5": ["code"], "6": ["code"], "7": ["code"], "8": ["code", "type", "site"], "9": ["area", "position", "site"], "10": ["code", "action", "site"],
 };
 
 function controlOf(id: EntryId, field: string, kind: unknown): { control: Control; list?: keyof typeof LABELS } {
@@ -54,6 +59,12 @@ function build(id: EntryId): EntryDef {
     const c = byCol.get(col); if (!c || !c.input) return [];
     return [{ col, field, header: ui(c.header), libroHeader: c.header, hint: ui(c.hint), group: c.group, ...controlOf(id, field, kind), required: REQUIRED[id].includes(field) }];
   }).sort((x, y) => cat.columns.findIndex((c) => c.col === x.col) - cat.columns.findIndex((c) => c.col === y.col));
+  if (SITE_FIELD_SHEETS.includes(id)) {
+    // D-75: «Centro de operaciones» (opcional), junto al cargo; no es una casilla del libro.
+    const at = fields.findIndex((f) => f.field === "position");
+    const near = fields[at];
+    fields.splice(at + 1, 0, { col: SITE_COL, field: "site", header: "Centro de operaciones (CO)", libroHeader: "Centro de operaciones (CO)", hint: "Centro de operaciones al que aplica. Debe estar ya registrado en Cargos y dotación. Opcional.", group: near.group, control: "site", required: false, extra: true });
+  }
   const computed: EntryComputed[] = cat.columns.filter((c) => !c.input).map((c) => ({ col: c.col, header: ui(c.header), format: "text" as const }));
   return { id, adapter, sheetName: cat.sheetName, title: sentence(cat.title.replace(/^HOJA \d+ · /i, "")), note: ui(cat.note), short: SHORT_TITLE[id], fields, computed, listFields: LIST_FIELDS[id] };
 }

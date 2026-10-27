@@ -1,0 +1,4031 @@
+{
+  "id": "2ffa8626-3567-4fcc-98c8-e7978345d118",
+  "prevId": "7cf1c3c2-e7b9-4664-b309-9f349ecb5d58",
+  "version": "7",
+  "dialect": "postgresql",
+  "tables": {
+    "public.action_items": {
+      "name": "action_items",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "study_id": {
+          "name": "study_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "data_kind": {
+          "name": "data_kind",
+          "type": "data_kind",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'real'"
+        },
+        "code": {
+          "name": "code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "finding": {
+          "name": "finding",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "action": {
+          "name": "action",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "area_id": {
+          "name": "area_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "site_id": {
+          "name": "site_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "position_name": {
+          "name": "position_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "resources": {
+          "name": "resources",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "estimated_cost": {
+          "name": "estimated_cost",
+          "type": "numeric(16, 2)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "priority": {
+          "name": "priority",
+          "type": "level3",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "initiative_type": {
+          "name": "initiative_type",
+          "type": "initiative_type",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "start_date": {
+          "name": "start_date",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "end_date": {
+          "name": "end_date",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "dependencies": {
+          "name": "dependencies",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "risks": {
+          "name": "risks",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "result_indicator": {
+          "name": "result_indicator",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "target": {
+          "name": "target",
+          "type": "numeric(18, 4)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "status": {
+          "name": "status",
+          "type": "plan_status",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "actual_result": {
+          "name": "actual_result",
+          "type": "numeric(18, 4)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "version": {
+          "name": "version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "action_items_study_id_studies_id_fk": {
+          "name": "action_items_study_id_studies_id_fk",
+          "tableFrom": "action_items",
+          "tableTo": "studies",
+          "columnsFrom": [
+            "study_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "actions_area_fk": {
+          "name": "actions_area_fk",
+          "tableFrom": "action_items",
+          "tableTo": "areas",
+          "columnsFrom": [
+            "area_id",
+            "study_id"
+          ],
+          "columnsTo": [
+            "id",
+            "study_id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "actions_site_fk": {
+          "name": "actions_site_fk",
+          "tableFrom": "action_items",
+          "tableTo": "sites",
+          "columnsFrom": [
+            "site_id",
+            "study_id"
+          ],
+          "columnsTo": [
+            "id",
+            "study_id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "actions_study_code_uq": {
+          "name": "actions_study_code_uq",
+          "nullsNotDistinct": false,
+          "columns": [
+            "study_id",
+            "code"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "actions_dates_ck": {
+          "name": "actions_dates_ck",
+          "value": "\"action_items\".\"end_date\" is null or \"action_items\".\"start_date\" is null or \"action_items\".\"end_date\" >= \"action_items\".\"start_date\""
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.activities": {
+      "name": "activities",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "study_id": {
+          "name": "study_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "data_kind": {
+          "name": "data_kind",
+          "type": "data_kind",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'real'"
+        },
+        "code": {
+          "name": "code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "position_id": {
+          "name": "position_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "employee_code": {
+          "name": "employee_code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "description": {
+          "name": "description",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "process": {
+          "name": "process",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "objective_result": {
+          "name": "objective_result",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "other_positions": {
+          "name": "other_positions",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "formally_documented": {
+          "name": "formally_documented",
+          "type": "tri_state",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "frequency": {
+          "name": "frequency",
+          "type": "frequency",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "calc_mode": {
+          "name": "calc_mode",
+          "type": "calc_mode",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "executions_per_period": {
+          "name": "executions_per_period",
+          "type": "numeric(14, 4)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "period": {
+          "name": "period",
+          "type": "period_unit",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "scope": {
+          "name": "scope",
+          "type": "exec_scope",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "units_per_execution": {
+          "name": "units_per_execution",
+          "type": "numeric(14, 4)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "time_avg_min": {
+          "name": "time_avg_min",
+          "type": "numeric(12, 4)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "time_min_min": {
+          "name": "time_min_min",
+          "type": "numeric(12, 4)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "time_max_min": {
+          "name": "time_max_min",
+          "type": "numeric(12, 4)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "season_high_factor": {
+          "name": "season_high_factor",
+          "type": "numeric(6, 3)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "season_low_factor": {
+          "name": "season_low_factor",
+          "type": "numeric(6, 3)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "data_source": {
+          "name": "data_source",
+          "type": "data_source",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "confidence": {
+          "name": "confidence",
+          "type": "confidence",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "simultaneous_people": {
+          "name": "simultaneous_people",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "load_share_pct": {
+          "name": "load_share_pct",
+          "type": "numeric(5, 4)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "secondary_position_id": {
+          "name": "secondary_position_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "all_shifts": {
+          "name": "all_shifts",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "planning": {
+          "name": "planning",
+          "type": "planning",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "tools": {
+          "name": "tools",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "inputs": {
+          "name": "inputs",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "deliverable": {
+          "name": "deliverable",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "dependencies": {
+          "name": "dependencies",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "wait_min": {
+          "name": "wait_min",
+          "type": "numeric(12, 4)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "wait_occupies_person": {
+          "name": "wait_occupies_person",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "travel_min": {
+          "name": "travel_min",
+          "type": "numeric(12, 4)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "rework_pct": {
+          "name": "rework_pct",
+          "type": "numeric(5, 4)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "rework_min": {
+          "name": "rework_min",
+          "type": "numeric(12, 4)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "consequences": {
+          "name": "consequences",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "controls": {
+          "name": "controls",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "activity_type": {
+          "name": "activity_type",
+          "type": "activity_type",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "value_class": {
+          "name": "value_class",
+          "type": "value_class",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "mandatory": {
+          "name": "mandatory",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "standardization_potential": {
+          "name": "standardization_potential",
+          "type": "potential",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "simplification_potential": {
+          "name": "simplification_potential",
+          "type": "potential",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "automation_potential": {
+          "name": "automation_potential",
+          "type": "potential",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "integration_possible": {
+          "name": "integration_possible",
+          "type": "yes_no_ne",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "evidence": {
+          "name": "evidence",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "notes": {
+          "name": "notes",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "pending_validation": {
+          "name": "pending_validation",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "version": {
+          "name": "version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1
+        }
+      },
+      "indexes": {
+        "activities_position_idx": {
+          "name": "activities_position_idx",
+          "columns": [
+            {
+              "expression": "position_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "activities_study_id_studies_id_fk": {
+          "name": "activities_study_id_studies_id_fk",
+          "tableFrom": "activities",
+          "tableTo": "studies",
+          "columnsFrom": [
+            "study_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "activities_position_fk": {
+          "name": "activities_position_fk",
+          "tableFrom": "activities",
+          "tableTo": "positions",
+          "columnsFrom": [
+            "position_id",
+            "study_id"
+          ],
+          "columnsTo": [
+            "id",
+            "study_id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "activities_secondary_position_fk": {
+          "name": "activities_secondary_position_fk",
+          "tableFrom": "activities",
+          "tableTo": "positions",
+          "columnsFrom": [
+            "secondary_position_id",
+            "study_id"
+          ],
+          "columnsTo": [
+            "id",
+            "study_id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "activities_study_code_uq": {
+          "name": "activities_study_code_uq",
+          "nullsNotDistinct": false,
+          "columns": [
+            "study_id",
+            "code"
+          ]
+        },
+        "activities_id_study_uq": {
+          "name": "activities_id_study_uq",
+          "nullsNotDistinct": false,
+          "columns": [
+            "id",
+            "study_id"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "activities_code_ck": {
+          "name": "activities_code_ck",
+          "value": "length(btrim(\"activities\".\"code\")) > 0"
+        },
+        "activities_ranges_ck": {
+          "name": "activities_ranges_ck",
+          "value": "\n    (\"activities\".\"executions_per_period\" is null or \"activities\".\"executions_per_period\" >= 0) and (\"activities\".\"units_per_execution\" is null or \"activities\".\"units_per_execution\" >= 0)\n    and (\"activities\".\"time_avg_min\" is null or \"activities\".\"time_avg_min\" >= 0) and (\"activities\".\"time_min_min\" is null or \"activities\".\"time_min_min\" >= 0) and (\"activities\".\"time_max_min\" is null or \"activities\".\"time_max_min\" >= 0)\n    and (\"activities\".\"season_high_factor\" is null or \"activities\".\"season_high_factor\" between 0 and 10) and (\"activities\".\"season_low_factor\" is null or \"activities\".\"season_low_factor\" between 0 and 10)\n    and (\"activities\".\"simultaneous_people\" is null or \"activities\".\"simultaneous_people\" between 1 and 50)\n    and (\"activities\".\"load_share_pct\" is null or \"activities\".\"load_share_pct\" between 0 and 1) and (\"activities\".\"rework_pct\" is null or \"activities\".\"rework_pct\" between 0 and 1)\n    and (\"activities\".\"wait_min\" is null or \"activities\".\"wait_min\" >= 0) and (\"activities\".\"travel_min\" is null or \"activities\".\"travel_min\" >= 0) and (\"activities\".\"rework_min\" is null or \"activities\".\"rework_min\" >= 0)"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.activity_shifts": {
+      "name": "activity_shifts",
+      "schema": "",
+      "columns": {
+        "study_id": {
+          "name": "study_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "activity_id": {
+          "name": "activity_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "shift_id": {
+          "name": "shift_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "activity_shifts_shift_idx": {
+          "name": "activity_shifts_shift_idx",
+          "columns": [
+            {
+              "expression": "shift_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "activity_shifts_study_id_studies_id_fk": {
+          "name": "activity_shifts_study_id_studies_id_fk",
+          "tableFrom": "activity_shifts",
+          "tableTo": "studies",
+          "columnsFrom": [
+            "study_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "activity_shifts_activity_fk": {
+          "name": "activity_shifts_activity_fk",
+          "tableFrom": "activity_shifts",
+          "tableTo": "activities",
+          "columnsFrom": [
+            "activity_id",
+            "study_id"
+          ],
+          "columnsTo": [
+            "id",
+            "study_id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "activity_shifts_shift_fk": {
+          "name": "activity_shifts_shift_fk",
+          "tableFrom": "activity_shifts",
+          "tableTo": "position_shifts",
+          "columnsFrom": [
+            "shift_id",
+            "study_id"
+          ],
+          "columnsTo": [
+            "id",
+            "study_id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "activity_shifts_pk": {
+          "name": "activity_shifts_pk",
+          "nullsNotDistinct": false,
+          "columns": [
+            "activity_id",
+            "shift_id"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.agent_proposals": {
+      "name": "agent_proposals",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "study_id": {
+          "name": "study_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "run_id": {
+          "name": "run_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "kind": {
+          "name": "kind",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "summary": {
+          "name": "summary",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "payload": {
+          "name": "payload",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'pending'"
+        },
+        "reviewed_by": {
+          "name": "reviewed_by",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "reviewed_at": {
+          "name": "reviewed_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "applied_at": {
+          "name": "applied_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "agent_proposals_study_id_studies_id_fk": {
+          "name": "agent_proposals_study_id_studies_id_fk",
+          "tableFrom": "agent_proposals",
+          "tableTo": "studies",
+          "columnsFrom": [
+            "study_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "agent_proposals_run_id_agent_runs_id_fk": {
+          "name": "agent_proposals_run_id_agent_runs_id_fk",
+          "tableFrom": "agent_proposals",
+          "tableTo": "agent_runs",
+          "columnsFrom": [
+            "run_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.agent_runs": {
+      "name": "agent_runs",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "study_id": {
+          "name": "study_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "trigger": {
+          "name": "trigger",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "model": {
+          "name": "model",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'running'"
+        },
+        "input_tokens": {
+          "name": "input_tokens",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "output_tokens": {
+          "name": "output_tokens",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "agent_runs_study_id_studies_id_fk": {
+          "name": "agent_runs_study_id_studies_id_fk",
+          "tableFrom": "agent_runs",
+          "tableTo": "studies",
+          "columnsFrom": [
+            "study_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.areas": {
+      "name": "areas",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "study_id": {
+          "name": "study_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "sort_order": {
+          "name": "sort_order",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "areas_study_id_studies_id_fk": {
+          "name": "areas_study_id_studies_id_fk",
+          "tableFrom": "areas",
+          "tableTo": "studies",
+          "columnsFrom": [
+            "study_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "areas_study_name_uq": {
+          "name": "areas_study_name_uq",
+          "nullsNotDistinct": false,
+          "columns": [
+            "study_id",
+            "name"
+          ]
+        },
+        "areas_id_study_uq": {
+          "name": "areas_id_study_uq",
+          "nullsNotDistinct": false,
+          "columns": [
+            "id",
+            "study_id"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.audit_log": {
+      "name": "audit_log",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "bigint",
+          "primaryKey": true,
+          "notNull": true,
+          "identity": {
+            "type": "always",
+            "name": "audit_log_id_seq",
+            "schema": "public",
+            "increment": "1",
+            "startWith": "1",
+            "minValue": "1",
+            "maxValue": "9223372036854775807",
+            "cache": "1",
+            "cycle": false
+          }
+        },
+        "study_id": {
+          "name": "study_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "actor_id": {
+          "name": "actor_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "origin": {
+          "name": "origin",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "action": {
+          "name": "action",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "entity": {
+          "name": "entity",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "entity_id": {
+          "name": "entity_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "diff": {
+          "name": "diff",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "at": {
+          "name": "at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "audit_study_at_idx": {
+          "name": "audit_study_at_idx",
+          "columns": [
+            {
+              "expression": "study_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "audit_entity_idx": {
+          "name": "audit_entity_idx",
+          "columns": [
+            {
+              "expression": "entity",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "entity_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "audit_log_study_id_studies_id_fk": {
+          "name": "audit_log_study_id_studies_id_fk",
+          "tableFrom": "audit_log",
+          "tableTo": "studies",
+          "columnsFrom": [
+            "study_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.deviations": {
+      "name": "deviations",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "study_id": {
+          "name": "study_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "rule_code": {
+          "name": "rule_code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "entity": {
+          "name": "entity",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "entity_id": {
+          "name": "entity_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "baseline": {
+          "name": "baseline",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "observed": {
+          "name": "observed",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "explanation": {
+          "name": "explanation",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'open'"
+        },
+        "detected_at": {
+          "name": "detected_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "deviations_study_id_studies_id_fk": {
+          "name": "deviations_study_id_studies_id_fk",
+          "tableFrom": "deviations",
+          "tableTo": "studies",
+          "columnsFrom": [
+            "study_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.improvement_opportunities": {
+      "name": "improvement_opportunities",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "study_id": {
+          "name": "study_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "data_kind": {
+          "name": "data_kind",
+          "type": "data_kind",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'real'"
+        },
+        "code": {
+          "name": "code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "type": {
+          "name": "type",
+          "type": "opportunity_type",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "finding_class": {
+          "name": "finding_class",
+          "type": "finding_class",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "problem": {
+          "name": "problem",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "related_activity_id": {
+          "name": "related_activity_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "evidence": {
+          "name": "evidence",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "probable_cause": {
+          "name": "probable_cause",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "proposal": {
+          "name": "proposal",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "area_id": {
+          "name": "area_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "site_id": {
+          "name": "site_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "position_name": {
+          "name": "position_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "expected_benefit": {
+          "name": "expected_benefit",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "recoverable_hours_per_week": {
+          "name": "recoverable_hours_per_week",
+          "type": "numeric(10, 2)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "impact_assumptions": {
+          "name": "impact_assumptions",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "implementation_risks": {
+          "name": "implementation_risks",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "impact_score": {
+          "name": "impact_score",
+          "type": "smallint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "ease_score": {
+          "name": "ease_score",
+          "type": "smallint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "effort_score": {
+          "name": "effort_score",
+          "type": "smallint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "cost_score": {
+          "name": "cost_score",
+          "type": "smallint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "risk_score": {
+          "name": "risk_score",
+          "type": "smallint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "owner": {
+          "name": "owner",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "due_date": {
+          "name": "due_date",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "follow_up_indicator": {
+          "name": "follow_up_indicator",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "validation_status": {
+          "name": "validation_status",
+          "type": "validation_status",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "version": {
+          "name": "version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "improvement_opportunities_study_id_studies_id_fk": {
+          "name": "improvement_opportunities_study_id_studies_id_fk",
+          "tableFrom": "improvement_opportunities",
+          "tableTo": "studies",
+          "columnsFrom": [
+            "study_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "opportunities_activity_fk": {
+          "name": "opportunities_activity_fk",
+          "tableFrom": "improvement_opportunities",
+          "tableTo": "activities",
+          "columnsFrom": [
+            "related_activity_id",
+            "study_id"
+          ],
+          "columnsTo": [
+            "id",
+            "study_id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "opportunities_area_fk": {
+          "name": "opportunities_area_fk",
+          "tableFrom": "improvement_opportunities",
+          "tableTo": "areas",
+          "columnsFrom": [
+            "area_id",
+            "study_id"
+          ],
+          "columnsTo": [
+            "id",
+            "study_id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "opportunities_site_fk": {
+          "name": "opportunities_site_fk",
+          "tableFrom": "improvement_opportunities",
+          "tableTo": "sites",
+          "columnsFrom": [
+            "site_id",
+            "study_id"
+          ],
+          "columnsTo": [
+            "id",
+            "study_id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "opportunities_study_code_uq": {
+          "name": "opportunities_study_code_uq",
+          "nullsNotDistinct": false,
+          "columns": [
+            "study_id",
+            "code"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "opportunities_scales_ck": {
+          "name": "opportunities_scales_ck",
+          "value": "coalesce(\"improvement_opportunities\".\"impact_score\",1) between 1 and 5 and coalesce(\"improvement_opportunities\".\"ease_score\",1) between 1 and 5 and coalesce(\"improvement_opportunities\".\"effort_score\",1) between 1 and 5 and coalesce(\"improvement_opportunities\".\"cost_score\",1) between 1 and 5 and coalesce(\"improvement_opportunities\".\"risk_score\",1) between 1 and 5"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.measurability_assessments": {
+      "name": "measurability_assessments",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "study_id": {
+          "name": "study_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "activity_id": {
+          "name": "activity_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "direct_measurement": {
+          "name": "direct_measurement",
+          "type": "tri_state",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "has_indicators": {
+          "name": "has_indicators",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "has_history": {
+          "name": "has_history",
+          "type": "tri_state",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "has_time_standard": {
+          "name": "has_time_standard",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "source_reliability": {
+          "name": "source_reliability",
+          "type": "level3",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "external_dependency": {
+          "name": "external_dependency",
+          "type": "level3",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "result_verifiable": {
+          "name": "result_verifiable",
+          "type": "tri_state",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "recommended_unit": {
+          "name": "recommended_unit",
+          "type": "measure_unit",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "proposed_indicator": {
+          "name": "proposed_indicator",
+          "type": "indicator_kind",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "qualitative_criterion": {
+          "name": "qualitative_criterion",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "version": {
+          "name": "version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "measurability_assessments_study_id_studies_id_fk": {
+          "name": "measurability_assessments_study_id_studies_id_fk",
+          "tableFrom": "measurability_assessments",
+          "tableTo": "studies",
+          "columnsFrom": [
+            "study_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "measurability_activity_fk": {
+          "name": "measurability_activity_fk",
+          "tableFrom": "measurability_assessments",
+          "tableTo": "activities",
+          "columnsFrom": [
+            "activity_id",
+            "study_id"
+          ],
+          "columnsTo": [
+            "id",
+            "study_id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "measurability_activity_uq": {
+          "name": "measurability_activity_uq",
+          "nullsNotDistinct": false,
+          "columns": [
+            "activity_id"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.measurements": {
+      "name": "measurements",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "study_id": {
+          "name": "study_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "activity_id": {
+          "name": "activity_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "observed_at": {
+          "name": "observed_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "units_processed": {
+          "name": "units_processed",
+          "type": "numeric(14, 4)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "person_hours": {
+          "name": "person_hours",
+          "type": "numeric(10, 4)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "method": {
+          "name": "method",
+          "type": "data_source",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "observer": {
+          "name": "observer",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "measurements_study_id_studies_id_fk": {
+          "name": "measurements_study_id_studies_id_fk",
+          "tableFrom": "measurements",
+          "tableTo": "studies",
+          "columnsFrom": [
+            "study_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "measurements_activity_fk": {
+          "name": "measurements_activity_fk",
+          "tableFrom": "measurements",
+          "tableTo": "activities",
+          "columnsFrom": [
+            "activity_id",
+            "study_id"
+          ],
+          "columnsTo": [
+            "id",
+            "study_id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "measurements_hours_ck": {
+          "name": "measurements_hours_ck",
+          "value": "\"measurements\".\"person_hours\" > 0"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.memberships": {
+      "name": "memberships",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "study_id": {
+          "name": "study_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "role": {
+          "name": "role",
+          "type": "app_role",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "memberships_user_idx": {
+          "name": "memberships_user_idx",
+          "columns": [
+            {
+              "expression": "user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "memberships_study_id_studies_id_fk": {
+          "name": "memberships_study_id_studies_id_fk",
+          "tableFrom": "memberships",
+          "tableTo": "studies",
+          "columnsFrom": [
+            "study_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "memberships_study_user_uq": {
+          "name": "memberships_study_user_uq",
+          "nullsNotDistinct": false,
+          "columns": [
+            "study_id",
+            "user_id"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.position_shifts": {
+      "name": "position_shifts",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "study_id": {
+          "name": "study_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "position_id": {
+          "name": "position_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "start_time": {
+          "name": "start_time",
+          "type": "time",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "end_time": {
+          "name": "end_time",
+          "type": "time",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "break_minutes": {
+          "name": "break_minutes",
+          "type": "smallint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "days": {
+          "name": "days",
+          "type": "smallint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "sort_order": {
+          "name": "sort_order",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "position_shifts_position_idx": {
+          "name": "position_shifts_position_idx",
+          "columns": [
+            {
+              "expression": "position_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "position_shifts_study_id_studies_id_fk": {
+          "name": "position_shifts_study_id_studies_id_fk",
+          "tableFrom": "position_shifts",
+          "tableTo": "studies",
+          "columnsFrom": [
+            "study_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "position_shifts_position_fk": {
+          "name": "position_shifts_position_fk",
+          "tableFrom": "position_shifts",
+          "tableTo": "positions",
+          "columnsFrom": [
+            "position_id",
+            "study_id"
+          ],
+          "columnsTo": [
+            "id",
+            "study_id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "position_shifts_id_study_uq": {
+          "name": "position_shifts_id_study_uq",
+          "nullsNotDistinct": false,
+          "columns": [
+            "id",
+            "study_id"
+          ]
+        },
+        "position_shifts_name_uq": {
+          "name": "position_shifts_name_uq",
+          "nullsNotDistinct": false,
+          "columns": [
+            "position_id",
+            "name"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "position_shifts_name_ck": {
+          "name": "position_shifts_name_ck",
+          "value": "length(btrim(\"position_shifts\".\"name\")) > 0"
+        },
+        "position_shifts_break_ck": {
+          "name": "position_shifts_break_ck",
+          "value": "\"position_shifts\".\"break_minutes\" is null or \"position_shifts\".\"break_minutes\" between 0 and 240"
+        },
+        "position_shifts_days_ck": {
+          "name": "position_shifts_days_ck",
+          "value": "\"position_shifts\".\"days\" is null or \"position_shifts\".\"days\" between 1 and 127"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.positions": {
+      "name": "positions",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "study_id": {
+          "name": "study_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "area_id": {
+          "name": "area_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "site_id": {
+          "name": "site_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "data_kind": {
+          "name": "data_kind",
+          "type": "data_kind",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'real'"
+        },
+        "boss": {
+          "name": "boss",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "objective": {
+          "name": "objective",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "formal_functions": {
+          "name": "formal_functions",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "operation_description": {
+          "name": "operation_description",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "auto_created": {
+          "name": "auto_created",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "version": {
+          "name": "version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "positions_study_id_studies_id_fk": {
+          "name": "positions_study_id_studies_id_fk",
+          "tableFrom": "positions",
+          "tableTo": "studies",
+          "columnsFrom": [
+            "study_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "positions_area_fk": {
+          "name": "positions_area_fk",
+          "tableFrom": "positions",
+          "tableTo": "areas",
+          "columnsFrom": [
+            "area_id",
+            "study_id"
+          ],
+          "columnsTo": [
+            "id",
+            "study_id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "positions_site_fk": {
+          "name": "positions_site_fk",
+          "tableFrom": "positions",
+          "tableTo": "sites",
+          "columnsFrom": [
+            "site_id",
+            "study_id"
+          ],
+          "columnsTo": [
+            "id",
+            "study_id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "positions_key_uq": {
+          "name": "positions_key_uq",
+          "nullsNotDistinct": false,
+          "columns": [
+            "study_id",
+            "area_id",
+            "site_id",
+            "name",
+            "data_kind"
+          ]
+        },
+        "positions_id_study_uq": {
+          "name": "positions_id_study_uq",
+          "nullsNotDistinct": false,
+          "columns": [
+            "id",
+            "study_id"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.redesign_proposals": {
+      "name": "redesign_proposals",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "study_id": {
+          "name": "study_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "data_kind": {
+          "name": "data_kind",
+          "type": "data_kind",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'real'"
+        },
+        "area_id": {
+          "name": "area_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "site_id": {
+          "name": "site_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "current_position_name": {
+          "name": "current_position_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "current_objective": {
+          "name": "current_objective",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "current_functions": {
+          "name": "current_functions",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "kept_activities": {
+          "name": "kept_activities",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "modified_activities": {
+          "name": "modified_activities",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "removed_activities": {
+          "name": "removed_activities",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "transferred_activities": {
+          "name": "transferred_activities",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "receiving_position_name": {
+          "name": "receiving_position_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "new_responsibilities": {
+          "name": "new_responsibilities",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "limits_and_authority": {
+          "name": "limits_and_authority",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "required_competencies": {
+          "name": "required_competencies",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "training_needs": {
+          "name": "training_needs",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "performance_indicators": {
+          "name": "performance_indicators",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "reporting_lines": {
+          "name": "reporting_lines",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "hours_out_per_week": {
+          "name": "hours_out_per_week",
+          "type": "numeric(10, 2)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "hours_in_per_week": {
+          "name": "hours_in_per_week",
+          "type": "numeric(10, 2)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "hours_recovered_per_week": {
+          "name": "hours_recovered_per_week",
+          "type": "numeric(10, 2)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "justification": {
+          "name": "justification",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "expected_benefits": {
+          "name": "expected_benefits",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "risks_and_conditions": {
+          "name": "risks_and_conditions",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "approval_status": {
+          "name": "approval_status",
+          "type": "approval_status",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'drafting'"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "version": {
+          "name": "version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "redesign_proposals_study_id_studies_id_fk": {
+          "name": "redesign_proposals_study_id_studies_id_fk",
+          "tableFrom": "redesign_proposals",
+          "tableTo": "studies",
+          "columnsFrom": [
+            "study_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "redesign_area_fk": {
+          "name": "redesign_area_fk",
+          "tableFrom": "redesign_proposals",
+          "tableTo": "areas",
+          "columnsFrom": [
+            "area_id",
+            "study_id"
+          ],
+          "columnsTo": [
+            "id",
+            "study_id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "redesign_site_fk": {
+          "name": "redesign_site_fk",
+          "tableFrom": "redesign_proposals",
+          "tableTo": "sites",
+          "columnsFrom": [
+            "site_id",
+            "study_id"
+          ],
+          "columnsTo": [
+            "id",
+            "study_id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "redesign_study_area_position_uq": {
+          "name": "redesign_study_area_position_uq",
+          "nullsNotDistinct": false,
+          "columns": [
+            "study_id",
+            "data_kind",
+            "area_id",
+            "current_position_name"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.risk_assessments": {
+      "name": "risk_assessments",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "study_id": {
+          "name": "study_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "activity_id": {
+          "name": "activity_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "risk": {
+          "name": "risk",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "consequences": {
+          "name": "consequences",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "impact_operational": {
+          "name": "impact_operational",
+          "type": "smallint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "impact_economic": {
+          "name": "impact_economic",
+          "type": "smallint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "impact_labor": {
+          "name": "impact_labor",
+          "type": "smallint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "impact_legal": {
+          "name": "impact_legal",
+          "type": "smallint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "impact_service": {
+          "name": "impact_service",
+          "type": "smallint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "probability": {
+          "name": "probability",
+          "type": "smallint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "controls": {
+          "name": "controls",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "evidence": {
+          "name": "evidence",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "dependencies": {
+          "name": "dependencies",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "people_who_can_execute": {
+          "name": "people_who_can_execute",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "duplications": {
+          "name": "duplications",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "function_incompatibility": {
+          "name": "function_incompatibility",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "version": {
+          "name": "version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "risk_assessments_study_id_studies_id_fk": {
+          "name": "risk_assessments_study_id_studies_id_fk",
+          "tableFrom": "risk_assessments",
+          "tableTo": "studies",
+          "columnsFrom": [
+            "study_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "risk_activity_fk": {
+          "name": "risk_activity_fk",
+          "tableFrom": "risk_assessments",
+          "tableTo": "activities",
+          "columnsFrom": [
+            "activity_id",
+            "study_id"
+          ],
+          "columnsTo": [
+            "id",
+            "study_id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "risk_activity_uq": {
+          "name": "risk_activity_uq",
+          "nullsNotDistinct": false,
+          "columns": [
+            "activity_id"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "risk_scales_ck": {
+          "name": "risk_scales_ck",
+          "value": "coalesce(\"risk_assessments\".\"impact_operational\",1) between 1 and 5 and coalesce(\"risk_assessments\".\"impact_economic\",1) between 1 and 5 and coalesce(\"risk_assessments\".\"impact_labor\",1) between 1 and 5 and coalesce(\"risk_assessments\".\"impact_legal\",1) between 1 and 5 and coalesce(\"risk_assessments\".\"impact_service\",1) between 1 and 5 and coalesce(\"risk_assessments\".\"probability\",1) between 1 and 5"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.sheet_connections": {
+      "name": "sheet_connections",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "study_id": {
+          "name": "study_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "spreadsheet_id": {
+          "name": "spreadsheet_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "actor_id": {
+          "name": "actor_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "mode": {
+          "name": "mode",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'off'"
+        },
+        "mapping_version": {
+          "name": "mapping_version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1
+        },
+        "last_sync_at": {
+          "name": "last_sync_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'idle'"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "version": {
+          "name": "version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "sheet_connections_study_id_studies_id_fk": {
+          "name": "sheet_connections_study_id_studies_id_fk",
+          "tableFrom": "sheet_connections",
+          "tableTo": "studies",
+          "columnsFrom": [
+            "study_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "sheet_conn_study_sheet_uq": {
+          "name": "sheet_conn_study_sheet_uq",
+          "nullsNotDistinct": false,
+          "columns": [
+            "study_id",
+            "spreadsheet_id"
+          ]
+        },
+        "sheet_conn_spreadsheet_uq": {
+          "name": "sheet_conn_spreadsheet_uq",
+          "nullsNotDistinct": false,
+          "columns": [
+            "spreadsheet_id"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.sites": {
+      "name": "sites",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "study_id": {
+          "name": "study_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "regional": {
+          "name": "regional",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "sites_study_id_studies_id_fk": {
+          "name": "sites_study_id_studies_id_fk",
+          "tableFrom": "sites",
+          "tableTo": "studies",
+          "columnsFrom": [
+            "study_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "sites_study_name_uq": {
+          "name": "sites_study_name_uq",
+          "nullsNotDistinct": false,
+          "columns": [
+            "study_id",
+            "name"
+          ]
+        },
+        "sites_id_study_uq": {
+          "name": "sites_id_study_uq",
+          "nullsNotDistinct": false,
+          "columns": [
+            "id",
+            "study_id"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.staffing_entries": {
+      "name": "staffing_entries",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "study_id": {
+          "name": "study_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "position_id": {
+          "name": "position_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "headcount": {
+          "name": "headcount",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "employee_code": {
+          "name": "employee_code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "weekly_hours": {
+          "name": "weekly_hours",
+          "type": "numeric(5, 2)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "survey_date": {
+          "name": "survey_date",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "surveyor": {
+          "name": "surveyor",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "info_source": {
+          "name": "info_source",
+          "type": "info_source",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "notes": {
+          "name": "notes",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "version": {
+          "name": "version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1
+        }
+      },
+      "indexes": {
+        "staffing_position_idx": {
+          "name": "staffing_position_idx",
+          "columns": [
+            {
+              "expression": "position_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "staffing_entries_study_id_studies_id_fk": {
+          "name": "staffing_entries_study_id_studies_id_fk",
+          "tableFrom": "staffing_entries",
+          "tableTo": "studies",
+          "columnsFrom": [
+            "study_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "staffing_position_fk": {
+          "name": "staffing_position_fk",
+          "tableFrom": "staffing_entries",
+          "tableTo": "positions",
+          "columnsFrom": [
+            "position_id",
+            "study_id"
+          ],
+          "columnsTo": [
+            "id",
+            "study_id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "staffing_ranges_ck": {
+          "name": "staffing_ranges_ck",
+          "value": "(\"staffing_entries\".\"headcount\" is null or \"staffing_entries\".\"headcount\" between 0 and 500) and (\"staffing_entries\".\"weekly_hours\" is null or \"staffing_entries\".\"weekly_hours\" between 0 and 84)"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.studies": {
+      "name": "studies",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "description": {
+          "name": "description",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_by": {
+          "name": "created_by",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "version": {
+          "name": "version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.study_parameters": {
+      "name": "study_parameters",
+      "schema": "",
+      "columns": {
+        "study_id": {
+          "name": "study_id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "work_days_per_week": {
+          "name": "work_days_per_week",
+          "type": "numeric(4, 2)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'6'"
+        },
+        "weeks_per_month": {
+          "name": "weeks_per_month",
+          "type": "numeric(16, 12)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'4.333333333333'"
+        },
+        "weeks_per_year": {
+          "name": "weeks_per_year",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 52
+        },
+        "reserve_pct": {
+          "name": "reserve_pct",
+          "type": "numeric(5, 4)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'0.1000'"
+        },
+        "overload_threshold": {
+          "name": "overload_threshold",
+          "type": "numeric(5, 4)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'1.0000'"
+        },
+        "low_load_threshold": {
+          "name": "low_load_threshold",
+          "type": "numeric(5, 4)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'0.5000'"
+        },
+        "hourly_cost_cop": {
+          "name": "hourly_cost_cop",
+          "type": "numeric(14, 2)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "scenario": {
+          "name": "scenario",
+          "type": "scenario",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'base'"
+        },
+        "assumptions_validated": {
+          "name": "assumptions_validated",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "weight_impact": {
+          "name": "weight_impact",
+          "type": "smallint",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 3
+        },
+        "weight_ease": {
+          "name": "weight_ease",
+          "type": "smallint",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 2
+        },
+        "weight_effort": {
+          "name": "weight_effort",
+          "type": "smallint",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1
+        },
+        "weight_cost": {
+          "name": "weight_cost",
+          "type": "smallint",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1
+        },
+        "weight_risk": {
+          "name": "weight_risk",
+          "type": "smallint",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1
+        },
+        "dev_estimate_pct": {
+          "name": "dev_estimate_pct",
+          "type": "numeric(5, 4)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'0.2000'"
+        },
+        "dev_min_measurements": {
+          "name": "dev_min_measurements",
+          "type": "smallint",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 3
+        },
+        "dev_jump_pct": {
+          "name": "dev_jump_pct",
+          "type": "numeric(5, 4)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'0.2500'"
+        },
+        "dev_min_history": {
+          "name": "dev_min_history",
+          "type": "smallint",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 3
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "version": {
+          "name": "version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "study_parameters_study_id_studies_id_fk": {
+          "name": "study_parameters_study_id_studies_id_fk",
+          "tableFrom": "study_parameters",
+          "tableTo": "studies",
+          "columnsFrom": [
+            "study_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "study_parameters_ranges_ck": {
+          "name": "study_parameters_ranges_ck",
+          "value": "\"study_parameters\".\"work_days_per_week\" between 1 and 7 and \"study_parameters\".\"reserve_pct\" between 0 and 1 and \"study_parameters\".\"low_load_threshold\" <= \"study_parameters\".\"overload_threshold\""
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.study_snapshots": {
+      "name": "study_snapshots",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "study_id": {
+          "name": "study_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "label": {
+          "name": "label",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "taken_at": {
+          "name": "taken_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "metrics": {
+          "name": "metrics",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "study_snapshots_study_id_studies_id_fk": {
+          "name": "study_snapshots_study_id_studies_id_fk",
+          "tableFrom": "study_snapshots",
+          "tableTo": "studies",
+          "columnsFrom": [
+            "study_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.suitability_assessments": {
+      "name": "suitability_assessments",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "study_id": {
+          "name": "study_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "activity_id": {
+          "name": "activity_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "correspondence": {
+          "name": "correspondence",
+          "type": "correspondence",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "technical_knowledge": {
+          "name": "technical_knowledge",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "training": {
+          "name": "training",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "experience": {
+          "name": "experience",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "technical_competencies": {
+          "name": "technical_competencies",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "behavioral_competencies": {
+          "name": "behavioral_competencies",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "authorizations": {
+          "name": "authorizations",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "autonomy": {
+          "name": "autonomy",
+          "type": "level3",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "compatibility": {
+          "name": "compatibility",
+          "type": "compatibility",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "current_competencies": {
+          "name": "current_competencies",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "gaps": {
+          "name": "gaps",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "training_possible": {
+          "name": "training_possible",
+          "type": "tri_state",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "reassignment_possible": {
+          "name": "reassignment_possible",
+          "type": "reassignment",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "specialization_needed": {
+          "name": "specialization_needed",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "situation": {
+          "name": "situation",
+          "type": "situation",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "sensitive_responsibility": {
+          "name": "sensitive_responsibility",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "separation_evaluated": {
+          "name": "separation_evaluated",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "version": {
+          "name": "version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "suitability_assessments_study_id_studies_id_fk": {
+          "name": "suitability_assessments_study_id_studies_id_fk",
+          "tableFrom": "suitability_assessments",
+          "tableTo": "studies",
+          "columnsFrom": [
+            "study_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "suitability_activity_fk": {
+          "name": "suitability_activity_fk",
+          "tableFrom": "suitability_assessments",
+          "tableTo": "activities",
+          "columnsFrom": [
+            "activity_id",
+            "study_id"
+          ],
+          "columnsTo": [
+            "id",
+            "study_id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "suitability_activity_uq": {
+          "name": "suitability_activity_uq",
+          "nullsNotDistinct": false,
+          "columns": [
+            "activity_id"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.sync_events": {
+      "name": "sync_events",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "study_id": {
+          "name": "study_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "connection_id": {
+          "name": "connection_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "direction": {
+          "name": "direction",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "origin_id": {
+          "name": "origin_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "sheet_name": {
+          "name": "sheet_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "row_ref": {
+          "name": "row_ref",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "payload": {
+          "name": "payload",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'received'"
+        },
+        "error": {
+          "name": "error",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "processed_at": {
+          "name": "processed_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "sync_events_study_id_studies_id_fk": {
+          "name": "sync_events_study_id_studies_id_fk",
+          "tableFrom": "sync_events",
+          "tableTo": "studies",
+          "columnsFrom": [
+            "study_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "sync_events_connection_id_sheet_connections_id_fk": {
+          "name": "sync_events_connection_id_sheet_connections_id_fk",
+          "tableFrom": "sync_events",
+          "tableTo": "sheet_connections",
+          "columnsFrom": [
+            "connection_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "sync_events_origin_uq": {
+          "name": "sync_events_origin_uq",
+          "nullsNotDistinct": false,
+          "columns": [
+            "connection_id",
+            "origin_id"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.validation_issues": {
+      "name": "validation_issues",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "study_id": {
+          "name": "study_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "entity": {
+          "name": "entity",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "entity_id": {
+          "name": "entity_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "field": {
+          "name": "field",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "rule_code": {
+          "name": "rule_code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "severity": {
+          "name": "severity",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "auto_fixable": {
+          "name": "auto_fixable",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "suggested_value": {
+          "name": "suggested_value",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'open'"
+        },
+        "detected_at": {
+          "name": "detected_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "resolved_at": {
+          "name": "resolved_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "resolved_by": {
+          "name": "resolved_by",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "issues_study_status_idx": {
+          "name": "issues_study_status_idx",
+          "columns": [
+            {
+              "expression": "study_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "validation_issues_study_id_studies_id_fk": {
+          "name": "validation_issues_study_id_studies_id_fk",
+          "tableFrom": "validation_issues",
+          "tableTo": "studies",
+          "columnsFrom": [
+            "study_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    }
+  },
+  "enums": {
+    "public.activity_type": {
+      "name": "activity_type",
+      "schema": "public",
+      "values": [
+        "operational",
+        "administrative",
+        "control",
+        "coordination",
+        "service",
+        "support",
+        "occasional"
+      ]
+    },
+    "public.app_role": {
+      "name": "app_role",
+      "schema": "public",
+      "values": [
+        "owner",
+        "editor",
+        "analyst",
+        "viewer"
+      ]
+    },
+    "public.approval_status": {
+      "name": "approval_status",
+      "schema": "public",
+      "values": [
+        "drafting",
+        "validated_by_owner",
+        "approved_by_management",
+        "rejected"
+      ]
+    },
+    "public.calc_mode": {
+      "name": "calc_mode",
+      "schema": "public",
+      "values": [
+        "per_event",
+        "per_unit"
+      ]
+    },
+    "public.compatibility": {
+      "name": "compatibility",
+      "schema": "public",
+      "values": [
+        "compatible",
+        "partial",
+        "incompatible"
+      ]
+    },
+    "public.confidence": {
+      "name": "confidence",
+      "schema": "public",
+      "values": [
+        "high",
+        "medium",
+        "low"
+      ]
+    },
+    "public.correspondence": {
+      "name": "correspondence",
+      "schema": "public",
+      "values": [
+        "high",
+        "partial",
+        "low",
+        "none"
+      ]
+    },
+    "public.data_kind": {
+      "name": "data_kind",
+      "schema": "public",
+      "values": [
+        "real",
+        "demo"
+      ]
+    },
+    "public.data_source": {
+      "name": "data_source",
+      "schema": "public",
+      "values": [
+        "declared_by_employee",
+        "declared_by_manager",
+        "observed",
+        "timed",
+        "verifiable_source",
+        "validated_estimate"
+      ]
+    },
+    "public.exec_scope": {
+      "name": "exec_scope",
+      "schema": "public",
+      "values": [
+        "per_employee",
+        "position_total"
+      ]
+    },
+    "public.finding_class": {
+      "name": "finding_class",
+      "schema": "public",
+      "values": [
+        "confirmed",
+        "hypothesis",
+        "pending_recommendation"
+      ]
+    },
+    "public.frequency": {
+      "name": "frequency",
+      "schema": "public",
+      "values": [
+        "daily",
+        "weekly",
+        "biweekly",
+        "monthly",
+        "quarterly",
+        "annual",
+        "occasional",
+        "on_demand"
+      ]
+    },
+    "public.indicator_kind": {
+      "name": "indicator_kind",
+      "schema": "public",
+      "values": [
+        "cycle_time",
+        "units_per_hour",
+        "on_time_pct",
+        "error_pct",
+        "rework_rate",
+        "record_accuracy",
+        "service_level",
+        "control_compliance",
+        "response_time",
+        "qualitative_criterion"
+      ]
+    },
+    "public.info_source": {
+      "name": "info_source",
+      "schema": "public",
+      "values": [
+        "interview_employee",
+        "interview_manager",
+        "direct_observation",
+        "procedures_review",
+        "records_systems",
+        "timing"
+      ]
+    },
+    "public.initiative_type": {
+      "name": "initiative_type",
+      "schema": "public",
+      "values": [
+        "quick_win",
+        "investment",
+        "tech_adjustment",
+        "training",
+        "org_change"
+      ]
+    },
+    "public.level3": {
+      "name": "level3",
+      "schema": "public",
+      "values": [
+        "high",
+        "medium",
+        "low"
+      ]
+    },
+    "public.measure_unit": {
+      "name": "measure_unit",
+      "schema": "public",
+      "values": [
+        "minutes_per_execution",
+        "units_per_hour",
+        "on_time_pct",
+        "error_pct",
+        "rework_rate",
+        "record_accuracy",
+        "service_level",
+        "control_compliance",
+        "response_time",
+        "qualitative_criterion"
+      ]
+    },
+    "public.opportunity_type": {
+      "name": "opportunity_type",
+      "schema": "public",
+      "values": [
+        "keep",
+        "eliminate",
+        "simplify",
+        "standardize",
+        "automate",
+        "redistribute",
+        "group",
+        "create_specialized_role",
+        "train",
+        "document",
+        "reduce_waits_rework",
+        "improve_controls"
+      ]
+    },
+    "public.period_unit": {
+      "name": "period_unit",
+      "schema": "public",
+      "values": [
+        "day",
+        "week",
+        "fortnight",
+        "month",
+        "quarter",
+        "year"
+      ]
+    },
+    "public.plan_status": {
+      "name": "plan_status",
+      "schema": "public",
+      "values": [
+        "not_started",
+        "in_progress",
+        "completed",
+        "blocked",
+        "cancelled"
+      ]
+    },
+    "public.planning": {
+      "name": "planning",
+      "schema": "public",
+      "values": [
+        "planned",
+        "unplanned"
+      ]
+    },
+    "public.potential": {
+      "name": "potential",
+      "schema": "public",
+      "values": [
+        "high",
+        "medium",
+        "low",
+        "none"
+      ]
+    },
+    "public.reassignment": {
+      "name": "reassignment",
+      "schema": "public",
+      "values": [
+        "yes",
+        "conditional",
+        "no"
+      ]
+    },
+    "public.scenario": {
+      "name": "scenario",
+      "schema": "public",
+      "values": [
+        "base",
+        "high_season",
+        "low_season",
+        "min_time",
+        "max_time"
+      ]
+    },
+    "public.situation": {
+      "name": "situation",
+      "schema": "public",
+      "values": [
+        "s1_train",
+        "s2_not_in_purpose",
+        "s3_specialization",
+        "s4_simplify_automate",
+        "none"
+      ]
+    },
+    "public.tri_state": {
+      "name": "tri_state",
+      "schema": "public",
+      "values": [
+        "yes",
+        "partial",
+        "no"
+      ]
+    },
+    "public.validation_status": {
+      "name": "validation_status",
+      "schema": "public",
+      "values": [
+        "pending",
+        "in_validation",
+        "validated",
+        "rejected"
+      ]
+    },
+    "public.value_class": {
+      "name": "value_class",
+      "schema": "public",
+      "values": [
+        "direct_value",
+        "necessary_no_direct_value",
+        "dispensable"
+      ]
+    },
+    "public.yes_no_ne": {
+      "name": "yes_no_ne",
+      "schema": "public",
+      "values": [
+        "yes",
+        "no",
+        "not_evaluated"
+      ]
+    }
+  },
+  "schemas": {},
+  "sequences": {},
+  "roles": {},
+  "policies": {},
+  "views": {},
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  }
+}

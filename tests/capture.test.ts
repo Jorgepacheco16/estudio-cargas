@@ -31,7 +31,7 @@ async function main() {
       let total = 0;
       for (const d of allEntryDefs()) {
         const want = SHEET_FIELDS[d.id].columns.filter((c) => c.input).map((c) => c.col).sort();
-        const got = d.fields.map((f) => f.col).sort();
+        const got = d.fields.filter((f) => !f.extra).map((f) => f.col).sort(); // sin los campos propios de la aplicación (centro de operaciones, D-75)
         if (JSON.stringify(want) !== JSON.stringify(got)) throw new Error(`hoja ${d.id}: faltan ${want.filter((c) => !got.includes(c))} / sobran ${got.filter((c) => !want.includes(c))}`);
         total += got.length;
       }

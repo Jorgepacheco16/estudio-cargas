@@ -35,11 +35,11 @@ async function main() {
     await save("6", { code: "A-2", situation: "1. Corresponde al cargo, requiere capacitación" });
     await save("7", { code: "A-1", impLegal: "5", probability: "3" });                                       // 5 × 3 = 15 → Crítica
     await save("7", { code: "A-3", impLegal: "1", probability: "1" });                                       // 1 → Baja
-    await save("8", { code: "O-1", area: "Cajas", position: "Cajero", type: "Simplificar procedimiento", impact: "4", ease: "3", effort: "2", cost: "2", riskScore: "1", hours: "5" });
-    await save("8", { code: "O-2", area: "Domicilios", position: "Auxiliar", type: "Automatizar o digitalizar" });
-    await save("9", { area: "Cajas", position: "Cajero", hoursOut: "2" });
-    await save("10", { code: "P-1", action: "Capacitar", area: "Cajas", position: "Cajero", priority: "Alta", initiative: "Capacitación", status: "En curso", start: "2026-01-01", end: "2026-03-31" });
-    await save("10", { code: "P-2", action: "Automatizar", area: "Domicilios", position: "Auxiliar", priority: "Baja", initiative: "Ajuste tecnológico", status: "No iniciada", start: "2026-05-01", end: "2026-06-30" });
+    await save("8", { code: "O-1", area: "Cajas", position: "Cajero", type: "Simplificar procedimiento", site: "CO Prado", impact: "4", ease: "3", effort: "2", cost: "2", riskScore: "1", hours: "5" });
+    await save("8", { code: "O-2", area: "Domicilios", position: "Auxiliar", type: "Automatizar o digitalizar", site: "CO Norte" });
+    await save("9", { area: "Cajas", position: "Cajero", site: "CO Prado", hoursOut: "2" });
+    await save("10", { code: "P-1", action: "Capacitar", area: "Cajas", position: "Cajero", site: "CO Prado", priority: "Alta", initiative: "Capacitación", status: "En curso", start: "2026-01-01", end: "2026-03-31" });
+    await save("10", { code: "P-2", action: "Automatizar", area: "Domicilios", position: "Auxiliar", site: "CO Norte", priority: "Baja", initiative: "Ajuste tecnológico", status: "No iniciada", start: "2026-05-01", end: "2026-06-30" });
 
     const rows = async (id: EntryId) => (await listEntries(app.db, owner, studyId, id))!.rows;
     const run = async (id: EntryId, sp: Record<string, string | string[]>) => { const r = entryFilters(entryDef(id)!, await rows(id), sp); return { ...r, codes: r.rows.map((x) => Object.values(x.cells).find((v) => typeof v === "string" && /^[A-Z]-\d$/.test(v)) ?? "") }; };
@@ -84,6 +84,18 @@ async function main() {
       if ((await run("10", { vdesde: "no-es-fecha" })).rows.length !== 2) throw new Error("una fecha inválida no debe filtrar");
       const f = await run("10", { vdesde: "2026-04-01" }); if (f.active !== 1 || !f.range) throw new Error("conteo de filtros activos con rango");
       const keys = f.fields.map((x) => x.key); for (const k of ["estado", "prioridad", "iniciativa", "alerta"]) if (!keys.includes(k)) throw new Error(`falta el filtro ${k}`);
+    });
+    await check("Centro de operaciones en oportunidades, rediseño y plan de acción (D-75): se guarda, se filtra, uno desconocido se rechaza y vaciarlo lo quita", async () => {
+      if ((await run("8", { co: "CO Norte" })).codes.join() !== "O-2" || (await run("8", { co: ["CO Prado", "CO Norte"] })).rows.length !== 2) throw new Error("oportunidades");
+      if ((await run("9", { co: "CO Prado" })).rows.length !== 1 || (await run("9", { co: "CO Norte" })).rows.length !== 0) throw new Error("rediseño");
+      if ((await run("10", { co: "CO Prado" })).codes.join() !== "P-1" || (await run("10", { co: "CO Norte", estado: "No iniciada" })).codes.join() !== "P-2") throw new Error("plan de acción");
+      for (const id of ["8", "9", "10"] as const) if (!(await run(id, {})).fields.some((x) => x.key === "co")) throw new Error(`la sección ${id} debe ofrecer el filtro de centro de operaciones`);
+      const bad = await saveEntry(app.db, owner, studyId, "8", cells("8", { code: "O-3", site: "CO Inventado" }), {});
+      if (bad.ok || !bad.errors.join().includes("no está registrado")) throw new Error("aceptó un centro de operaciones que no existe");
+      const o1 = (await rows("8")).find((r) => Object.values(r.cells).includes("O-1"))!;
+      const cleared = await saveEntry(app.db, owner, studyId, "8", cells("8", { code: "O-1", area: "Cajas", position: "Cajero", type: "Simplificar procedimiento", site: "" }), { recId: o1.id, version: o1.version });
+      if (!cleared.ok || cleared.result !== "updated") throw new Error(JSON.stringify(cleared));
+      if ((await run("8", { co: "CO Prado" })).rows.length !== 0) throw new Error("vaciar el centro de operaciones debía quitarlo");
     });
   } finally {
     if (studyId) await admin.db.execute(sql`delete from public.studies where id = ${studyId}`);

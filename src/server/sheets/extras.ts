@@ -14,15 +14,17 @@ import type { Adapter } from "./adapters";
 import type { CellValue, SheetGateway } from "./gateway";
 import { q, type Conn } from "./internal";
 
-export const EXTRA_HEADERS = { shifts: "Turnos del cargo", operation: "Descripción de la operación", activityShifts: "Turnos en que se ejecuta" } as const;
+export const EXTRA_HEADERS = { shifts: "Turnos del cargo", operation: "Descripción de la operación", activityShifts: "Turnos en que se ejecuta", site: "Centro de operaciones" } as const;
 
 const blank = (v: unknown) => v === null || v === undefined || (typeof v === "string" && v.trim() === "");
 const flat = (v: unknown) => String(v ?? "").replace(/\s+/g, " ").trim();
 const same = (cur: unknown, want: string) => (blank(cur) || blank(want) ? blank(cur) && blank(want) : flat(cur) === flat(want));
 
-interface ExtraCol { header: string; value: (rec: Record<string, unknown>) => string }
+interface ExtraCol { header: string; value: (e: { rec: Record<string, unknown>; extras: Record<string, unknown> }) => string }
+/** Hojas con columnas adicionales: 2 (turnos y operación), 3 (turnos de la actividad) y 8, 9 y 10 (centro de operaciones, D-75). */
+const WITH_SITE = ["8", "9", "10"];
 
-export const hasExtras = (a: Adapter) => a.sheet.target === "2" || a.sheet.target === "activities";
+export const hasExtras = (a: Adapter) => a.sheet.target === "2" || a.sheet.target === "activities" || WITH_SITE.includes(a.sheet.target);
 
 /**
  * Escribe (o refresca) las columnas informativas de una hoja. Devuelve cuántas celdas escribió. En vista previa (dryRun) no escribe nada.
@@ -38,10 +40,12 @@ export async function mirrorExtras(db: Db, conn: Conn, gw: SheetGateway, a: Adap
   }));
   const defs: ExtraCol[] = a.sheet.target === "2"
     ? [
-      { header: EXTRA_HEADERS.shifts, value: (rec) => data.shiftLines.get(String(rec.positionId)) ?? "" },
-      { header: EXTRA_HEADERS.operation, value: (rec) => data.operation.get(String(rec.positionId)) ?? "" },
+      { header: EXTRA_HEADERS.shifts, value: (e) => data.shiftLines.get(String(e.rec.positionId)) ?? "" },
+      { header: EXTRA_HEADERS.operation, value: (e) => data.operation.get(String(e.rec.positionId)) ?? "" },
     ]
-    : [{ header: EXTRA_HEADERS.activityShifts, value: (rec) => data.activityShifts.get(String(rec.id)) ?? "" }];
+    : WITH_SITE.includes(a.sheet.target)
+      ? [{ header: EXTRA_HEADERS.site, value: (e) => String(e.extras.site ?? "") }]
+      : [{ header: EXTRA_HEADERS.activityShifts, value: (e) => data.activityShifts.get(String(e.rec.id)) ?? "" }];
 
   // Una sola lectura (encabezado y filas) para no gastar la cuota de la API de Google (60 lecturas por minuto): de ahí salen las columnas por encabezado,
   // el vínculo de cada fila, las casillas de entrada y lo que ya hay en las columnas nuevas. Las columnas que falten se agregan al final (visibles) y se rotulan.
@@ -65,7 +69,7 @@ export async function mirrorExtras(db: Db, conn: Conn, gw: SheetGateway, a: Adap
   const kindCol = a.spec.kind?.[0];
   const dataIdx = Object.values(a.spec).map(([col]) => col).filter((c) => c !== kindCol).map((c) => colToIndex(c) - 1);
   const cellOf = (row: number, col: string) => rowAt(row)[colToIndex(col) - 1];
-  const byId = new Map(data.entries.map((e) => [e.rec.id, e.rec as Record<string, unknown>]));
+  const byId = new Map(data.entries.map((e) => [e.rec.id, { rec: e.rec as Record<string, unknown>, extras: e.extras as Record<string, unknown> }]));
 
   const updates: { range: string; values: CellValue[][] }[] = [];
   for (let row = first; row <= last; row++) {

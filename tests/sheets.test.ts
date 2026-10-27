@@ -230,6 +230,24 @@ async function main() {
       const w = sheet.writes; await mirrorExtras(app.db, conn, sheet, a2, true); if (sheet.writes !== w) throw new Error("la vista previa escribió");
     });
 
+    await check("Centro de operaciones (D-75) → hojas 8, 9 y 10 de Google: columna adicional con su encabezado y el centro de cada registro", async () => {
+      const { saveEntry } = await import("../src/server/entry/service");
+      const { entryDef } = await import("../src/server/entry/defs");
+      const { mirrorExtras, EXTRA_HEADERS } = await import("../src/server/sheets/extras");
+      const { adapterById } = await import("../src/server/sheets/adapters");
+      const d = entryDef("8")!;
+      const cellsOf8 = (by: Record<string, string>) => Object.fromEntries(Object.entries(by).map(([f, v]) => [d.fields.find((x) => x.field === f)!.col, v]));
+      const r = await saveEntry(app.db, owner, studyId, "8", cellsOf8({ code: "O-CO", area: "Cajas", position: "Cajero", site: "Sede Norte" }), {});
+      if (!r.ok) throw new Error(JSON.stringify(r));
+      await pushAll(app.db, conn, sheet);
+      const h = (await sheet.read("'8_Oportunidades'!A6:BF6"))[0] as unknown[];
+      const i = h.indexOf(EXTRA_HEADERS.site); if (i < 0) throw new Error("falta la columna Centro de operaciones en la hoja 8");
+      const row = (await sheet.read("'8_Oportunidades'!B7:B60")).findIndex((x) => x[0] === "O-CO") + 7;
+      if (row < 7 || sheet.cell("8_Oportunidades", indexToCol(i + 1), row) !== "Sede Norte") throw new Error(String(sheet.cell("8_Oportunidades", indexToCol(i + 1), row)));
+      if ((await mirrorExtras(app.db, conn, sheet, adapterById("8")!)) !== 0) throw new Error("repitió escrituras sin cambios");
+      for (const t of ["9_Rediseno", "10_Plan_accion"]) { const hh = (await sheet.read(`'${t}'!A6:BF6`))[0] as unknown[]; if (!hh.includes(EXTRA_HEADERS.site)) throw new Error(`falta la columna en ${t}`); }
+    });
+
     await check("Cerrar huecos: tras eliminar una actividad el espejo deja la fila vacía y compactSheet sube las demás, sin tocar las fórmulas de la hoja (y no pisa filas sin vincular)", async () => {
       const { compactSheet } = await import("../src/server/sheets/mirror");
       const { adapterById } = await import("../src/server/sheets/adapters");

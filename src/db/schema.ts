@@ -334,6 +334,8 @@ export const improvementOpportunities = pgTable("improvement_opportunities", {
   probableCause: text("probable_cause"),
   proposal: text("proposal"),
   areaId: uuid("area_id"),
+  /** D-75: centro de operaciones al que aplica (opcional). */
+  siteId: uuid("site_id"),
   positionName: text("position_name"),
   expectedBenefit: text("expected_benefit"),
   recoverableHoursPerWeek: numeric("recoverable_hours_per_week", { precision: 10, scale: 2 }),
@@ -354,6 +356,7 @@ export const improvementOpportunities = pgTable("improvement_opportunities", {
   foreignKey({ columns: [t.relatedActivityId, t.studyId], foreignColumns: [activities.id, activities.studyId], name: "opportunities_activity_fk" }),
   foreignKey({ columns: [t.areaId, t.studyId], foreignColumns: [areas.id, areas.studyId], name: "opportunities_area_fk" }),
   check("opportunities_scales_ck", sql`coalesce(${t.impactScore},1) between 1 and 5 and coalesce(${t.easeScore},1) between 1 and 5 and coalesce(${t.effortScore},1) between 1 and 5 and coalesce(${t.costScore},1) between 1 and 5 and coalesce(${t.riskScore},1) between 1 and 5`),
+  foreignKey({ columns: [t.siteId, t.studyId], foreignColumns: [sites.id, sites.studyId], name: "opportunities_site_fk" }),
 ]);
 
 export const redesignProposals = pgTable("redesign_proposals", {
@@ -361,6 +364,8 @@ export const redesignProposals = pgTable("redesign_proposals", {
   studyId: studyFk(),
   dataKind: dataKind("data_kind").notNull().default("real"),
   areaId: uuid("area_id").notNull(),
+  /** D-75: centro de operaciones al que aplica (opcional). */
+  siteId: uuid("site_id"),
   currentPositionName: text("current_position_name").notNull(),
   currentObjective: text("current_objective"),
   currentFunctions: text("current_functions"),
@@ -386,6 +391,7 @@ export const redesignProposals = pgTable("redesign_proposals", {
 }, (t) => [
   unique("redesign_study_area_position_uq").on(t.studyId, t.dataKind, t.areaId, t.currentPositionName),
   foreignKey({ columns: [t.areaId, t.studyId], foreignColumns: [areas.id, areas.studyId], name: "redesign_area_fk" }),
+  foreignKey({ columns: [t.siteId, t.studyId], foreignColumns: [sites.id, sites.studyId], name: "redesign_site_fk" }),
 ]);
 
 export const actionItems = pgTable("action_items", {
@@ -396,6 +402,8 @@ export const actionItems = pgTable("action_items", {
   finding: text("finding"),
   action: text("action").notNull(),
   areaId: uuid("area_id"),
+  /** D-75: centro de operaciones al que aplica (opcional). */
+  siteId: uuid("site_id"),
   positionName: text("position_name"),
   resources: text("resources"),
   estimatedCost: numeric("estimated_cost", { precision: 16, scale: 2 }),
@@ -414,6 +422,7 @@ export const actionItems = pgTable("action_items", {
   unique("actions_study_code_uq").on(t.studyId, t.code),
   foreignKey({ columns: [t.areaId, t.studyId], foreignColumns: [areas.id, areas.studyId], name: "actions_area_fk" }),
   check("actions_dates_ck", sql`${t.endDate} is null or ${t.startDate} is null or ${t.endDate} >= ${t.startDate}`),
+  foreignKey({ columns: [t.siteId, t.studyId], foreignColumns: [sites.id, sites.studyId], name: "actions_site_fk" }),
 ]);
 
 /* ───────── Capacidades NUEVAS (no existen en el Excel): auditoría, sincronización, validación, agente ───────── */

@@ -50,6 +50,13 @@
       "when": 1793054069536,
       "tag": "0006_position_operation",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1793074556396,
+      "tag": "0007_diagnostico_centro_operaciones",
+      "breakpoints": true
     }
   ]
 }

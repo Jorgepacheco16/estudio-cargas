@@ -3,11 +3,11 @@
  * validación que la importación (un solo camino de datos), con control de versión, auditoría con origen «app» y espejo hacia Google Sheets.
  * Los valores de las columnas con fórmula del libro se calculan aquí con las reglas del libro y se devuelven como SOLO LECTURA.
  */
-import { and, eq, getTableColumns } from "drizzle-orm";
+import { and, eq, getTableColumns, sql } from "drizzle-orm";
 import type { PgTable } from "drizzle-orm/pg-core";
 import { after } from "next/server";
 import { withRls, type Db, type Tx } from "../../db/client";
-import { areas as areaTable, auditLog, studyParameters, syncEvents } from "../../db/schema";
+import { areas as areaTable, auditLog, sites as siteTable, studyParameters, syncEvents } from "../../db/schema";
 import { SUGGESTED_INDICATORS, computeMeasurability, computeOpportunity, computePlan, computeRedesign, computeRisk, computeSuitability, labelOf } from "../../domain/calculators";
 import { norm } from "../../domain/engine";
 import { LABELS } from "../../domain/labels";
@@ -20,7 +20,7 @@ import { pushSheet, mirrorParameters } from "../sheets/mirror";
 import { listConnections } from "../sheets/sync";
 import { todayBogota } from "../dashboard-data";
 import { loadStudyDataTx } from "../studies";
-import { entryDef, type EntryDef, type EntryId } from "./defs";
+import { SITE_COL, SITE_FIELD_SHEETS, entryDef, type EntryDef, type EntryId } from "./defs";
 
 type Cells = Record<string, string | number | null>;
 export type ComputedValue = string | number | null;
@@ -125,7 +125,7 @@ export async function listEntries(db: Db, sub: string, studyId: string, id: Entr
   return withRls(db, { sub }, async (tx) => {
     const ctx = await loadContext(tx, studyId);
     const items = await def.adapter.all(tx, studyId);
-    return { def, rows: items.map((it) => { const cells = cellsOf(def.adapter, it.rec, it.extras); return { id: it.rec.id, version: it.rec.version, positionId: (it.rec as { positionId?: string }).positionId, cells, computed: computedFor(def, it.rec, it.extras, ctx), facets: facetsOf(def, it.extras, cells, ctx) }; }) };
+    return { def, rows: items.map((it) => { const cells = cellsOf(def.adapter, it.rec, it.extras); if (SITE_FIELD_SHEETS.includes(def.id)) cells[SITE_COL] = String((it.extras as Record<string, unknown>).site ?? ""); return { id: it.rec.id, version: it.rec.version, positionId: (it.rec as { positionId?: string }).positionId, cells, computed: computedFor(def, it.rec, it.extras, ctx), facets: facetsOf(def, it.extras, cells, ctx) }; }) };
   });
 }
 
@@ -193,11 +193,28 @@ export async function saveEntry(db: Db, sub: string, studyId: string, id: EntryI
   const def = entryDef(id); if (!def) return { ok: false, errors: ["Hoja desconocida"] };
   const v = validateRaw(def, raw);
   if (!v.ok) return v;
-  return withRls(db, { sub }, (tx) => persistEntry(tx, sub, studyId, def, v.row, ref));
+  return withRls(db, { sub }, async (tx): Promise<SaveResult> => {
+    const x = await siteExtra(tx, studyId, def, raw, false);
+    if ("error" in x) return { ok: false, errors: [x.error] };
+    return persistEntry(tx, sub, studyId, def, v.row, { ...ref, extra: x.extra });
+  });
+}
+
+/**
+ * Centro de operaciones (D-75) de un registro de oportunidades, rediseño o plan de acción: busca el centro por su nombre entre los ya registrados (no crea
+ * centros nuevos desde estas hojas, para no ensuciar la lista). Vacío en el formulario lo quita; en la carga masiva (`blankKeeps`) lo deja como está.
+ */
+export async function siteExtra(tx: Tx, studyId: string, def: EntryDef, raw: Record<string, string>, blankKeeps: boolean): Promise<{ extra?: Record<string, unknown> } | { error: string }> {
+  if (!SITE_FIELD_SHEETS.includes(def.id)) return {};
+  const name = (raw[SITE_COL] ?? "").trim().replace(/\s+/g, " ");
+  if (name === "") return blankKeeps ? {} : { extra: { siteId: null } };
+  const [s] = await tx.select({ id: siteTable.id }).from(siteTable).where(and(eq(siteTable.studyId, studyId), sql`lower(btrim(${siteTable.name})) = ${name.toLowerCase()}`));
+  if (!s) return { error: `Centro de operaciones: «${name.slice(0, 60)}» no está registrado. Use uno de los que ya existen en Cargos y dotación o en Actividades.` };
+  return { extra: { siteId: s.id } };
 }
 
 /** Guarda un registro ya validado dentro de una transacción abierta. Con matchExisting, si la clave ya existe se actualiza ese registro (carga masiva). */
-export async function persistEntry(tx: Tx, sub: string, studyId: string, def: EntryDef, row: ReturnType<typeof readRowFrom>, ref: { recId?: string; version?: number; matchExisting?: boolean }): Promise<SaveResult> {
+export async function persistEntry(tx: Tx, sub: string, studyId: string, def: EntryDef, row: ReturnType<typeof readRowFrom>, ref: { recId?: string; version?: number; matchExisting?: boolean; extra?: Record<string, unknown> }): Promise<SaveResult> {
   const a = def.adapter;
   const table = a.table as PgTable, k = getTableColumns(table) as Record<string, Parameters<typeof eq>[0]>;
   const hasCode = "code" in k;
@@ -217,7 +234,7 @@ export async function persistEntry(tx: Tx, sub: string, studyId: string, def: En
     if ("error" in built) return { ok: false, errors: [built.error] };
     // Desde el formulario una fecha de fin anterior a la de inicio es un error que la persona corrige (la importación, en cambio, las deja vacías y lo reporta).
     if (c.rep.issues.some((i) => i.rule === "DATE_ORDER")) return { ok: false, errors: ["Fecha de fin: no puede ser anterior a la fecha de inicio."] };
-    const values: Record<string, unknown> = hasCode ? { ...built.values, code: row.s("code") } : built.values;
+    const values: Record<string, unknown> = { ...(hasCode ? { ...built.values, code: row.s("code") } : built.values), ...(ref.extra ?? {}) };
     const notices = c.rep.issues.map((i) => friendly(i.message));
     const audit = (action: string, entityId: string, diff: Record<string, { from: unknown; to: unknown }>) => tx.insert(auditLog).values({ studyId, actorId: sub, origin: "app", action, entity: a.entity, entityId, diff });
     if (!existing) {

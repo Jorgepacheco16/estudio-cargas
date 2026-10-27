@@ -134,6 +134,18 @@ async function main() {
       if (bad.committed || bad.counts.error !== 1 || (await count("action_items")) !== 1) throw new Error("plan de acción: debía ser todo o nada");
     });
 
+    await check("Centro de operaciones (D-75) en la carga masiva de oportunidades: se guarda, en blanco no lo cambia y uno desconocido es error", async () => {
+      const d8 = entryDef("8")!;
+      const r8 = (rowNo: number, code: string, site: string): ParsedRow => ({ rowNo, operation: "", shiftsText: "", cells: { [col(d8, "code")]: code, [col(d8, "site")]: site } });
+      const siteOf = async (code: string) => ((await admin.db.execute(sql`select s.name n from public.improvement_opportunities o left join public.sites s on s.id = o.site_id where o.study_id = ${studyId} and o.code = ${code}`)) as unknown as { n: string | null }[])[0]?.n ?? null;
+      const a = await run("8", up([r8(2, "O-9", "prado")]), true);                       // sin distinguir mayúsculas
+      if (!a.committed || a.counts.create !== 1 || (await siteOf("O-9")) !== "Prado") throw new Error(JSON.stringify(a));
+      const b = await run("8", up([r8(2, "O-9", "")]), true, true);                      // en blanco: no cambia el actual
+      if (!b.committed || (await siteOf("O-9")) !== "Prado") throw new Error("el blanco no debía quitar el centro de operaciones");
+      const c = await run("8", up([r8(2, "O-10", "Inventado")]), true);
+      if (c.committed || c.counts.error !== 1 || !c.rows[0].messages.join().includes("no está registrado") || (await siteOf("O-10")) !== null) throw new Error(JSON.stringify(c));
+    });
+
     await check("Capacidad: más filas nuevas de las que admite la hoja de Google (200 en cargos) se rechazan antes de guardar", async () => {
       const rows = Array.from({ length: 205 }, (_, i) => cargo(i + 2, `Cargo ${i}`));
       const r = await run("2", up(rows), true);

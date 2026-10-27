@@ -154,8 +154,9 @@ const opportunitiesAdapter: Adapter = {
   async all(tx, studyId) {
     const acts = new Map((await tx.select({ id: activities.id, code: activities.code }).from(activities).where(eq(activities.studyId, studyId))).map((a) => [a.id, a.code]));
     const ars = new Map((await tx.select({ id: areas.id, name: areas.name }).from(areas).where(eq(areas.studyId, studyId))).map((a) => [a.id, a.name]));
+    const sts = new Map((await tx.select({ id: sites.id, name: sites.name }).from(sites).where(eq(sites.studyId, studyId))).map((s) => [s.id, s.name])); // D-75: centro de operaciones
     const rows = await tx.select().from(improvementOpportunities).where(eq(improvementOpportunities.studyId, studyId)).orderBy(improvementOpportunities.code);
-    return rows.map((o) => ({ code: o.code, rec: o as unknown as Rec, extras: { kind: o.dataKind, code: o.code, activityCode: o.relatedActivityId ? acts.get(o.relatedActivityId) ?? null : null, area: o.areaId ? ars.get(o.areaId) ?? null : null } }));
+    return rows.map((o) => ({ code: o.code, rec: o as unknown as Rec, extras: { kind: o.dataKind, code: o.code, activityCode: o.relatedActivityId ? acts.get(o.relatedActivityId) ?? null : null, area: o.areaId ? ars.get(o.areaId) ?? null : null, site: o.siteId ? sts.get(o.siteId) ?? null : null } }));
   },
 };
 
@@ -171,8 +172,9 @@ const planAdapter: Adapter = {
   },
   async all(tx, studyId) {
     const ars = new Map((await tx.select({ id: areas.id, name: areas.name }).from(areas).where(eq(areas.studyId, studyId))).map((a) => [a.id, a.name]));
+    const sts = new Map((await tx.select({ id: sites.id, name: sites.name }).from(sites).where(eq(sites.studyId, studyId))).map((s) => [s.id, s.name])); // D-75: centro de operaciones
     const rows = await tx.select().from(actionItems).where(eq(actionItems.studyId, studyId)).orderBy(actionItems.code);
-    return rows.map((p) => ({ code: p.code, rec: p as unknown as Rec, extras: { kind: p.dataKind, code: p.code, area: p.areaId ? ars.get(p.areaId) ?? null : null, start: p.startDate, end: p.endDate } }));
+    return rows.map((p) => ({ code: p.code, rec: p as unknown as Rec, extras: { kind: p.dataKind, code: p.code, area: p.areaId ? ars.get(p.areaId) ?? null : null, site: p.siteId ? sts.get(p.siteId) ?? null : null, start: p.startDate, end: p.endDate } }));
   },
 };
 
@@ -225,8 +227,9 @@ const redesignAdapter: Adapter = {
   },
   async all(tx, studyId) {
     const ars = new Map((await tx.select({ id: areas.id, name: areas.name }).from(areas).where(eq(areas.studyId, studyId))).map((a) => [a.id, a.name]));
+    const sts = new Map((await tx.select({ id: sites.id, name: sites.name }).from(sites).where(eq(sites.studyId, studyId))).map((s) => [s.id, s.name])); // D-75: centro de operaciones
     const rows = await tx.select().from(redesignProposals).where(eq(redesignProposals.studyId, studyId)).orderBy(redesignProposals.createdAt);
-    return rows.map((x) => ({ code: x.id, rec: x as unknown as Rec, extras: { kind: x.dataKind, area: ars.get(x.areaId) ?? null, position: x.currentPositionName } }));
+    return rows.map((x) => ({ code: x.id, rec: x as unknown as Rec, extras: { kind: x.dataKind, area: ars.get(x.areaId) ?? null, position: x.currentPositionName, site: x.siteId ? sts.get(x.siteId) ?? null : null } }));
   },
 };
 

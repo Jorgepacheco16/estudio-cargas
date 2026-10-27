@@ -11,7 +11,7 @@ import { ALL_SHIFTS, parseDaysText, parseShift } from "../../domain/shifts";
 import { saveShiftTx, setActivityShiftsTx } from "../shifts";
 import { BULK_MAX_ROWS, type BulkSheet, type ParsedUpload } from "./bulk-file";
 import { entryDef, type EntryId } from "./defs";
-import { persistEntry, validateRaw } from "./service";
+import { persistEntry, siteExtra, validateRaw } from "./service";
 
 export interface BulkRowReport { sheet: "Datos" | "Turnos"; rowNo: number; label: string; action: "create" | "update" | "unchanged" | "error"; messages: string[] }
 export interface Counts { create: number; update: number; unchanged: number; error: number }
@@ -62,12 +62,15 @@ export async function runBulk(db: Db, sub: string, studyId: string, hoja: BulkSh
         const res = await attempt(tx, async (sp) => {
           // Cargos (hoja 2): no tienen código; la clave es tipo de dato + área + sede + cargo + código del colaborador (si lo trae). Si ya hay UNA fila con esa
           // clave se actualiza; si hay varias no se adivina (error); si no hay, se crea.
-          let ref: { recId?: string; version?: number; matchExisting?: boolean } = { matchExisting: true };
+          let ref: { recId?: string; version?: number; matchExisting?: boolean; extra?: Record<string, unknown> } = { matchExisting: true };
           if (hoja === "2") {
             const found = await findStaffing(sp, studyId, v.row.s("kind") === "demo" ? "demo" : "real", v.row.s("area") ?? "", v.row.s("site") ?? "", v.row.s("position") ?? "", v.row.s("employeeCode") ?? "");
             if (found.length > 1) throw new RowFail(["Ya hay varias filas de dotación con esta clave (tipo, área, sede, cargo y código del colaborador). Edítelas en la aplicación o indique el código del colaborador."]);
             ref = found.length === 1 ? { recId: found[0].id, version: found[0].version } : {};
           }
+          const sx = await siteExtra(sp, studyId, def, r.cells, true); // D-75: centro de operaciones (8, 9 y 10); en blanco no cambia el actual
+          if ("error" in sx) throw new RowFail([sx.error]);
+          ref = { ...ref, extra: sx.extra };
           const saved = await persistEntry(sp, sub, studyId, def, v.row, ref);
           if (!saved.ok) throw new RowFail(saved.errors);
           if (seen.has(saved.recId)) throw new RowFail([`Fila repetida: tiene la misma clave que la fila ${seen.get(saved.recId)}.`]);
