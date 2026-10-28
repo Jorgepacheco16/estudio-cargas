@@ -1,4 +1,5 @@
 import { Purpose } from "@/components/Purpose";
+import { ConfirmButton } from "@/components/ConfirmButton";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getDb } from "@/db/server";
@@ -39,7 +40,7 @@ export default async function Parametros({ searchParams }: { searchParams: Promi
           {areas.map((a) => (
             <li key={a.id}>
               <span>{a.name}</span>
-              {canWrite && <form action={removeAreaAction}><input type="hidden" name="name" value={a.name} /><button className="btn danger" type="submit" aria-label={`Quitar ${a.name}`}>Quitar</button></form>}
+              {canWrite && <form action={removeAreaAction}><input type="hidden" name="name" value={a.name} /><ConfirmButton title="¿Quitar esta área?" message={<>Se quitará el área <b>{a.name}</b> de la lista.</>} confirmLabel="Quitar" ariaLabel={`Quitar ${a.name}`}>Quitar</ConfirmButton></form>}
             </li>
           ))}
         </ul>

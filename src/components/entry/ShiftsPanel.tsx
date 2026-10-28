@@ -1,4 +1,5 @@
 import { deleteShiftAction, saveShiftAction } from "@/app/entrada/shift-actions";
+import { ConfirmButton } from "@/components/ConfirmButton";
 import { DAY_NAMES, daysOf, describeShift } from "@/domain/shifts";
 import type { ShiftRow } from "@/server/shifts";
 
@@ -36,7 +37,7 @@ export function ShiftsPanel({ positionId, entryId, shifts, canWrite, ok, error }
               <form action={deleteShiftAction} style={{ marginTop: 6 }}>
                 {hidden(s.id)}
                 {s.usedBy > 0 && <label style={{ marginRight: 12 }}><input type="checkbox" name="confirm" /> Confirmo: quitarlo también de las {s.usedBy} actividad(es) que lo usan</label>}
-                <button className="btn danger" type="submit">Eliminar turno</button>
+                <ConfirmButton title="¿Eliminar este turno?" message="Se eliminará el turno de este cargo.">Eliminar turno</ConfirmButton>
               </form>
             </>
           ) : null}

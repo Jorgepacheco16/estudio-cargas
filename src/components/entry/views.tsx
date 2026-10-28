@@ -14,6 +14,7 @@ import { bulkEnabled } from "@/server/entry/bulk-file";
 import { FilterBar } from "@/components/FilterBar";
 import { entryFilters } from "@/server/entry/filters";
 import { filterQuery } from "@/domain/filters";
+import { ConfirmButton } from "@/components/ConfirmButton";
 import { PagedTable } from "@/components/PagedTable";
 import { OperationPanel } from "@/components/entry/OperationPanel";
 import { getOperation } from "@/server/operation";
@@ -85,7 +86,7 @@ export async function EntrySection({ hoja, sp: rawSp, bar = true }: { hoja: Entr
                   {def.computed.map((c) => { const v = r.computed[c.col]; return <td key={c.col} className="calc">{v === null || v === undefined || v === "" ? "—" : typeof v === "number" ? v.toLocaleString("es-CO", { maximumFractionDigits: 4 }) : String(v)}</td>; })}
                   <td style={{ whiteSpace: "nowrap" }}>
                     <Link className="btn" href={`${base}/${r.id}`}>{canWrite ? "Editar" : "Ver"}</Link>{" "}
-                    {canWrite && <form action={deleteEntryAction} style={{ display: "inline" }}><input type="hidden" name="hoja" value={def.id} /><input type="hidden" name="recId" value={r.id} /><button className="btn danger" type="submit">Eliminar</button></form>}
+                    {canWrite && <form action={deleteEntryAction} style={{ display: "inline" }}><input type="hidden" name="hoja" value={def.id} /><input type="hidden" name="recId" value={r.id} /><ConfirmButton title="¿Eliminar este registro?" message={<>Se eliminará el registro <b>{String(inputValue(def, listCols[0]?.field ?? "", r.cells[listCols[0]?.col ?? ""]) || "sin código")}</b> de {def.short}.</>} ariaLabel={`Eliminar ${String(inputValue(def, listCols[0]?.field ?? "", r.cells[listCols[0]?.col ?? ""]) || "registro")}`}>Eliminar</ConfirmButton></form>}
                   </td>
                 </tr>
               ))}

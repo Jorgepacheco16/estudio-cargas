@@ -388,3 +388,14 @@ tfoot td { background: var(--blue-soft); border-top: 2px solid var(--blue); bord
 .pager-btn:hover:not(:disabled) { background: var(--line); }
 .pager-btn:disabled { opacity: .35; cursor: default; }
 .pager-btn:focus-visible, .pager select:focus-visible { outline: 3px solid var(--blue); outline-offset: 2px; }
+
+/* Ventana de confirmación antes de eliminar o quitar un registro. */
+dialog.confirm { width: min(420px, calc(100vw - 32px)); padding: 22px 24px; border: 1px solid var(--line); border-radius: 12px; background: var(--card); color: var(--ink); box-shadow: 0 20px 60px rgba(0, 0, 0, .35); text-align: left; white-space: normal; }
+dialog.confirm::backdrop { background: rgba(15, 20, 27, .55); }
+dialog.confirm h2 { margin: 0 0 8px; font-size: 1.125rem; }
+dialog.confirm p { margin: 0 0 8px; font-size: .9375rem; }
+dialog.confirm .confirm-warn { color: var(--red-dark); font-weight: 600; font-size: .875rem; }
+.confirm-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 16px; }
+.btn.danger-solid { background: var(--red); border-color: var(--red); color: #fff; }
+html[data-theme="dark"] .btn.danger-solid { color: #0f141b; }
+.btn.danger-solid:hover { background: var(--red-dark); border-color: var(--red-dark); }

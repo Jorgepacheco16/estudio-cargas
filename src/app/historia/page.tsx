@@ -1,4 +1,5 @@
 import { Purpose } from "@/components/Purpose";
+import { ConfirmButton } from "@/components/ConfirmButton";
 import { PagedTable } from "@/components/PagedTable";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -139,7 +140,7 @@ export default async function Historia({ searchParams }: { searchParams: Promise
         <section className="card">
           <h2>Mediciones registradas ({ms.length})</h2>
           {ms.length === 0 ? <div className="empty">Sin mediciones.</div> : <PagedTable head={<tr><th>Fecha</th><th>Actividad</th><th className="num">Unidades</th><th className="num">Horas-persona</th><th>Método</th><th>Observador</th><th /></tr>} rows={ms.map((m) => <tr key={m.id}><td>{when(m.observedAt)}</td><td>{code.get(m.activityId)}</td><td className="num">{nf(m.unitsProcessed === null ? null : Number(m.unitsProcessed))}</td><td className="num">{nf(Number(m.personHours))}</td><td>{optionsOf("L_Fuente").find((o) => o.code === m.method)?.label}</td><td>{m.observer ?? ""}</td>
-              <td><form action={deleteMeasurementAction}><input type="hidden" name="id" value={m.id} /><button className="btn danger" type="submit" disabled={!canWrite}>Eliminar</button></form></td></tr>)} />}
+              <td><form action={deleteMeasurementAction}><input type="hidden" name="id" value={m.id} /><ConfirmButton title="¿Eliminar esta medición?" message="Se eliminará la medición seleccionada." disabled={!canWrite}>Eliminar</ConfirmButton></form></td></tr>)} />}
         </section>
       </main>
     );
