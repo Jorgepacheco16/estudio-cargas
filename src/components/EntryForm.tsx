@@ -1,5 +1,5 @@
 "use client";
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import Link from "next/link";
 import { saveEntryAction, type FormState } from "@/app/entrada/actions";
 import { CoveragePanel } from "@/components/CoveragePanel";
@@ -17,12 +17,14 @@ const spanOf = (f: FormField): "full" | "two" | "one" => {
   return "one";
 };
 
-export function EntryForm({ hoja, base, recId, version, fields, computed, initial, lookups, canWrite, coverage, shifts }: {
-  coverage?: { cargoId: string; afterCol: string }; shifts?: { positions: PickerPosition[]; initial: { all: boolean; ids: string[] }; cols: { kind: string; area: string; site: string; position: string }; afterCol: string }; hoja: string; base: string; recId?: string; version?: number; fields: FormField[]; computed: FormComputed[]; initial: Record<string, string>; lookups: Lookups; canWrite: boolean;
+export function EntryForm({ hoja, base, recId, version, fields, computed, initial, lookups, canWrite, coverage, shifts, shiftType }: {
+  /** Hoja 2: tipo de turno del cargo (Fijo / Variable). `initial`: «fixed», «variable» o vacío. */
+  shiftType?: { initial: string }; coverage?: { cargoId: string; afterCol: string }; shifts?: { positions: PickerPosition[]; initial: { all: boolean; ids: string[] }; cols: { kind: string; area: string; site: string; position: string }; afterCol: string }; hoja: string; base: string; recId?: string; version?: number; fields: FormField[]; computed: FormComputed[]; initial: Record<string, string>; lookups: Lookups; canWrite: boolean;
 }) {
   const [state, action, pending] = useActionState<FormState, FormData>(saveEntryAction, { errors: [], values: initial });
   const val = (col: string) => state.values[col] ?? "";
   const groups = [...new Set(fields.map((f) => f.group))];
+  const [tipo, setTipo] = useState(shiftType?.initial ?? "");
   return (
     <form action={action} className="entry-form">
       <input type="hidden" name="hoja" value={hoja} />
@@ -72,6 +74,25 @@ export function EntryForm({ hoja, base, recId, version, fields, computed, initia
           )}
         </section>
       ))}
+      {shiftType && (
+        <section className="card" role="group" aria-labelledby="tt-h">
+          <h2 id="tt-h">Tipo de turno</h2>
+          <div className="form-grid">
+            <div className="field span-two">
+              <label htmlFor="shiftType">Tipo de turno de este cargo en este centro de operaciones</label>
+              <select id="shiftType" name="shiftType" value={tipo} onChange={(e) => setTipo(e.target.value)} disabled={!canWrite}>
+                <option value="">(sin definir)</option>
+                <option value="fixed">Fijo</option>
+                <option value="variable">Variable</option>
+              </select>
+              <p className="hint">{tipo === "fixed" ? "Fijo: el cargo se requiere con el mismo horario sin importar cuánto se venda (por ejemplo, un auxiliar de prevención y pérdidas por puerta). Se registran los turnos con su horario."
+                : tipo === "variable" ? "Variable: el cargo se programa según el volumen de ventas. No se registran todos los horarios posibles sino las franjas horarias dentro de las que se distribuyen los turnos de los colaboradores."
+                : "Es información para el estudio y para el agente de IA: no cambia las horas ni la capacidad. El mismo cargo puede ser fijo en un centro de operaciones y variable en otro."}</p>
+            </div>
+          </div>
+          <p className="note" style={{ marginBottom: 0 }}>{recId ? `Después de guardar, registre ${tipo === "variable" ? "las franjas" : "los turnos"} en el bloque «${tipo === "variable" ? "Franjas" : "Turnos"} de este cargo» que aparece más abajo.` : `Al guardar el cargo podrá registrar ${tipo === "variable" ? "sus franjas" : "sus turnos"} (abra el cargo con «Editar»).`}</p>
+        </section>
+      )}
       <datalist id="dl_sites">{lookups.sites.map((s) => <option key={s} value={s} />)}</datalist>
       <datalist id="dl_positions">{lookups.positions.map((s) => <option key={s} value={s} />)}</datalist>
       {computed.length > 0 && (

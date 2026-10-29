@@ -3,6 +3,29 @@
  * o que aplica a «Todos los turnos». Es información: no entra en ningún cálculo de horas, capacidad ni alertas.
  */
 export const ALL_SHIFTS = "Todos los turnos";
+export const ALL_BANDS = "Todas las franjas";
+
+/**
+ * Tipo de turno del cargo en un centro de operaciones. «Fijo»: se registran los turnos con su horario. «Variable»: no se registran todos los horarios posibles
+ * sino las FRANJAS horarias dentro de las que se distribuyen los turnos de los colaboradores del cargo. Es información para el agente: no entra en ningún cálculo.
+ */
+export type ShiftType = "fixed" | "variable";
+export const SHIFT_TYPE_LABEL: Record<ShiftType, string> = { fixed: "Fijo", variable: "Variable" };
+export const isShiftType = (v: unknown): v is ShiftType => v === "fixed" || v === "variable";
+/** «Fijo» / «Variable» (o fixed / variable) → tipo; vacío → null (sin definir); cualquier otra cosa → undefined (no se entiende). */
+export function parseShiftType(raw: string): ShiftType | null | undefined {
+  const t = raw.normalize("NFD").replace(/[̀-ͯ]/g, "").trim().toLowerCase();
+  if (t === "") return null;
+  if (t === "fijo" || t === "fixed") return "fixed";
+  if (t === "variable") return "variable";
+  return undefined;
+}
+/** Cómo se llama cada registro según el tipo: «turno» (fijo o sin definir) o «franja» (variable). */
+export const shiftNoun = (t: ShiftType | null | undefined) => (t === "variable"
+  ? { one: "franja", many: "franjas", One: "Franja", Many: "Franjas", all: ALL_BANDS }
+  : { one: "turno", many: "turnos", One: "Turno", Many: "Turnos", all: ALL_SHIFTS });
+/** Frase que se entrega al agente cuando el cargo tiene turno variable. */
+export const VARIABLE_EXPLAIN = "turno variable: en cada franja se distribuyen los turnos de los colaboradores del cargo";
 export const NAME_MAX = 60;
 
 /** Días de la semana: la posición es el bit (0 = lunes … 6 = domingo). */
@@ -99,12 +122,13 @@ export function parseShift(i: ShiftInput): { ok: true; values: ShiftValues } | {
 }
 
 /** «Apertura · L–S · 05:30–13:00 · receso 30 min · 7 h netas» (los días solo aparecen si no son todos). */
-export function describeShift(v: Omit<ShiftValues, "days"> & { days?: number | null }): string {
-  const parts = [v.name];
+export function describeShift(v: Omit<ShiftValues, "days"> & { days?: number | null; type?: ShiftType | null }): string {
+  const variable = v.type === "variable";
+  const parts = [variable ? `Franja ${v.name}` : v.name];
   if (v.days !== undefined && v.days !== null) parts.push(describeDays(v.days));
   if (v.start && v.end) parts.push(`${v.start}–${v.end}`);
   if (v.breakMin) parts.push(`receso ${v.breakMin} min`);
-  const h = netHours(v);
+  const h = variable ? null : netHours(v); // la franja es una ventana de horas, no la duración del turno de una persona
   if (h !== null) parts.push(`${String(Math.round(h * 100) / 100).replace(".", ",")} h netas`);
   return parts.join(" · ");
 }

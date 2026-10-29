@@ -22,10 +22,10 @@ export const BULK_MAX_BYTES = 1_500_000;
 export const OPERATION_HEADER = "Descripción de la operación";
 export const ACTIVITY_SHIFTS_HEADER = "Turnos en que se ejecuta";
 export const SHIFT_SHEET = "Turnos";
-export const SHIFT_HEADERS = { kind: "Tipo de dato", area: "Área", site: "Centro de operaciones", position: "Cargo", name: "Nombre del turno", start: "Hora de inicio", end: "Hora de fin", breakMin: "Receso (minutos)", days: "Días" } as const;
+export const SHIFT_HEADERS = { kind: "Tipo de dato", area: "Área", site: "Centro de operaciones", position: "Cargo", name: "Nombre del turno", start: "Hora de inicio", end: "Hora de fin", breakMin: "Receso (minutos)", days: "Días", type: "Tipo de turno" } as const;
 
 export interface ParsedRow { rowNo: number; cells: Record<string, string>; operation: string; shiftsText: string; error?: string }
-export interface ParsedShift { rowNo: number; kind: string; area: string; site: string; position: string; name: string; start: string; end: string; breakMin: string; days: string }
+export interface ParsedShift { rowNo: number; kind: string; area: string; site: string; position: string; name: string; start: string; end: string; breakMin: string; days: string; type: string }
 export interface ParsedUpload { rows: ParsedRow[]; shifts: ParsedShift[]; fileErrors: string[] }
 
 /** Texto sin tildes, en minúsculas y sin el asterisco de «obligatorio»: para reconocer los encabezados aunque se hayan tocado. */
@@ -91,11 +91,13 @@ export async function buildTemplate(def: EntryDef, areas: string[], activities: 
     ts.getCell(1, 6).note = "Formato HH:MM, por ejemplo 05:30";
     ts.getCell(1, 7).note = "Formato HH:MM, por ejemplo 13:00. Si es menor que la de inicio, el turno cruza la medianoche.";
     ts.getCell(1, 9).note = "Todos, L-S, L-V, «L, X, V» o Domingo (L M X J V S D). Vacío = todos los días.";
+    ts.getCell(1, 10).note = "Fijo o Variable: tipo de turno del cargo. Si es Variable, las filas de este cargo son FRANJAS horarias en las que se distribuyen los turnos. Vacío = no cambia el tipo actual.";
     ts.getRow(1).height = 32;
     const areaRange = areas.length ? rangeOf(def.fields.find((f) => f.control === "area")!.header) : null;
     const kindField = def.fields.find((f) => f.field === "kind");
     for (let r = 2; r <= 301; r++) {
       if (areaRange) ts.getCell(r, 2).dataValidation = { type: "list", allowBlank: true, formulae: [areaRange], showErrorMessage: true, errorStyle: "warning", error: "Elija un área de la lista." };
+      ts.getCell(r, 10).dataValidation = { type: "list", allowBlank: true, formulae: ['"Fijo,Variable"'], showErrorMessage: true, errorStyle: "warning", error: "Elija Fijo o Variable." };
       if (kindField) ts.getCell(r, 1).dataValidation = { type: "list", allowBlank: true, formulae: [rangeOf(kindField.header)], showErrorMessage: true, errorStyle: "warning", error: "Elija REAL o DEMO." };
     }
   }
@@ -213,7 +215,7 @@ export async function parseUpload(def: EntryDef, data: Buffer | ArrayBuffer): Pr
       if (missing.length) { out.fileErrors.push(`En la hoja «${SHIFT_SHEET}» faltan las columnas: ${missing.join(", ")}.`); return out; }
       const get = (r: number, h: string, time = false) => { const n = idx.get(key(h)); if (!n) return ""; const t = time ? timeText(ts.getRow(r).getCell(n)) : cellText(ts.getRow(r).getCell(n), undefined); return t.problem ? `⚠${t.problem}` : t.text; };
       for (let r = 2; r <= Math.min(ts.rowCount, 1000); r++) {
-        const s: ParsedShift = { rowNo: r, kind: get(r, SHIFT_HEADERS.kind), area: get(r, SHIFT_HEADERS.area), site: get(r, SHIFT_HEADERS.site), position: get(r, SHIFT_HEADERS.position), name: get(r, SHIFT_HEADERS.name), start: get(r, SHIFT_HEADERS.start, true), end: get(r, SHIFT_HEADERS.end, true), breakMin: get(r, SHIFT_HEADERS.breakMin), days: get(r, SHIFT_HEADERS.days) };
+        const s: ParsedShift = { rowNo: r, kind: get(r, SHIFT_HEADERS.kind), area: get(r, SHIFT_HEADERS.area), site: get(r, SHIFT_HEADERS.site), position: get(r, SHIFT_HEADERS.position), name: get(r, SHIFT_HEADERS.name), start: get(r, SHIFT_HEADERS.start, true), end: get(r, SHIFT_HEADERS.end, true), breakMin: get(r, SHIFT_HEADERS.breakMin), days: get(r, SHIFT_HEADERS.days), type: get(r, SHIFT_HEADERS.type) };
         if (Object.entries(s).some(([k, v]) => k !== "rowNo" && v !== "")) out.shifts.push(s);
       }
       if (out.shifts.length > 300) { out.fileErrors.push("La hoja «Turnos» trae más de 300 turnos; el máximo por carga es 300."); return out; }

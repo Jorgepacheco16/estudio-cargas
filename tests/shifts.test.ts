@@ -1,4 +1,4 @@
-import { ALL_SHIFTS, activityShiftsText, daysOf, describeDays, describeShift, maskFromDays, parseDaysText, grossMinutes, netHours, normTime, parseShift, reconcileSelection } from "../src/domain/shifts";
+import { ALL_SHIFTS, activityShiftsText, daysOf, describeDays, describeShift, maskFromDays, parseDaysText, grossMinutes, netHours, normTime, parseShift, parseShiftType, reconcileSelection, shiftNoun } from "../src/domain/shifts";
 import { check, summary } from "./helpers";
 
 /** Turnos del cargo (D-67): validación, horas netas y selección de la actividad. Funciones puras. */
@@ -63,6 +63,14 @@ async function main() {
     if (describeShift(r.values) !== "Apertura · 05:30–13:00 · receso 30 min · 7 h netas") throw new Error(describeShift(r.values));
     if (activityShiftsText(true, ["Cierre"]) !== ALL_SHIFTS) throw new Error("todos");
     if (activityShiftsText(false, ["Cierre", "Apertura"]) !== "Apertura, Cierre" || activityShiftsText(false, []) !== "") throw new Error("lista");
+  });
+
+  await check("Tipo de turno: Fijo / Variable se entiende con o sin tilde y mayúsculas; vacío = sin definir; lo demás no se entiende. La franja se describe sin horas netas", () => {
+    if (parseShiftType("Fijo") !== "fixed" || parseShiftType(" VARIABLE ") !== "variable" || parseShiftType("") !== null || parseShiftType("mixto") !== undefined) throw new Error("parseShiftType");
+    const v = { name: "Mañana", start: "06:00", end: "14:00", breakMin: 30, days: null };
+    if (describeShift({ ...v, type: "variable" }) !== "Franja Mañana · 06:00–14:00 · receso 30 min") throw new Error(describeShift({ ...v, type: "variable" }));
+    if (describeShift({ ...v, type: "fixed" }) !== "Mañana · 06:00–14:00 · receso 30 min · 7,5 h netas") throw new Error(describeShift({ ...v, type: "fixed" }));
+    if (shiftNoun("variable").many !== "franjas" || shiftNoun(null).many !== "turnos" || shiftNoun("variable").all !== "Todas las franjas") throw new Error("shiftNoun");
   });
 
   await check("Si la actividad cambia de cargo, los turnos que no son de ese cargo se descartan (sin duplicados)", () => {

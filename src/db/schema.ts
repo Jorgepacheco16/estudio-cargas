@@ -117,11 +117,14 @@ export const positions = pgTable("positions", {
   formalFunctions: text("formal_functions"),
   /** D-69: cómo opera el cargo en la práctica (turnos que programa la herramienta, puestos mínimos de apertura y cierre, etc.). Texto informativo. */
   operationDescription: text("operation_description"),
+  /** Tipo de turno del cargo en este centro de operaciones: «fixed» (turnos con horario) o «variable» (franjas horarias en las que se distribuyen los turnos). Informativo; null = sin definir. */
+  shiftType: text("shift_type"),
   autoCreated: boolean("auto_created").notNull().default(false),
   ...stamps(),
 }, (t) => [
   unique("positions_key_uq").on(t.studyId, t.areaId, t.siteId, t.name, t.dataKind),
   unique("positions_id_study_uq").on(t.id, t.studyId),
+  check("positions_shift_type_ck", sql`${t.shiftType} is null or ${t.shiftType} in ('fixed', 'variable')`),
   foreignKey({ columns: [t.areaId, t.studyId], foreignColumns: [areas.id, areas.studyId], name: "positions_area_fk" }),
   foreignKey({ columns: [t.siteId, t.studyId], foreignColumns: [sites.id, sites.studyId], name: "positions_site_fk" }),
 ]);

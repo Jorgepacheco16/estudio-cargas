@@ -5,7 +5,7 @@
 import { and, asc, eq, inArray, sql } from "drizzle-orm";
 import { withRls, type Db, type Tx } from "../db/client";
 import { activities, activityShifts, areas, auditLog, positionShifts, positions, sites } from "../db/schema";
-import { activityShiftsText, describeDays, describeShift, normTime, parseShift, reconcileSelection, type ShiftInput, type ShiftValues } from "../domain/shifts";
+import { ALL_BANDS, SHIFT_TYPE_LABEL, VARIABLE_EXPLAIN, activityShiftsText, describeDays, describeShift, isShiftType, normTime, parseShift, reconcileSelection, type ShiftInput, type ShiftType, type ShiftValues } from "../domain/shifts";
 
 export interface ShiftRow { id: string; positionId: string; name: string; start: string | null; end: string | null; breakMin: number | null; days: number | null; usedBy: number }
 export type ShiftResult = { ok: true; notices: string[]; changed?: boolean } | { ok: false; errors: string[] };
@@ -22,6 +22,30 @@ export async function listShifts(db: Db, sub: string, studyId: string, positionI
     const n = new Map(uses.map((u) => [u.shiftId, u.n]));
     return rows.map((r) => ({ id: r.id, positionId: r.positionId, name: r.name, start: hhmm(r.startTime), end: hhmm(r.endTime), breakMin: r.breakMinutes, days: r.days, usedBy: n.get(r.id) ?? 0 }));
   });
+}
+
+const typeOf = (v: string | null): ShiftType | null => (isShiftType(v) ? v : null);
+
+/** Tipo de turno del cargo (null = sin definir). */
+export async function getShiftType(db: Db, sub: string, studyId: string, positionId: string): Promise<ShiftType | null> {
+  return withRls(db, { sub }, async (tx) => {
+    const [p] = await tx.select({ t: positions.shiftType }).from(positions).where(and(eq(positions.id, positionId), eq(positions.studyId, studyId)));
+    return typeOf(p?.t ?? null);
+  });
+}
+
+/** Guarda el tipo de turno del cargo (Fijo / Variable / sin definir). Informativo; deja constancia en audit_log con origen «app». */
+export async function setShiftType(db: Db, sub: string, studyId: string, positionId: string, type: ShiftType | null): Promise<{ ok: true; changed: boolean } | { ok: false; error: string }> {
+  return withRls(db, { sub }, (tx) => setShiftTypeTx(tx, sub, studyId, positionId, type));
+}
+/** Lo mismo dentro de una transacción ya abierta (la usa la carga masiva). */
+export async function setShiftTypeTx(tx: Tx, sub: string, studyId: string, positionId: string, type: ShiftType | null): Promise<{ ok: true; changed: boolean } | { ok: false; error: string }> {
+  const [cur] = await tx.select({ t: positions.shiftType }).from(positions).where(and(eq(positions.id, positionId), eq(positions.studyId, studyId)));
+  if (!cur) return { ok: false as const, error: "El cargo ya no existe." };
+  if (typeOf(cur.t) === type) return { ok: true as const, changed: false };
+  await tx.update(positions).set({ shiftType: type }).where(and(eq(positions.id, positionId), eq(positions.studyId, studyId)));
+  await audit(tx, studyId, sub, "update", "position_shift_type", positionId, { shiftType: { from: typeOf(cur.t) ? SHIFT_TYPE_LABEL[typeOf(cur.t)!] : null, to: type ? SHIFT_TYPE_LABEL[type] : null } });
+  return { ok: true as const, changed: true };
 }
 
 /** Crea (sin shiftId) o edita un turno del cargo. */
@@ -110,17 +134,17 @@ export async function setActivityShiftsTx(tx: Tx, sub: string, studyId: string, 
   }
 }
 
-export interface PositionShifts { kind: string; area: string; site: string; position: string; shifts: { id: string; name: string; start: string | null; end: string | null; breakMin: number | null; days: number | null }[] }
+export interface PositionShifts { kind: string; area: string; site: string; position: string; type: ShiftType | null; shifts: { id: string; name: string; start: string | null; end: string | null; breakMin: number | null; days: number | null }[] }
 /** Cargos con sus turnos, para el selector del formulario de actividades (solo cargos que tienen turnos). */
 export async function shiftsByPosition(db: Db, sub: string, studyId: string): Promise<PositionShifts[]> {
   return withRls(db, { sub }, async (tx) => {
-    const rows = await tx.select({ id: positionShifts.id, name: positionShifts.name, start: positionShifts.startTime, end: positionShifts.endTime, brk: positionShifts.breakMinutes, days: positionShifts.days, order: positionShifts.sortOrder, kind: positions.dataKind, area: areas.name, site: sites.name, position: positions.name })
+    const rows = await tx.select({ id: positionShifts.id, name: positionShifts.name, start: positionShifts.startTime, end: positionShifts.endTime, brk: positionShifts.breakMinutes, days: positionShifts.days, order: positionShifts.sortOrder, kind: positions.dataKind, area: areas.name, site: sites.name, position: positions.name, type: positions.shiftType })
       .from(positionShifts).innerJoin(positions, eq(positions.id, positionShifts.positionId)).innerJoin(areas, eq(areas.id, positions.areaId)).innerJoin(sites, eq(sites.id, positions.siteId))
       .where(eq(positionShifts.studyId, studyId)).orderBy(asc(positionShifts.sortOrder), asc(positionShifts.name));
     const out = new Map<string, PositionShifts>();
     for (const r of rows) {
       const k = `${r.kind}|${r.area}|${r.site}|${r.position}`;
-      if (!out.has(k)) out.set(k, { kind: r.kind, area: r.area, site: r.site, position: r.position, shifts: [] });
+      if (!out.has(k)) out.set(k, { kind: r.kind, area: r.area, site: r.site, position: r.position, type: typeOf(r.type), shifts: [] });
       out.get(k)!.shifts.push({ id: r.id, name: r.name, start: hhmm(r.start), end: hhmm(r.end), breakMin: r.brk, days: r.days });
     }
     return [...out.values()];
@@ -132,24 +156,38 @@ export async function shiftTextByActivityId(tx: Tx, studyId: string): Promise<Ma
   const byCode = await shiftTextRows(tx, studyId);
   return new Map(byCode.map((r) => [r.id, r.text]));
 }
-/** Lo mismo por código de actividad (para el agente). */
+/** Lo mismo por código de actividad (para el agente). Si el cargo tiene turno variable, se le explica qué significan las franjas. */
 export async function shiftTextByActivityCode(tx: Tx, studyId: string): Promise<Map<string, string>> {
   const rows = await shiftTextRows(tx, studyId);
-  return new Map(rows.map((r) => [r.code, r.text]));
+  return new Map(rows.map((r) => [r.code, r.variable ? `${r.text} (${VARIABLE_EXPLAIN})` : r.text]));
 }
 /** Descripción de los turnos de cada cargo, un turno por línea, para la hoja 2 de Google. Solo cargos con turnos. */
 export async function shiftLinesByPositionId(tx: Tx, studyId: string): Promise<Map<string, string>> {
   const rows = await tx.select().from(positionShifts).where(eq(positionShifts.studyId, studyId)).orderBy(asc(positionShifts.sortOrder), asc(positionShifts.name));
+  const type = await shiftTypeByPositionId(tx, studyId);
   const out = new Map<string, string[]>();
-  for (const r of rows) out.set(r.positionId, [...(out.get(r.positionId) ?? []), describeShift({ name: r.name, start: hhmm(r.startTime), end: hhmm(r.endTime), breakMin: r.breakMinutes, days: r.days })]);
+  for (const r of rows) out.set(r.positionId, [...(out.get(r.positionId) ?? []), describeShift({ name: r.name, start: hhmm(r.startTime), end: hhmm(r.endTime), breakMin: r.breakMinutes, days: r.days, type: type.get(r.positionId) ?? null })]);
   return new Map([...out].map(([k, v]) => [k, v.join("\n")]));
 }
-async function shiftTextRows(tx: Tx, studyId: string): Promise<{ id: string; code: string; text: string }[]> {
-  const acts = await tx.select({ id: activities.id, code: activities.code, all: activities.allShifts }).from(activities).where(eq(activities.studyId, studyId));
+/** Tipo de turno por id de cargo, escrito para la hoja 2 de Google: «Fijo» o «Variable». Solo cargos con tipo definido. */
+export async function shiftTypeTextByPositionId(tx: Tx, studyId: string): Promise<Map<string, string>> {
+  return new Map([...(await shiftTypeByPositionId(tx, studyId))].map(([id, t]) => [id, SHIFT_TYPE_LABEL[t]]));
+}
+async function shiftTypeByPositionId(tx: Tx, studyId: string): Promise<Map<string, ShiftType>> {
+  const rows = await tx.select({ id: positions.id, t: positions.shiftType }).from(positions).where(eq(positions.studyId, studyId));
+  return new Map(rows.flatMap((r) => (isShiftType(r.t) ? [[r.id, r.t] as [string, ShiftType]] : [])));
+}
+async function shiftTextRows(tx: Tx, studyId: string): Promise<{ id: string; code: string; text: string; variable: boolean }[]> {
+  const type = await shiftTypeByPositionId(tx, studyId);
+  const acts = await tx.select({ id: activities.id, code: activities.code, all: activities.allShifts, positionId: activities.positionId }).from(activities).where(eq(activities.studyId, studyId));
   const links = await tx.select({ activityId: activityShifts.activityId, name: positionShifts.name, days: positionShifts.days }).from(activityShifts).innerJoin(positionShifts, eq(positionShifts.id, activityShifts.shiftId)).where(eq(activityShifts.studyId, studyId));
   const names = new Map<string, string[]>();
   for (const l of links) names.set(l.activityId, [...(names.get(l.activityId) ?? []), l.days === null ? l.name : `${l.name} (${describeDays(l.days)})`]);
-  const out: { id: string; code: string; text: string }[] = [];
-  for (const a of acts) { const t = activityShiftsText(a.all, names.get(a.id) ?? []); if (t) out.push({ id: a.id, code: a.code, text: t }); }
+  const out: { id: string; code: string; text: string; variable: boolean }[] = [];
+  for (const a of acts) {
+    const variable = type.get(a.positionId) === "variable";
+    const t = variable && a.all ? ALL_BANDS : activityShiftsText(a.all, (names.get(a.id) ?? []).map((n) => (variable ? `Franja ${n}` : n)));
+    if (t) out.push({ id: a.id, code: a.code, text: t, variable });
+  }
   return out;
 }

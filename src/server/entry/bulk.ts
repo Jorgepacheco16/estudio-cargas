@@ -7,8 +7,8 @@ import { and, eq, sql } from "drizzle-orm";
 import { withRls, type Db, type Tx } from "../../db/client";
 import { activities, areas, auditLog, positionShifts, positions, sites, staffingEntries } from "../../db/schema";
 import { LONG_TEXT_MAX } from "../../domain/limits";
-import { ALL_SHIFTS, parseDaysText, parseShift } from "../../domain/shifts";
-import { saveShiftTx, setActivityShiftsTx } from "../shifts";
+import { ALL_SHIFTS, parseDaysText, parseShift, parseShiftType, type ShiftType } from "../../domain/shifts";
+import { saveShiftTx, setActivityShiftsTx, setShiftTypeTx } from "../shifts";
 import { BULK_MAX_ROWS, type BulkSheet, type ParsedUpload } from "./bulk-file";
 import { entryDef, type EntryId } from "./defs";
 import { persistEntry, siteExtra, validateRaw } from "./service";
@@ -87,6 +87,7 @@ export async function runBulk(db: Db, sub: string, studyId: string, hoja: BulkSh
 
       if (hoja === "2") {
         const seenShift = new Map<string, number>();
+        const seenType = new Map<string, ShiftType>();
         for (const s of parsed.shifts) {
           const label = [s.area, s.site, s.position, s.name].filter(Boolean).join(" · ") || "(sin datos)";
           const bad = Object.values(s).find((x) => typeof x === "string" && x.startsWith("⚠"));
@@ -97,6 +98,8 @@ export async function runBulk(db: Db, sub: string, studyId: string, hoja: BulkSh
           if (!days) { add("Turnos", s.rowNo, label, "error", [`Días no válidos «${s.days}»: use Todos, L-S, L-V, «L, X, V» o Domingo.`]); continue; }
           const p = parseShift({ name: s.name, start: s.start, end: s.end, breakMin: s.breakMin, days });
           if (!p.ok) { add("Turnos", s.rowNo, label, "error", p.errors); continue; }
+          const type = parseShiftType(s.type);
+          if (type === undefined) { add("Turnos", s.rowNo, label, "error", [`Tipo de turno no válido «${s.type}»: use Fijo o Variable.`]); continue; }
           const res = await attempt(tx, async (sp) => {
             const kind = norm(s.kind) === "demo" ? "demo" : "real";
             const [pos] = await sp.select({ id: positions.id }).from(positions).innerJoin(areas, eq(areas.id, positions.areaId)).innerJoin(sites, eq(sites.id, positions.siteId))
@@ -105,10 +108,13 @@ export async function runBulk(db: Db, sub: string, studyId: string, hoja: BulkSh
             const dup = `${pos.id}|${norm(s.name)}`;
             if (seenShift.has(dup)) throw new RowFail([`Turno repetido: el mismo cargo y nombre aparecen en la fila ${seenShift.get(dup)}.`]);
             const [cur] = await sp.select({ id: positionShifts.id }).from(positionShifts).where(and(eq(positionShifts.positionId, pos.id), sql`lower(btrim(${positionShifts.name})) = ${norm(p.values.name)}`));
+            if (type && seenType.get(pos.id) && seenType.get(pos.id) !== type) throw new RowFail(["Este cargo aparece con dos tipos de turno distintos (Fijo y Variable) en el archivo."]);
             const saved = await saveShiftTx(sp, sub, studyId, pos.id, cur?.id, p.values);
             if (!saved.ok) throw new RowFail(saved.errors);
+            let typeChanged = false;
+            if (type) { const t = await setShiftTypeTx(sp, sub, studyId, pos.id, type); if (!t.ok) throw new RowFail([t.error]); typeChanged = t.changed; seenType.set(pos.id, type); }
             seenShift.set(dup, s.rowNo);
-            return cur ? (saved.changed ? "update" : "unchanged") : "create";
+            return cur ? (saved.changed || typeChanged ? "update" : "unchanged") : "create";
           });
           if (!res.ok) add("Turnos", s.rowNo, label, "error", res.errors); else add("Turnos", s.rowNo, label, res.value as BulkRowReport["action"]);
         }

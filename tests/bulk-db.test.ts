@@ -20,7 +20,7 @@ const actividad = (rowNo: number, code: string, position: string, shiftsText = "
   rowNo, operation: "", shiftsText,
   cells: { [col(d3, "kind")]: "REAL", [col(d3, "code")]: code, [col(d3, "area")]: "Cajas", [col(d3, "site")]: "Prado", [col(d3, "position")]: position, [col(d3, "name")]: `Actividad ${code}`, [col(d3, "calcMode")]: "Por evento", [col(d3, "executions")]: "1", [col(d3, "period")]: "Día", [col(d3, "scope")]: "Por colaborador", [col(d3, "timeAvg")]: "5" },
 });
-const turno = (rowNo: number, position: string, name: string, start: string, end: string, days = "L-S", breakMin = "30"): ParsedShift => ({ rowNo, kind: "", area: "Cajas", site: "Prado", position, name, start, end, breakMin, days });
+const turno = (rowNo: number, position: string, name: string, start: string, end: string, days = "L-S", breakMin = "30"): ParsedShift => ({ rowNo, kind: "", area: "Cajas", site: "Prado", position, name, start, end, breakMin, days, type: "" });
 const up = (rows: ParsedRow[], shifts: ParsedShift[] = []): ParsedUpload => ({ rows, shifts, fileErrors: [] });
 
 async function main() {

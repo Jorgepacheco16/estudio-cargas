@@ -4,7 +4,7 @@ import { createDb } from "../src/db/client";
 import { createStudy } from "../src/server/studies";
 import { entryDef, type EntryId } from "../src/server/entry/defs";
 import { saveEntry } from "../src/server/entry/service";
-import { activityShiftSelection, deleteShift, listShifts, saveShift, setActivityShifts, shiftTextByActivityCode, shiftsByPosition } from "../src/server/shifts";
+import { activityShiftSelection, deleteShift, getShiftType, listShifts, saveShift, setActivityShifts, setShiftType, shiftLinesByPositionId, shiftTextByActivityCode, shiftsByPosition } from "../src/server/shifts";
 import { withRls } from "../src/db/client";
 import { getOperation, saveOperation } from "../src/server/operation";
 import { LONG_TEXT_MAX } from "../src/domain/limits";
@@ -153,6 +153,28 @@ async function main() {
       if (!cleared.ok || !cleared.changed || (await getOperation(app.db, owner, studyId, fiscal)) !== "") throw new Error("no se pudo vaciar");
       const au = (await admin.db.execute(sql`select count(*)::int n from public.audit_log where study_id = ${studyId} and entity = 'position_operation' and origin = 'app'`)) as unknown as { n: number }[];
       if (au[0].n !== 2) throw new Error(`auditoría ${au[0].n}`); // guardar y vaciar; lo repetido no audita
+    });
+
+    await check("Tipo de turno del cargo: sin definir → Variable → Fijo; solo lectura no lo cambia; audita; las franjas salen rotuladas para la hoja y para el agente", async () => {
+      if ((await getShiftType(app.db, owner, studyId, fiscal)) !== null) throw new Error("debía empezar sin definir");
+      const a = await setShiftType(app.db, owner, studyId, fiscal, "variable");
+      if (!a.ok || !a.changed || (await getShiftType(app.db, owner, studyId, fiscal)) !== "variable") throw new Error(JSON.stringify(a));
+      const same = await setShiftType(app.db, owner, studyId, fiscal, "variable");
+      if (!same.ok || same.changed) throw new Error("repetir el mismo tipo debía ser «sin cambios»");
+      await rejects(setShiftType(app.db, viewer, studyId, fiscal, "fixed"), "42501");
+      const txt = await withRls(app.db, { sub: owner }, (tx) => shiftTextByActivityCode(tx, studyId));
+      if (!String(txt.get("F-2")).startsWith("Todas las franjas (turno variable: ") || !String(txt.get("F-1")).startsWith("Franja ") || !String(txt.get("F-1")).includes("(turno variable")) throw new Error(JSON.stringify([...txt]));
+      const lines = await withRls(app.db, { sub: owner }, (tx) => shiftLinesByPositionId(tx, studyId));
+      if (!String(lines.get(fiscal)).split("\n").every((l) => l.startsWith("Franja ") && !l.includes("h netas"))) throw new Error(String(lines.get(fiscal)));
+      const sbp = await shiftsByPosition(app.db, owner, studyId);
+      if (sbp.find((p) => p.position === "Fiscal de piso")?.type !== "variable") throw new Error("el selector no recibió el tipo");
+      const back = await setShiftType(app.db, owner, studyId, fiscal, "fixed");
+      if (!back.ok || !back.changed) throw new Error(JSON.stringify(back));
+      const txt2 = await withRls(app.db, { sub: owner }, (tx) => shiftTextByActivityCode(tx, studyId));
+      if (txt2.get("F-2") !== "Todos los turnos") throw new Error(txt2.get("F-2"));
+      const au = (await admin.db.execute(sql`select count(*)::int n from public.audit_log where study_id = ${studyId} and entity = 'position_shift_type' and origin = 'app'`)) as unknown as { n: number }[];
+      if (au[0].n !== 2) throw new Error(`auditoría ${au[0].n}`);
+      if ((await admin.db.execute(sql`update public.positions set shift_type = 'x' where id = ${fiscal}`).then(() => "aceptó", () => "rechazó")) !== "rechazó") throw new Error("la restricción debía rechazar un tipo inválido");
     });
 
     await check("Borrar el cargo borra sus turnos y los vínculos de las actividades (cascada)", async () => {

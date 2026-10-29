@@ -1,0 +1,2 @@
+ALTER TABLE "positions" ADD COLUMN "shift_type" text;--> statement-breakpoint
+ALTER TABLE "positions" ADD CONSTRAINT "positions_shift_type_ck" CHECK ("positions"."shift_type" is null or "positions"."shift_type" in ('fixed', 'variable'));

@@ -1,6 +1,6 @@
 /**
  * Columnas informativas que la app agrega al FINAL de las hojas 2 y 3 de Google (D-67, D-69), sin mover ninguna columna del libro:
- *  · hoja 2 (Caracterización): «Turnos del cargo» y «Descripción de la operación» (una por cargo; se repite en cada fila de dotación del mismo cargo);
+ *  · hoja 2 (Caracterización): «Turnos del cargo» (turnos o, si el tipo es Variable, franjas), «Descripción de la operación» y «Tipo de turno» (Fijo o Variable); una por cargo, se repite en cada fila de dotación del mismo cargo;
  *  · hoja 3 (Actividades): «Turnos en que se ejecuta».
  * Solo van de la app a la hoja (la app es la fuente, D-63): lo que se escriba a mano ahí se vuelve a sobrescribir. Se ubican por su encabezado; si no
  * existen se agregan. Las filas se reconocen por el vínculo oculto de la app (__app_id), así que esto corre DESPUÉS del espejo de la hoja.
@@ -9,12 +9,12 @@ import { eq } from "drizzle-orm";
 import { withRls, type Db } from "../../db/client";
 import { positions } from "../../db/schema";
 import { INTERNAL_HEADERS, indexToCol, colToIndex } from "../../domain/sheetmap";
-import { shiftLinesByPositionId, shiftTextByActivityId } from "../shifts";
+import { shiftLinesByPositionId, shiftTextByActivityId, shiftTypeTextByPositionId } from "../shifts";
 import type { Adapter } from "./adapters";
 import type { CellValue, SheetGateway } from "./gateway";
 import { q, type Conn } from "./internal";
 
-export const EXTRA_HEADERS = { shifts: "Turnos del cargo", operation: "Descripción de la operación", activityShifts: "Turnos en que se ejecuta", site: "Centro de operaciones" } as const;
+export const EXTRA_HEADERS = { shifts: "Turnos del cargo", shiftType: "Tipo de turno", operation: "Descripción de la operación", activityShifts: "Turnos en que se ejecuta", site: "Centro de operaciones" } as const;
 
 const blank = (v: unknown) => v === null || v === undefined || (typeof v === "string" && v.trim() === "");
 const flat = (v: unknown) => String(v ?? "").replace(/\s+/g, " ").trim();
@@ -35,6 +35,7 @@ export async function mirrorExtras(db: Db, conn: Conn, gw: SheetGateway, a: Adap
   const data = await withRls(db, { sub: conn.actorId }, async (tx) => ({
     entries: await a.all(tx, conn.studyId),
     shiftLines: a.sheet.target === "2" ? await shiftLinesByPositionId(tx, conn.studyId) : new Map<string, string>(),
+    shiftType: a.sheet.target === "2" ? await shiftTypeTextByPositionId(tx, conn.studyId) : new Map<string, string>(),
     operation: a.sheet.target === "2" ? new Map((await tx.select({ id: positions.id, t: positions.operationDescription }).from(positions).where(eq(positions.studyId, conn.studyId))).map((p) => [p.id, p.t ?? ""])) : new Map<string, string>(),
     activityShifts: a.sheet.target === "activities" ? await shiftTextByActivityId(tx, conn.studyId) : new Map<string, string>(),
   }));
@@ -42,6 +43,7 @@ export async function mirrorExtras(db: Db, conn: Conn, gw: SheetGateway, a: Adap
     ? [
       { header: EXTRA_HEADERS.shifts, value: (e) => data.shiftLines.get(String(e.rec.positionId)) ?? "" },
       { header: EXTRA_HEADERS.operation, value: (e) => data.operation.get(String(e.rec.positionId)) ?? "" },
+      { header: EXTRA_HEADERS.shiftType, value: (e) => data.shiftType.get(String(e.rec.positionId)) ?? "" },
     ]
     : WITH_SITE.includes(a.sheet.target)
       ? [{ header: EXTRA_HEADERS.site, value: (e) => String(e.extras.site ?? "") }]

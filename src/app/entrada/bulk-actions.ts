@@ -15,7 +15,7 @@ export interface BulkState { stage: "idle" | "preview" | "error"; message?: stri
 
 const parsedSchema = z.object({
   rows: z.array(z.object({ rowNo: z.number().int(), cells: z.record(z.string(), z.string()), operation: z.string(), shiftsText: z.string(), error: z.string().optional() }).strict()).max(400),
-  shifts: z.array(z.object({ rowNo: z.number().int(), kind: z.string(), area: z.string(), site: z.string(), position: z.string(), name: z.string(), start: z.string(), end: z.string(), breakMin: z.string(), days: z.string() }).strict()).max(300),
+  shifts: z.array(z.object({ rowNo: z.number().int(), kind: z.string(), area: z.string(), site: z.string(), position: z.string(), name: z.string(), start: z.string(), end: z.string(), breakMin: z.string(), days: z.string(), type: z.string().default("") }).strict()).max(300),
   fileErrors: z.array(z.string()).max(0),
 }).strict();
 

@@ -5,8 +5,9 @@ import { getUser } from "@/lib/supabase/server";
 import { activeStudyId } from "@/data/source";
 import { basePath, PARAMETROS_PATH } from "@/lib/entry-routes";
 import { ENTRY_IDS, entryDef, type EntryId } from "@/server/entry/defs";
-import { deleteEntry, saveEntry, scheduleMirror } from "@/server/entry/service";
-import { setActivityShifts } from "@/server/shifts";
+import { deleteEntry, getEntry, saveEntry, scheduleMirror } from "@/server/entry/service";
+import { setActivityShifts, setShiftType } from "@/server/shifts";
+import { parseShiftType } from "@/domain/shifts";
 import { SHEETS, parseForm, saveRow } from "@/server/capture";
 import { areas as areaTable } from "@/db/schema";
 import { withRls } from "@/db/client";
@@ -52,6 +53,18 @@ export async function saveEntryAction(_prev: FormState, fd: FormData): Promise<F
       if (!r.ok) res.notices.push("La actividad se guardó, pero no sus turnos: " + r.errors.join(" "));
       else { res.notices.push(...r.notices); shiftsChanged = r.changed === true; }
     } catch { res.notices.push("La actividad se guardó, pero no se pudieron guardar sus turnos. Ábrala y vuelva a elegirlos."); }
+  }
+  // Tipo de turno del cargo (hoja 2): Fijo, Variable o sin definir. Un fallo aquí no deshace el registro ya guardado.
+  if (id === "2" && fd.has("shiftType")) {
+    try {
+      const t = parseShiftType(String(fd.get("shiftType") ?? ""));
+      const found = t === undefined ? null : await getEntry(getDb(), user.id, study.id, "2", res.recId);
+      if (found?.row.positionId) {
+        const r = await setShiftType(getDb(), user.id, study.id, found.row.positionId, t ?? null);
+        if (!r.ok) res.notices.push("El cargo se guardó, pero no su tipo de turno: " + r.error);
+        else if (r.changed) shiftsChanged = true;
+      }
+    } catch { res.notices.push("El cargo se guardó, pero no se pudo guardar su tipo de turno. Ábralo y vuelva a elegirlo."); }
   }
   if (res.result !== "unchanged" || shiftsChanged) scheduleMirror(getDb(), user.id, study.id, id);
   const msg = res.result === "created" ? "Registro creado" : res.result === "updated" ? "Registro actualizado" : "Sin cambios";

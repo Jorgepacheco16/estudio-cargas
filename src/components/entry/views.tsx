@@ -18,7 +18,7 @@ import { ConfirmButton } from "@/components/ConfirmButton";
 import { PagedTable } from "@/components/PagedTable";
 import { OperationPanel } from "@/components/entry/OperationPanel";
 import { getOperation } from "@/server/operation";
-import { activityShiftSelection, listShifts, shiftsByPosition } from "@/server/shifts";
+import { activityShiftSelection, getShiftType, listShifts, shiftsByPosition } from "@/server/shifts";
 
 async function session() {
   const user = await getUser();
@@ -114,7 +114,7 @@ export async function EntryNew({ hoja }: { hoja: EntryId }) {
   return (
     <main>
       <div className="head"><div><h1>Nuevo registro · {def.short}</h1><div className="sub">Los campos con * son obligatorios. Lo que deje vacío se guarda vacío.</div></div><div className="tools"><Link className="btn" href={basePath(hoja)}>← Volver a {def.short}</Link></div></div>
-      <EntryForm hoja={def.id} base={basePath(hoja)} {...formProps(def)} lookups={lookups} shifts={await shiftProps(user.id, study!.id, hoja)} canWrite={study!.role !== "viewer"} />
+      <EntryForm hoja={def.id} base={basePath(hoja)} {...formProps(def)} lookups={lookups} shifts={await shiftProps(user.id, study!.id, hoja)} shiftType={hoja === "2" ? { initial: "" } : undefined} canWrite={study!.role !== "viewer"} />
     </main>
   );
 }
@@ -127,12 +127,13 @@ export async function EntryEdit({ hoja, id, sp }: { hoja: EntryId; id: string; s
   const found = await getEntry(getDb(), user.id, study!.id, hoja, id);
   if (!found) notFound();
   const lookups = await entryOptions(getDb(), user.id, study!.id);
+  const shiftType = hoja === "2" && found!.row.positionId ? await getShiftType(getDb(), user.id, study!.id, found!.row.positionId).catch(() => null) : null;
   return (
     <main>
       <div className="head"><div><h1>Editar registro · {def.short}</h1><div className="sub">Al guardar, la hoja de Google se actualiza con estos valores.</div></div><div className="tools"><Link className="btn" href={basePath(hoja)}>← Volver a {def.short}</Link></div></div>
-      <EntryForm key={found!.row.version} hoja={def.id} base={basePath(hoja)} coverage={hoja === "2" && found!.row.positionId ? { cargoId: found!.row.positionId, afterCol: "J" } : undefined} recId={id} version={found!.row.version} {...formProps(def, found!.row)} lookups={lookups} shifts={await shiftProps(user.id, study!.id, hoja, id)} canWrite={study!.role !== "viewer"} />
+      <EntryForm key={found!.row.version} hoja={def.id} base={basePath(hoja)} coverage={hoja === "2" && found!.row.positionId ? { cargoId: found!.row.positionId, afterCol: "J" } : undefined} recId={id} version={found!.row.version} {...formProps(def, found!.row)} lookups={lookups} shifts={await shiftProps(user.id, study!.id, hoja, id)} shiftType={hoja === "2" ? { initial: shiftType ?? "" } : undefined} canWrite={study!.role !== "viewer"} />
       {hoja === "2" && found!.row.positionId && <OperationPanel positionId={found!.row.positionId} entryId={id} text={await getOperation(getDb(), user.id, study!.id, found!.row.positionId).catch(() => "")} canWrite={study!.role !== "viewer"} ok={sp?.from === "operacion" ? sp.ok : undefined} error={sp?.from === "operacion" ? sp.error : undefined} />}
-      {hoja === "2" && found!.row.positionId && <ShiftsPanel ok={sp?.from === "turnos" ? sp.ok : undefined} error={sp?.from === "turnos" ? sp.error : undefined} positionId={found!.row.positionId} entryId={id} shifts={await listShifts(getDb(), user.id, study!.id, found!.row.positionId).catch(() => [])} canWrite={study!.role !== "viewer"} />}
+      {hoja === "2" && found!.row.positionId && <ShiftsPanel type={shiftType} ok={sp?.from === "turnos" ? sp.ok : undefined} error={sp?.from === "turnos" ? sp.error : undefined} positionId={found!.row.positionId} entryId={id} shifts={await listShifts(getDb(), user.id, study!.id, found!.row.positionId).catch(() => [])} canWrite={study!.role !== "viewer"} />}
     </main>
   );
 }
