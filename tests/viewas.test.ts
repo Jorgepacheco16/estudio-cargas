@@ -7,7 +7,7 @@ import { NEXT_PATTERN } from "../src/lib/invitation";
 import { check, summary } from "./helpers";
 
 process.env.GUEST_SESSION_SECRET ??= "x".repeat(40);
-const access = (perms = emptyPermissions(), isAdmin = false) => ({ access: { roleId: "r", roleName: "Rol", perms, allAreas: true, areaIds: [], isAdmin } });
+const access = (perms = emptyPermissions(), isAdmin = false) => ({ access: { displayName: null, roleId: "r", roleName: "Rol", perms, allAreas: true, areaIds: [], isAdmin } });
 
 /** D-91 — «ver como» (cookie firmada), menú por permisos y regreso seguro desde Google. Funciones puras. */
 async function main() {

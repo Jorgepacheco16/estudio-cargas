@@ -22,7 +22,7 @@ const audit = (tx: Tx, studyId: string, sub: string, action: string, entity: str
   tx.insert(auditLog).values({ studyId, actorId: sub, origin: "app", action, entity, entityId, diff });
 
 /* ───────── Permisos de quien está en sesión ───────── */
-export interface MyAccess { roleId: string | null; roleName: string; perms: Permissions; allAreas: boolean; areaIds: string[]; isAdmin: boolean }
+export interface MyAccess { displayName: string | null; roleId: string | null; roleName: string; perms: Permissions; allAreas: boolean; areaIds: string[]; isAdmin: boolean }
 
 /** Nivel de acceso de las membresías heredadas (sin role_id): mismas reglas que private.module_level. */
 export function legacyPerms(role: string): Permissions {
@@ -33,14 +33,14 @@ export function legacyPerms(role: string): Permissions {
 
 export async function getMyAccess(db: Db, sub: string, studyId: string): Promise<MyAccess | null> {
   return withRls(db, { sub }, async (tx) => {
-    const [m] = await tx.select({ role: memberships.role, roleId: memberships.roleId, allAreas: memberships.allAreas }).from(memberships).where(and(eq(memberships.studyId, studyId), eq(memberships.userId, sub)));
+    const [m] = await tx.select({ role: memberships.role, roleId: memberships.roleId, allAreas: memberships.allAreas, displayName: memberships.displayName }).from(memberships).where(and(eq(memberships.studyId, studyId), eq(memberships.userId, sub)));
     if (!m) return null;
     const areaIds = m.allAreas ? [] : (await tx.select({ id: memberAreas.areaId }).from(memberAreas).where(and(eq(memberAreas.studyId, studyId), eq(memberAreas.userId, sub)))).map((r) => r.id);
-    if (!m.roleId) { const perms = legacyPerms(m.role); return { roleId: null, roleName: m.role === "owner" ? SUPER_ROLE : m.role === "viewer" ? "Lector" : "Editor", perms, allAreas: m.allAreas, areaIds, isAdmin: perms.usuarios === "edit" }; }
+    if (!m.roleId) { const perms = legacyPerms(m.role); return { displayName: m.displayName, roleId: null, roleName: m.role === "owner" ? SUPER_ROLE : m.role === "viewer" ? "Lector" : "Editor", perms, allAreas: m.allAreas, areaIds, isAdmin: perms.usuarios === "edit" }; }
     const [r] = await tx.select({ name: roles.name }).from(roles).where(and(eq(roles.id, m.roleId), eq(roles.studyId, studyId)));
     const perms = emptyPermissions();
     for (const p of await tx.select({ module: rolePermissions.module, level: rolePermissions.level }).from(rolePermissions).where(and(eq(rolePermissions.roleId, m.roleId), eq(rolePermissions.studyId, studyId)))) perms[p.module as AppModule] = p.level as Level;
-    return { roleId: m.roleId, roleName: r?.name ?? "", perms, allAreas: m.allAreas, areaIds, isAdmin: perms.usuarios === "edit" };
+    return { displayName: m.displayName, roleId: m.roleId, roleName: r?.name ?? "", perms, allAreas: m.allAreas, areaIds, isAdmin: perms.usuarios === "edit" };
   });
 }
 
@@ -136,8 +136,21 @@ export async function rememberOwnEmail(db: Db, sub: string, studyId: string, ema
   }).catch(() => undefined);
 }
 
+/** La persona cambia SU nombre (vacío lo quita). La base de datos valida y deja constancia; nadie puede cambiar el de otra persona. */
+export async function setMyDisplayName(db: Db, sub: string, studyId: string, name: string): Promise<{ ok: true } | { ok: false; error: string }> {
+  try {
+    await withRls(db, { sub }, (tx) => tx.execute(sql`select private.set_display_name(${studyId}::uuid, ${name})`));
+    return { ok: true };
+  } catch (e) {
+    const m = pgMessage(e);
+    if (m.code === "P0001" || m.code === "28000") return { ok: false, error: m.message };
+    if (m.code === "25006") return { ok: false, error: "Está viendo la aplicación como otra persona (solo lectura): no se puede guardar." };
+    throw e;
+  }
+}
+
 /* ───────── Personas ───────── */
-export interface MemberView { userId: string; email: string | null; roleId: string | null; roleName: string; allAreas: boolean; areas: string[]; isSelf: boolean; since: Date }
+export interface MemberView { userId: string; name: string | null; email: string | null; roleId: string | null; roleName: string; allAreas: boolean; areas: string[]; isSelf: boolean; since: Date }
 export async function listMembers(db: Db, sub: string, studyId: string): Promise<MemberView[]> {
   return withRls(db, { sub }, async (tx) => {
     const ms = await tx.select().from(memberships).where(eq(memberships.studyId, studyId)).orderBy(asc(memberships.createdAt));
@@ -145,7 +158,7 @@ export async function listMembers(db: Db, sub: string, studyId: string): Promise
     const as = new Map((await tx.select({ id: areas.id, name: areas.name }).from(areas).where(eq(areas.studyId, studyId))).map((a) => [a.id, a.name]));
     const ma = await tx.select().from(memberAreas).where(eq(memberAreas.studyId, studyId));
     return ms.map((m) => ({
-      userId: m.userId, email: m.email, roleId: m.roleId, roleName: m.roleId ? rs.get(m.roleId) ?? "" : m.role === "owner" ? SUPER_ROLE : m.role === "viewer" ? "Lector" : "Editor",
+      userId: m.userId, name: m.displayName, email: m.email, roleId: m.roleId, roleName: m.roleId ? rs.get(m.roleId) ?? "" : m.role === "owner" ? SUPER_ROLE : m.role === "viewer" ? "Lector" : "Editor",
       allAreas: m.allAreas, areas: ma.filter((x) => x.userId === m.userId).map((x) => as.get(x.areaId) ?? "").filter(Boolean).sort((a, b) => a.localeCompare(b, "es")), isSelf: m.userId === sub, since: m.createdAt,
     }));
   });

@@ -49,10 +49,10 @@ export default async function Usuarios({ searchParams }: { searchParams: Promise
             <h2>Personas con acceso ({members.length})</h2>
             <p className="note">Cada persona tiene un rol (qué módulos ve y edita) y unas áreas. Para cambiarlos, abra «Editar».</p>
             <PagedTable
-              head={<tr><th>Correo</th><th>Rol</th><th>Áreas</th><th>Desde</th><th>Acciones</th></tr>}
+              head={<tr><th>Persona</th><th>Rol</th><th>Áreas</th><th>Desde</th><th>Acciones</th></tr>}
               rows={members.map((m) => (
                 <tr key={m.userId}>
-                  <td><b>{m.email ?? "—"}</b>{m.isSelf && <span className="muted"> · usted</span>}</td>
+                  <td><b>{m.name ?? m.email ?? "—"}</b>{m.name && m.email && <div className="muted">{m.email}</div>}{m.isSelf && <span className="muted"> · usted</span>}</td>
                   <td>{m.roleName}</td>
                   <td>{areasText(m)}</td>
                   <td>{when(m.since)}</td>
@@ -129,7 +129,7 @@ export default async function Usuarios({ searchParams }: { searchParams: Promise
               <tbody>
                 {members.map((m) => {
                   const p = permsOf(m, rolesById);
-                  return <tr key={m.userId}><td><b>{m.email ?? "—"}</b></td><td>{m.roleName}</td>{MODULES.filter((x) => x !== "usuarios").map((x) => <td key={x}><Pill level={p[x]} /></td>)}<td>{areasText(m)}</td></tr>;
+                  return <tr key={m.userId}><td><b>{m.name ?? m.email ?? "—"}</b>{m.name && m.email && <div className="muted">{m.email}</div>}</td><td>{m.roleName}</td>{MODULES.filter((x) => x !== "usuarios").map((x) => <td key={x}><Pill level={p[x]} /></td>)}<td>{areasText(m)}</td></tr>;
                 })}
               </tbody>
             </table>

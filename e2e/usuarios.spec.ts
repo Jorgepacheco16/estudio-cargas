@@ -93,6 +93,16 @@ test("la persona ve y edita lo que su rol permite, y nada más", async () => {
   await expect(ana.getByRole("link", { name: "+ Agregar registro" })).toHaveCount(0); // Lectura: sin botón de agregar
 });
 
+test("la persona escribe su nombre en «Mi cuenta» y se le ve con él (encabezado y lista de usuarios)", async () => {
+  await ana.goto("/cuenta");
+  await listo(ana, "Mi cuenta");
+  await ana.fill("#c-nombre", "Ana Pérez");
+  await ana.getByRole("button", { name: "Guardar nombre" }).click();
+  await expect(ana.getByText("Nombre guardado.")).toBeVisible();
+  await expect(ana.locator(".account-mail")).toHaveText("Ana Pérez");
+  await expect(ana.locator(".account-label")).toContainText("ana@prueba.co");
+});
+
 test("el Super usuario ve el cuadro de permisos y usa «Ver como» (solo lectura)", async () => {
   // El Super usuario (todas las áreas) sí ve la actividad de Domicilios y no tiene la franja de áreas.
   await admin.goto("/actividades");
@@ -101,6 +111,7 @@ test("el Super usuario ve el cuadro de permisos y usa «Ver como» (solo lectura
   await expect(admin.getByText(/Trabaja solo con/)).toHaveCount(0);
   await admin.goto("/usuarios?vista=permisos");
   await listo(admin, "Cuadro de permisos");
+  await expect(admin.getByText("Ana Pérez").first()).toBeVisible();
   await expect(admin.getByText("ana@prueba.co").first()).toBeVisible();
   await admin.goto("/usuarios?vista=personas");
   await listo(admin, "Personas con acceso");

@@ -23,7 +23,7 @@ export default async function EditarPersona({ params }: { params: Promise<{ user
   const selected = areas.filter((a) => m!.areas.includes(a.name)).map((a) => a.id);
   return (
     <main>
-      <div className="head"><div><h1>Editar persona</h1><div className="sub">{m!.email ?? "Sin correo registrado"}{m!.isSelf ? " · usted" : ""}</div></div><div className="tools"><Link className="btn" href="/usuarios?vista=personas">← Volver a personas</Link></div></div>
+      <div className="head"><div><h1>Editar persona</h1><div className="sub">{m!.name ? `${m!.name} · ` : ""}{m!.email ?? "Sin correo registrado"}{m!.isSelf ? " · usted" : ""}</div></div><div className="tools"><Link className="btn" href="/usuarios?vista=personas">← Volver a personas</Link></div></div>
       <form action={updateMemberAction} className="entry-form">
         <input type="hidden" name="persona" value={m!.userId} />
         <section className="card">

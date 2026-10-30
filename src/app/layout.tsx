@@ -50,7 +50,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             </header>
             {user?.viewAs && (
               <div className="viewas-bar" role="status">
-                <span>Está viendo la aplicación como <b>{user.email ?? "otra persona"}</b> · solo lectura: no se puede guardar nada.</span>
+                <span>Está viendo la aplicación como <b>{study?.access?.displayName ?? user.email ?? "otra persona"}</b> · solo lectura: no se puede guardar nada.</span>
                 <form action={exitViewAsAction}><button className="btn" type="submit">Salir de esta vista</button></form>
               </div>
             )}

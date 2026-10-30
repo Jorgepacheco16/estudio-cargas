@@ -4,7 +4,7 @@ import { createDb, withRls } from "../src/db/client";
 import { createStudy } from "../src/server/studies";
 import { entryDef, type EntryId } from "../src/server/entry/defs";
 import { listEntries, saveEntry } from "../src/server/entry/service";
-import { createInvitation, deleteRole, getMyAccess, listInvitations, listMembers, listRoles, lookupInvitation, redeemInvitation, removeMember, revokeInvitation, saveRole, updateMember } from "../src/server/access";
+import { createInvitation, deleteRole, getMyAccess, setMyDisplayName, listInvitations, listMembers, listRoles, lookupInvitation, redeemInvitation, removeMember, revokeInvitation, saveRole, updateMember } from "../src/server/access";
 import { connectSheet, listConnections } from "../src/server/sheets/sync";
 import { roles, rolePermissions, memberships } from "../src/db/schema";
 import { eq } from "drizzle-orm";
@@ -239,6 +239,23 @@ async function main() {
       const ro = await withRls(app.db, { sub: owner }, async (tx) => { await tx.execute(sql`set transaction read only`); return (await tx.execute(sql`select count(*)::int n from public.areas where study_id = ${studyId}`)) as unknown as { n: number }[]; });
       if (ro[0].n < 1) throw new Error("debía poder leer");
       await rejects(withRls(app.db, { sub: owner }, async (tx) => { await tx.execute(sql`set transaction read only`); await tx.execute(sql`insert into public.areas (study_id, name, sort_order) values (${studyId}, 'Área de prueba solo lectura', 99)`); }), "25006", "escribir en solo lectura");
+    });
+
+    await check("Nombre de la persona (D-93): cada una cambia SOLO el suyo; se limpian espacios, vacío lo quita, lo demasiado largo o con caracteres de control se rechaza; queda en la auditoría y el Super usuario lo ve en la lista", async () => {
+      const a = await setMyDisplayName(app.db, owner, studyId, "  Jorge   Pacheco  ");
+      if (!a.ok || (await getMyAccess(app.db, owner, studyId))!.displayName !== "Jorge Pacheco") throw new Error(JSON.stringify(a));
+      if ((await listMembers(app.db, owner, studyId)).find((m) => m.isSelf)!.name !== "Jorge Pacheco") throw new Error("la lista de personas debía mostrar el nombre");
+      if ((await setMyDisplayName(app.db, owner, studyId, "x".repeat(81))).ok || (await setMyDisplayName(app.db, owner, studyId, "Nombre\u0007raro")).ok) throw new Error("aceptó un nombre inválido");
+      const noMember = await setMyDisplayName(app.db, intruso, studyId, "Intruso");
+      if (noMember.ok) throw new Error("quien no es miembro no puede ponerse nombre");
+      const au = (await admin.db.execute(sql`select count(*)::int n from public.audit_log where study_id = ${studyId} and entity = 'membership_name'`)) as unknown as { n: number }[];
+      if (au[0].n !== 1) throw new Error("el cambio de nombre debía quedar en la auditoría (una vez): " + au[0].n);
+      const same = await setMyDisplayName(app.db, owner, studyId, "Jorge Pacheco");
+      if (!same.ok || ((await admin.db.execute(sql`select count(*)::int n from public.audit_log where study_id = ${studyId} and entity = 'membership_name'`)) as unknown as { n: number }[])[0].n !== 1) throw new Error("repetir el mismo nombre no debía auditar de nuevo");
+      const clear = await setMyDisplayName(app.db, owner, studyId, "   ");
+      if (!clear.ok || (await getMyAccess(app.db, owner, studyId))!.displayName !== null) throw new Error("vaciar debía quitar el nombre");
+      const other = await withRls(app.db, { sub: capt }, (tx) => tx.execute(sql`update public.memberships set display_name = 'Hackeado' where user_id = ${owner} returning id`).catch(() => []));
+      if ((other as unknown as unknown[]).length !== 0) throw new Error("nadie debe poder cambiar el nombre de otra persona por la vía directa");
     });
 
     await check("Borrar el estudio borra sus roles, permisos, invitaciones y membresías sin chocar con las protecciones", async () => {

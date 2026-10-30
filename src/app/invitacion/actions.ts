@@ -5,7 +5,7 @@ import { getDb } from "@/db/server";
 import { authConfigured, createClient, getRealUser } from "@/lib/supabase/server";
 import { isBlocked, recordFailure } from "@/lib/ratelimit";
 import { NEXT_COOKIE } from "@/lib/invitation";
-import { lookupInvitation, redeemInvitation } from "@/server/access";
+import { lookupInvitation, redeemInvitation, setMyDisplayName } from "@/server/access";
 
 /**
  * Aceptar una invitación (D-91): la persona abre su enlace, crea su clave (o entra con Google o con su cuenta de siempre) y la base de datos comprueba que el correo de su
@@ -25,11 +25,12 @@ async function validInvitation(token: string) {
 }
 
 /** Con la sesión ya abierta, acepta la invitación y lleva a la aplicación. */
-async function redeemNow(token: string): Promise<never> {
+async function redeemNow(token: string, name = ""): Promise<never> {
   const user = await getRealUser();
   if (!user || !user.email) redirect(here(token, "error", "No se pudo abrir su sesión. Intente de nuevo."));
   const r = await redeemInvitation(getDb(), user!.id, user!.email!, token);
   if (!r.ok) redirect(here(token, "error", r.error));
+  if (name.trim()) await setMyDisplayName(getDb(), user!.id, r.studyId, name.trim()).catch(() => undefined); // el nombre es opcional: un fallo aquí no impide entrar
   (await cookies()).set("estudio_id", r.studyId, { httpOnly: true, sameSite: "lax", path: "/", maxAge: 60 * 60 * 24 * 365, secure: process.env.NODE_ENV === "production" });
   redirect("/?ok=" + encodeURIComponent("Bienvenido: su acceso ya está activo."));
 }
@@ -53,7 +54,7 @@ export async function createAccountAction(fd: FormData) {
   // Correo ya registrado: Supabase no avisa con un error sino con una cuenta sin identidades.
   if (data.user && (data.user.identities?.length ?? 0) === 0) redirect(here(token, "error", "Ese correo ya tiene una cuenta: use «Ya tengo cuenta» para entrar con su clave."));
   if (!data.session) redirect(here(token, "ok", "Le enviamos un correo para confirmar su cuenta. Confírmela y vuelva a abrir este enlace."));
-  await redeemNow(token);
+  await redeemNow(token, str(fd, "nombre", 80));
 }
 
 /** Quien ya tiene cuenta (con clave) entra y acepta. */

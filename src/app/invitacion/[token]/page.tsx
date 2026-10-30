@@ -60,6 +60,7 @@ export default async function Invitacion({ params, searchParams }: { params: Pro
       <input type="hidden" name="token" value={token} />
       <h2>Cree su clave</h2>
       <div className="field"><label htmlFor="inv-correo">Correo</label><input id="inv-correo" value={inv.email} readOnly /></div>
+      <div className="field"><label htmlFor="inv-nombre">Su nombre (opcional)</label><input id="inv-nombre" name="nombre" maxLength={80} autoComplete="name" placeholder="Ej.: Ana Pérez" /></div>
       <div className="field"><label htmlFor="inv-clave">Clave (mínimo 10 caracteres)</label><input id="inv-clave" name="password" type="password" required minLength={10} maxLength={72} autoComplete="new-password" /></div>
       <div className="field"><label htmlFor="inv-clave2">Repita la clave</label><input id="inv-clave2" name="again" type="password" required minLength={10} maxLength={72} autoComplete="new-password" /></div>
       <button className="btn solid" type="submit">Crear mi clave y entrar</button>

@@ -69,6 +69,8 @@ export const memberships = pgTable("memberships", {
   allAreas: boolean("all_areas").notNull().default(true),
   /** D-91: correo de la persona (para mostrarlo en la lista de usuarios; auth.users no es legible desde la aplicación). */
   email: text("email"),
+  /** D-93: nombre con el que la persona quiere verse en la aplicación (lo escribe ella; opcional). */
+  displayName: text("display_name"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 }, (t) => [
   unique("memberships_study_user_uq").on(t.studyId, t.userId), index("memberships_user_idx").on(t.userId),
