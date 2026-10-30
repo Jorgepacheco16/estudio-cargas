@@ -1,5 +1,5 @@
 /** Consolidaciones por actividad, cargo-sede y área (hojas 4a/4b del Excel). Funciones puras. */
-import { computeActivity, occupantsOf, capacityOf, norm, STATUS_ES, type PeriodKey, type ActivityInput, type ActivityResult, type Params, type StaffingInput } from "./engine";
+import { computeActivity, occupantsOf, personDaysOf, capacityOf, norm, STATUS_ES, type PeriodKey, type ActivityInput, type ActivityResult, type Params, type StaffingInput } from "./engine";
 
 export interface Thresholds { high: number; low: number }
 export type Mode = "real" | "demo" | "all";
@@ -35,7 +35,7 @@ export function analyze(staffAll: StaffingInput[], actsAll: ActivityInput[], prm
   const keep = (k: string) => mode === "all" || k === mode;
   const staff = staffAll.filter((s) => keep(s.dataKind));
   const acts = actsAll.filter((a) => keep(a.dataKind));
-  const results = acts.map((a) => computeActivity(a, prm, occupantsOf(staff, a)));
+  const results = acts.map((a) => computeActivity(a, prm, occupantsOf(staff, a), personDaysOf(staff, a, prm)));
   const activities: ActivityRow[] = acts.map((a, i) => ({
     code: a.code, dataKind: a.dataKind, area: a.area, site: a.site, position: a.position, secondaryPosition: a.secondaryPosition ?? null, secondaryArea: a.secondaryArea ?? null, secondarySite: a.secondarySite ?? null, status: STATUS_ES[results[i].status], complete: results[i].status === "OK",
     hoursWeek: results[i].hTotal ?? null, hoursMonth: results[i].hMonth ?? null, result: results[i],

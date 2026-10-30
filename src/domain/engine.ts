@@ -1,7 +1,12 @@
 /** Motor de cálculo: reproduce las hojas 4a y 4b del Excel. Funciones puras, sin acceso a base de datos. */
 export type PeriodKey = "day" | "week" | "fortnight" | "month" | "quarter" | "year";
 export type ScenarioKey = "base" | "high_season" | "low_season" | "min_time" | "max_time";
-export interface Params { workDaysPerWeek: number; weeksPerMonth: number; weeksPerYear: number; reservePct: number; scenario: ScenarioKey }
+export interface Params {
+  /** Días a la semana en que el cargo está DISPONIBLE (la operación abre). */
+  workDaysPerWeek: number; weeksPerMonth: number; weeksPerYear: number; reservePct: number; scenario: ScenarioKey;
+  /** Jornada laboral diaria de un colaborador (horas). Si está, las actividades «por día» que hace cada colaborador se cuentan en los días que trabaja la persona (horas semanales ÷ jornada diaria), no en los días en que el cargo está disponible. Vacío = comportamiento del libro de Excel. */
+  dailyWorkHours?: number | null;
+}
 export interface ActivityInput {
   code: string; dataKind: "real" | "demo"; area: string; site: string; position: string; employeeCode: string | null;
   calcMode: "per_event" | "per_unit" | null; scope: "per_employee" | "position_total" | null;
@@ -38,7 +43,23 @@ export const occupantsOf = (staff: StaffingInput[], a: Pick<ActivityInput, "data
   staff.filter((s) => s.dataKind === a.dataKind && norm(s.area) === norm(a.area) && norm(s.site) === norm(a.site) && norm(s.position) === norm(a.position))
     .reduce((acc, s) => acc + n(s.headcount), 0);
 
-export function computeActivity(a: ActivityInput, prm: Params, occupants: number): ActivityResult {
+/**
+ * Días a la semana que trabaja un colaborador del cargo = horas semanales ÷ jornada diaria (promedio de las filas de dotación del cargo ponderado por
+ * ocupantes), sin pasar de los días en que el cargo está disponible. undefined si falta la jornada diaria, los ocupantes o las horas semanales.
+ */
+export function personDaysOf(staff: StaffingInput[], a: Pick<ActivityInput, "dataKind" | "area" | "site" | "position">, prm: Params): number | undefined {
+  const d = prm.dailyWorkHours;
+  if (!d || d <= 0) return undefined;
+  const rows = staff.filter((s) => s.dataKind === a.dataKind && norm(s.area) === norm(a.area) && norm(s.site) === norm(a.site) && norm(s.position) === norm(a.position)
+    && s.headcount !== null && s.headcount > 0 && s.weeklyHours !== null && s.weeklyHours > 0);
+  const heads = rows.reduce((acc, s) => acc + (s.headcount ?? 0), 0);
+  if (heads === 0) return undefined;
+  const weekly = rows.reduce((acc, s) => acc + (s.headcount ?? 0) * (s.weeklyHours ?? 0), 0) / heads;
+  return Math.min(prm.workDaysPerWeek, weekly / d);
+}
+
+/** `personDays`: ver personDaysOf; solo cambia las actividades «por día» de cada colaborador (alcance per_employee). */
+export function computeActivity(a: ActivityInput, prm: Params, occupants: number, personDays?: number): ActivityResult {
   const share = a.loadShare ?? 1, people = a.simultaneous ?? 1;
   if (!a.calcMode) return { status: "MISSING_MODE" };
   if (a.executions === null) return { status: "MISSING_EXECUTIONS" };
@@ -50,7 +71,8 @@ export function computeActivity(a: ActivityInput, prm: Params, occupants: number
   if (share < 1 && !a.secondaryPosition) return { status: "MISSING_SECONDARY_POSITION" };
   if (a.scope === "per_employee" && !a.employeeCode && occupants === 0) return { status: "POSITION_NOT_REGISTERED" };
   const units = a.calcMode === "per_unit" ? n(a.unitsPerExecution) : 1;
-  const execPerWeek = a.executions * periodFactor(a.period, prm);
+  const perPersonDaily = a.period === "day" && a.scope === "per_employee" && personDays !== undefined;
+  const execPerWeek = a.executions * (perPersonDaily ? personDays : periodFactor(a.period, prm));
   const hpeWait = a.waitOccupies ? (n(a.waitMin) / 60) * people : 0;
   const hpeRework = ((n(a.reworkPct) * n(a.reworkMin)) / 60) * people;
   const hpeActive = ((a.timeAvgMin / 60) * units + n(a.travelMin) / 60) * people;

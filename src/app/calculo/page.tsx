@@ -64,6 +64,7 @@ export default async function Calculo({ searchParams }: { searchParams: Promise<
                 : `${cmp.same} de ${cmp.compared} coinciden · ${cmp.diffs.length} con diferencias (marcadas abajo) · ${cmp.missingInSheet.length} no están en la hoja de Google.`}
             </div>
           )}
+          {cmp && loaded.params.dailyWorkHours ? <p className="note">Con la jornada diaria de {loaded.params.dailyWorkHours} h en Parámetros, la aplicación cuenta las actividades «por día» de cada colaborador en los días que trabaja la persona (horas semanales ÷ jornada diaria), mientras que las fórmulas del libro de Google usan los días laborales por semana. Por eso esas actividades pueden aparecer con diferencias: el valor de la aplicación es el vigente.</p> : null}
         </section></div></details>
       )}
 
@@ -118,7 +119,7 @@ export default async function Calculo({ searchParams }: { searchParams: Promise<
         <summary>¿Cómo se calcula? (explicado paso a paso)</summary>
         <div className="adv-body">
           <ol style={{ margin: "8px 0 0", paddingLeft: 20, display: "grid", gap: 6 }}>
-            <li><b>Veces por semana</b> = cuántas veces se ejecuta la actividad en su período (día, semana, mes…) llevado a una semana de trabajo.</li>
+            <li><b>Veces por semana</b> = cuántas veces se ejecuta la actividad en su período (día, semana, mes…) llevado a una semana de trabajo. Si en Parámetros está la jornada laboral diaria, una actividad «por día» que hace cada colaborador se cuenta en los días que trabaja la persona (horas semanales del cargo ÷ jornada diaria; por ejemplo 42 ÷ 7 = 6), no en los días en que el cargo está disponible.</li>
             <li><b>Horas por ejecución</b> = tiempo promedio de cada vez (por evento o por unidad) + desplazamientos, esperas y reprocesos si los hay, multiplicado por las personas que participan a la vez.</li>
             <li><b>Horas por semana de una persona</b> = veces por semana × horas por ejecución, según el escenario elegido en Parámetros (base, temporada alta o baja, tiempo mínimo o máximo).</li>
             <li><b>Horas por semana totales en el centro de operaciones</b> = lo anterior × el número de ocupantes del cargo, si la actividad la hace cada colaborador; si es del conjunto del cargo, no se multiplica.</li>

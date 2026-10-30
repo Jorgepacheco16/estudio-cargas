@@ -91,6 +91,24 @@ async function main() {
     if (!q || Math.abs(q.hours - 0.5) > 1e-9 || q.reading !== "Falta registrar cantidad y jornada (hoja 2)") throw new Error(`cargo secundario: ${JSON.stringify(q)}`);
   });
 
+  await check("Días por persona: con la jornada diaria, la actividad «por día» de cada colaborador se cuenta en horas semanales ÷ jornada (42 ÷ 7 = 6), no en los días de disponibilidad (7)", () => {
+    const staff: StaffingInput[] = [{ dataKind: "real", area: "A", site: "S", position: "P", headcount: 10, weeklyHours: 42 }];
+    const base: ActivityInput = { code: "X", dataKind: "real", area: "A", site: "S", position: "P", employeeCode: null, calcMode: "per_event", scope: "per_employee", executions: 2, period: "day", unitsPerExecution: null, timeAvgMin: 30, timeMinMin: null, timeMaxMin: null, seasonHigh: null, seasonLow: null, simultaneous: null, loadShare: null, secondaryPosition: null, planning: null, waitMin: null, waitOccupies: null, travelMin: null, reworkPct: null, reworkMin: null };
+    const prm = { workDaysPerWeek: 7, weeksPerMonth: 52 / 12, weeksPerYear: 52, reservePct: 0, scenario: "base" as const };
+    const hrs = (a: ActivityInput, p: typeof prm & { dailyWorkHours?: number | null }, s = staff) => analyze(s, [a], p, TH, "real").activities[0].hoursWeek!;
+    // 2 veces/día × 0,5 h × 10 personas: 7 días = 70 h; 6 días = 60 h.
+    if (Math.abs(hrs(base, prm) - 70) > 1e-9) throw new Error("sin jornada diaria debe seguir como el libro (7 días)");
+    if (Math.abs(hrs(base, { ...prm, dailyWorkHours: 7 }) - 60) > 1e-9) throw new Error("con jornada de 7 h debía contar 6 días");
+    if (Math.abs(hrs({ ...base, scope: "position_total" }, { ...prm, dailyWorkHours: 7 }) - 7) > 1e-9) throw new Error("la actividad del conjunto del cargo sigue contando los 7 días de disponibilidad");
+    if (Math.abs(hrs({ ...base, period: "week", executions: 12 }, { ...prm, dailyWorkHours: 7 }) - 60) > 1e-9) throw new Error("los períodos que no son «día» no cambian");
+    const wide: StaffingInput[] = [{ ...staff[0], weeklyHours: 56 }];
+    if (Math.abs(hrs(base, { ...prm, dailyWorkHours: 7 }, wide) - 70) > 1e-9) throw new Error("no puede pasar de los días de disponibilidad (56 ÷ 7 = 8 → 7)");
+    const mixed: StaffingInput[] = [{ ...staff[0], headcount: 5, weeklyHours: 42 }, { ...staff[0], headcount: 5, weeklyHours: 36 }];
+    if (Math.abs(hrs(base, { ...prm, dailyWorkHours: 6 }, mixed) - 2 * 0.5 * 10 * (((5 * 42 + 5 * 36) / 10) / 6)) > 1e-9) throw new Error("promedio ponderado por ocupantes");
+    const noHours: StaffingInput[] = [{ ...staff[0], weeklyHours: null }];
+    if (Math.abs(hrs(base, { ...prm, dailyWorkHours: 7 }, noHours) - 70) > 1e-9) throw new Error("sin horas semanales cae al comportamiento del libro");
+  });
+
   await check("PDF: todas las vistas generan un PDF válido con acentos, símbolos fuera de WinAnsi y muchas filas (paginación)", async () => {
     for (const v of VIEWS) {
       const { title, tables } = tablesFor(v, a, dash);
