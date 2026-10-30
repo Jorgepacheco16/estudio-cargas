@@ -15,7 +15,7 @@ jobs:
       DATABASE_URL: postgres://app_user:app_pw@localhost:5432/studydb
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with: { node-version: 22, cache: npm }
       - run: npm ci
       - run: npm run typecheck
@@ -79,7 +79,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with: { node-version: 22, cache: npm }
       - run: npm ci
       - run: npx playwright install --with-deps chromium
@@ -113,7 +113,7 @@ jobs:
       GUEST_SESSION_SECRET: ci-e2e-usuarios-secreto-solo-para-pruebas-0123456789
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with: { node-version: 22, cache: npm }
       - run: npm ci
       - run: npx playwright install --with-deps chromium
@@ -144,7 +144,7 @@ jobs:
       DATABASE_URL: postgres://app_user:app_pw@localhost:5432/studydb
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with: { node-version: 22, cache: npm }
       - run: npm ci
       - name: Migraciones reales sobre PostgreSQL real
