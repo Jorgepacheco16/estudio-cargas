@@ -9,6 +9,9 @@ import {
 
 /* ───────── Enumeraciones: reproducen las listas desplegables del Excel (hoja Parametros) ───────── */
 export const appRole = pgEnum("app_role", ["owner", "editor", "analyst", "viewer"]);
+/** D-91: módulos a los que se da acceso por rol y niveles de acceso (Sin acceso, Lectura, Edición). */
+export const appModule = pgEnum("app_module", ["parametros", "cargos", "actividades", "medibilidad", "pertinencia", "riesgos", "oportunidades", "rediseno", "plan", "historia", "integraciones", "agente", "usuarios"]);
+export const moduleLevel = pgEnum("module_level", ["none", "read", "edit"]);
 export const dataKind = pgEnum("data_kind", ["real", "demo"]);                       // L_TipoDato
 export const frequency = pgEnum("frequency", ["daily", "weekly", "biweekly", "monthly", "quarterly", "annual", "occasional", "on_demand"]); // L_Frecuencia
 export const periodUnit = pgEnum("period_unit", ["day", "week", "fortnight", "month", "quarter", "year"]);                                   // L_Periodo
@@ -58,9 +61,70 @@ export const memberships = pgTable("memberships", {
   id: uuid("id").primaryKey().defaultRandom(),
   studyId: studyFk(),
   userId: uuid("user_id").notNull(),
+  /** Rol heredado (se conserva por compatibilidad: sin role_id los permisos salen de él). */
   role: appRole("role").notNull(),
+  /** D-91: rol de la persona (define el nivel de acceso a cada módulo). */
+  roleId: uuid("role_id"),
+  /** D-91: true = todas las áreas; si no, solo las de member_areas. */
+  allAreas: boolean("all_areas").notNull().default(true),
+  /** D-91: correo de la persona (para mostrarlo en la lista de usuarios; auth.users no es legible desde la aplicación). */
+  email: text("email"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-}, (t) => [unique("memberships_study_user_uq").on(t.studyId, t.userId), index("memberships_user_idx").on(t.userId)]);
+}, (t) => [
+  unique("memberships_study_user_uq").on(t.studyId, t.userId), index("memberships_user_idx").on(t.userId),
+  foreignKey({ columns: [t.roleId, t.studyId], foreignColumns: [roles.id, roles.studyId], name: "memberships_role_fk" }),
+]);
+
+/** D-91: rol = nombre + nivel de acceso por módulo. Los del sistema (es_sistema) no se editan ni se borran. */
+export const roles = pgTable("roles", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  studyId: studyFk(),
+  name: text("name").notNull(),
+  isSystem: boolean("is_system").notNull().default(false),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [
+  unique("roles_study_name_uq").on(t.studyId, t.name), unique("roles_id_study_uq").on(t.id, t.studyId),
+  check("roles_name_ck", sql`length(btrim(${t.name})) between 1 and 60`),
+]);
+export const rolePermissions = pgTable("role_permissions", {
+  roleId: uuid("role_id").notNull(),
+  studyId: studyFk(),
+  module: appModule("module").notNull(),
+  level: moduleLevel("level").notNull(),
+}, (t) => [
+  unique("role_permissions_pk").on(t.roleId, t.module),
+  foreignKey({ columns: [t.roleId, t.studyId], foreignColumns: [roles.id, roles.studyId], name: "role_permissions_role_fk" }).onDelete("cascade"),
+]);
+/** D-91: áreas de una persona cuando no tiene «todas las áreas». */
+export const memberAreas = pgTable("member_areas", {
+  studyId: studyFk(),
+  userId: uuid("user_id").notNull(),
+  areaId: uuid("area_id").notNull(),
+}, (t) => [
+  unique("member_areas_pk").on(t.studyId, t.userId, t.areaId),
+  foreignKey({ columns: [t.studyId, t.userId], foreignColumns: [memberships.studyId, memberships.userId], name: "member_areas_member_fk" }).onDelete("cascade"),
+  foreignKey({ columns: [t.areaId, t.studyId], foreignColumns: [areas.id, areas.studyId], name: "member_areas_area_fk" }).onDelete("cascade"),
+]);
+/** D-91: invitación de una persona (correo + rol + áreas). El enlace se guarda solo como hash; sirve una vez y vence. */
+export const invitations = pgTable("invitations", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  studyId: studyFk(),
+  email: text("email").notNull(),
+  roleId: uuid("role_id").notNull(),
+  allAreas: boolean("all_areas").notNull().default(true),
+  areaIds: uuid("area_ids").array().notNull().default(sql`'{}'::uuid[]`),
+  tokenHash: text("token_hash").notNull(),
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+  usedAt: timestamp("used_at", { withTimezone: true }),
+  usedBy: uuid("used_by"),
+  createdBy: uuid("created_by").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [
+  unique("invitations_token_uq").on(t.tokenHash),
+  index("invitations_email_idx").on(t.email),
+  foreignKey({ columns: [t.roleId, t.studyId], foreignColumns: [roles.id, roles.studyId], name: "invitations_role_fk" }),
+  check("invitations_email_ck", sql`${t.email} = lower(btrim(${t.email})) and position('@' in ${t.email}) > 1`),
+]);
 
 /** Hoja "Parametros" (supuestos). FechaCorte no se almacena: es la fecha actual al consultar. */
 export const studyParameters = pgTable("study_parameters", {

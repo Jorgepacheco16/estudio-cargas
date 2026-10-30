@@ -7,6 +7,8 @@ import { withRls, type Db, type Tx } from "../db/client";
 import { activities, areas, memberships, positions, sites, staffingEntries, studies, studyParameters } from "../db/schema";
 import type { ActivityInput, Params, StaffingInput } from "../domain/engine";
 import type { Thresholds } from "../domain/summary";
+import { SUPER_ROLE } from "../domain/access";
+import { seedRoles } from "./access";
 
 /** Áreas operativas del Excel (hoja Parametros, columna E). Se cargan al crear cada estudio. */
 export const AREAS_14 = [
@@ -25,6 +27,9 @@ export async function createStudy(db: Db, sub: string, name: string, description
   return withRls(db, { sub }, async (tx) => {
     const [s] = await tx.insert(studies).values({ name: clean, description: description?.trim() || null, createdBy: sub }).returning({ id: studies.id });
     await tx.insert(memberships).values({ studyId: s.id, userId: sub, role: "owner" });
+    // D-91: roles iniciales (Super usuario, Editor y Lector); quien crea el estudio es su primer Super usuario.
+    const roleIds = await seedRoles(tx, s.id);
+    await tx.update(memberships).set({ roleId: roleIds[SUPER_ROLE] }).where(and(eq(memberships.studyId, s.id), eq(memberships.userId, sub)));
     await tx.insert(studyParameters).values({ studyId: s.id });
     await tx.insert(areas).values(AREAS_14.map((n, i) => ({ studyId: s.id, name: n, sortOrder: i })));
     return s.id;

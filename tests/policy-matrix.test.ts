@@ -32,7 +32,8 @@ async function main() {
           if (t === "audit_log" && (cmd === "UPDATE" || cmd === "DELETE")) { if (ps.length) bad.push(`${t}.${cmd} debería no existir (bitácora de solo anexar)`); continue; }
           if (ps.length === 0) { bad.push(`${t}.${cmd} sin política`); continue; }
           if (ps.some((p) => p.roles !== "{authenticated}")) bad.push(`${t}.${cmd} aplica a otro rol`);
-          const want = t === "memberships" ? "is_owner" : t === "studies" ? "" : cmd === "SELECT" ? "can_read" : "can_write";
+          // D-91: por módulo, can_read_m / can_write_m contienen can_read / can_write; la administración (usuarios, roles, invitaciones, áreas de cada persona) es solo de quien administra (is_owner).
+          const want = ["memberships", "invitations", "member_areas"].includes(t) ? "is_owner" : ["roles", "role_permissions"].includes(t) ? (cmd === "SELECT" ? "can_read" : "is_owner") : t === "studies" ? "" : cmd === "SELECT" ? "can_read" : "can_write";
           if (want && !text(t, cmd).includes(want)) bad.push(`${t}.${cmd}: esperaba ${want}, tiene «${text(t, cmd).slice(0, 80)}»`);
         }
       }

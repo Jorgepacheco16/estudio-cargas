@@ -13,17 +13,17 @@ export function createDb(url: string, max = 5) {
   return { client, db: drizzle(client, { schema }) };
 }
 
-const claimsSchema = z.object({ sub: z.string().uuid() });
+const claimsSchema = z.object({ sub: z.string().uuid(), email: z.string().email().max(254).optional() });
 
 /**
  * Ejecuta `run` con RLS REAL: dentro de UNA transacción fija las claims del JWT y cambia al rol `authenticated`
  * (SET LOCAL ROLE). Al terminar la transacción ambos valores desaparecen, por lo que no se filtran a la
  * siguiente petición que reutilice la conexión. La conexión debe usar un rol SIN BYPASSRLS y que no sea dueño de las tablas.
  */
-export async function withRls<T>(db: Db, claims: { sub: string }, run: (tx: Tx) => Promise<T>): Promise<T> {
-  const { sub } = claimsSchema.parse(claims);
+export async function withRls<T>(db: Db, claims: { sub: string; email?: string }, run: (tx: Tx) => Promise<T>): Promise<T> {
+  const { sub, email } = claimsSchema.parse(claims); // el correo solo lo usa la función que acepta invitaciones (private.redeem_invitation)
   return db.transaction(async (tx) => {
-    await tx.execute(sql`select set_config('request.jwt.claims', ${JSON.stringify({ sub, role: "authenticated" })}, true)`);
+    await tx.execute(sql`select set_config('request.jwt.claims', ${JSON.stringify({ sub, role: "authenticated", ...(email ? { email } : {}) })}, true)`);
     await tx.execute(sql`set local role authenticated`);
     return run(tx);
   });
