@@ -173,6 +173,14 @@ export async function mirrorParameters(db: Db, conn: Conn, gw: SheetGateway, dry
   const st: PushStats = { sheet: "Parametros", appended: 0, refreshed: 0, cleared: 0, unchanged: 0, unlinked: 0, formulaLike: 0 };
   const updates: { range: string; values: CellValue[][] }[] = [];
   for (const [addr, v] of Object.entries(cells)) { const row = Number(addr.slice(1)); if (sameCell((cur[row - 5] ?? [])[0], v)) st.unchanged++; else { updates.push({ range: `'Parametros'!${addr}`, values: [[v]] }); st.refreshed++; } }
+  // Jornada laboral diaria (informativa): rótulo en B16 y valor en C16 (filas libres del libro). Si B16 ya tiene otro texto, no se toca.
+  const jd = ((await gw.read("'Parametros'!B16:C16"))[0] ?? []) as unknown[];
+  const jdLabel = "Jornada laboral diaria (horas)", jdWant: CellValue = p.dailyWorkHours === null ? "" : Number(p.dailyWorkHours);
+  const jdFree = String(jd[0] ?? "").trim() === "" || String(jd[0]).trim() === jdLabel;
+  if (jdFree && (p.dailyWorkHours !== null || String(jd[0] ?? "").trim() !== "")) {
+    if (String(jd[0] ?? "").trim() !== jdLabel) { updates.push({ range: "'Parametros'!B16", values: [[jdLabel]] }); st.refreshed++; }
+    if (!sameCell(jd[1], jdWant)) { updates.push({ range: "'Parametros'!C16", values: [[jdWant]] }); st.refreshed++; } else st.unchanged++;
+  }
   const list = await gw.read("'Parametros'!E5:E40");
   const want = [...ars, ...Array(Math.max(0, 36 - ars.length)).fill("")].slice(0, 36);
   const diff = want.some((v, i) => !sameCell((list[i] ?? [])[0], v));

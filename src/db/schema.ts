@@ -66,6 +66,8 @@ export const memberships = pgTable("memberships", {
 export const studyParameters = pgTable("study_parameters", {
   studyId: uuid("study_id").primaryKey().references(() => studies.id, { onDelete: "cascade" }),
   workDaysPerWeek: numeric("work_days_per_week", { precision: 4, scale: 2 }).notNull().default("6"),
+  /** Horas de la jornada laboral diaria de un colaborador (p. ej. 7). INFORMATIVO: no entra en ningún cálculo; aclara, junto con las horas semanales del cargo, cuántos días trabaja cada persona. */
+  dailyWorkHours: numeric("daily_work_hours", { precision: 4, scale: 2 }),
   weeksPerMonth: numeric("weeks_per_month", { precision: 16, scale: 12 }).notNull().default("4.333333333333"), // 52/12 con la precisión del Excel (con 6 decimales el recálculo difería en 1e-7)
   weeksPerYear: integer("weeks_per_year").notNull().default(52),
   reservePct: numeric("reserve_pct", { precision: 5, scale: 4 }).notNull().default("0.1000"),
@@ -86,6 +88,7 @@ export const studyParameters = pgTable("study_parameters", {
   devMinHistory: smallint("dev_min_history").notNull().default(3),
   ...stamps(),
 }, (t) => [
+  check("study_parameters_daily_hours_ck", sql`${t.dailyWorkHours} is null or ${t.dailyWorkHours} between 1 and 24`),
   check("study_parameters_ranges_ck", sql`${t.workDaysPerWeek} between 1 and 7 and ${t.reservePct} between 0 and 1 and ${t.lowLoadThreshold} <= ${t.overloadThreshold}`),
 ]);
 

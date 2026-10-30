@@ -1,0 +1,2 @@
+ALTER TABLE "study_parameters" ADD COLUMN "daily_work_hours" numeric(4, 2);--> statement-breakpoint
+ALTER TABLE "study_parameters" ADD CONSTRAINT "study_parameters_daily_hours_ck" CHECK ("study_parameters"."daily_work_hours" is null or "study_parameters"."daily_work_hours" between 1 and 24);

@@ -48,7 +48,7 @@ export async function buildDigest(tx: Tx, studyId: string): Promise<StudyDigest>
   return {
     studyId,
     parameters: {
-      workDaysPerWeek: Number(p.workDaysPerWeek), reservePct: Number(p.reservePct), overloadThreshold: Number(p.overloadThreshold), lowLoadThreshold: Number(p.lowLoadThreshold),
+      workDaysPerWeek: Number(p.workDaysPerWeek), ...(p.dailyWorkHours === null ? {} : { dailyWorkHours: Number(p.dailyWorkHours) }), reservePct: Number(p.reservePct), overloadThreshold: Number(p.overloadThreshold), lowLoadThreshold: Number(p.lowLoadThreshold),
       weeksPerYear: p.weeksPerYear, scenario: p.scenario, assumptionsValidated: p.assumptionsValidated,
     },
     findings: findings.slice(0, MAX_FINDINGS),

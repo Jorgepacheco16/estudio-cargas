@@ -3,7 +3,7 @@ import { useActionState } from "react";
 import { saveParamsAction } from "@/app/entrada/actions";
 import type { FormState } from "@/app/entrada/actions";
 
-export interface ParamField { key: string; label: string; kind: string; options: { code: string; label: string }[] }
+export interface ParamField { key: string; label: string; kind: string; hint?: string; options: { code: string; label: string }[] }
 
 export function ParamsForm({ fields, initial, version, canWrite }: { fields: ParamField[]; initial: Record<string, string>; version: number; canWrite: boolean }) {
   const [state, action, pending] = useActionState<FormState, FormData>(saveParamsAction, { errors: [], values: initial });
@@ -22,7 +22,7 @@ export function ParamsForm({ fields, initial, version, canWrite }: { fields: Par
             {f.kind === "list" ? <select id={`p_${f.key}`} name={f.key} defaultValue={state.values[f.key] ?? ""}>{f.options.map((o) => <option key={o.code} value={o.code}>{o.label}</option>)}</select>
               : f.kind === "bool" ? <select id={`p_${f.key}`} name={f.key} defaultValue={state.values[f.key] ?? ""}><option value="yes">Sí</option><option value="no">No</option></select>
               : <input id={`p_${f.key}`} name={f.key} defaultValue={state.values[f.key] ?? ""} inputMode="decimal" />}
-            <p className="hint" />
+            <p className="hint">{f.hint}</p>
           </div>
         ))}
       </div>

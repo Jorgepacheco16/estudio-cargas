@@ -21,7 +21,7 @@ export default async function Parametros({ searchParams }: { searchParams: Promi
   const [rows, areas] = await Promise.all([listRows(db, user!.id, study!.id, def), listAreas(db, user!.id, study!.id)]);
   const row = rows[0];
   const canWrite = study!.role !== "viewer";
-  const fields = def.fields.map((f) => ({ key: f.key, label: f.label, kind: f.kind, options: f.kind === "list" ? optionsOf(f.list!) : [] }));
+  const fields = def.fields.map((f) => ({ key: f.key, label: f.label, kind: f.kind, hint: f.hint, options: f.kind === "list" ? optionsOf(f.list!) : [] }));
   const initial = Object.fromEntries(def.fields.map((f) => [f.key, row ? toFormValue(f, row[f.key]) : ""]));
   return (
     <main>

@@ -11,7 +11,7 @@ import { LABELS } from "../domain/labels";
 import { LONG_TEXT_MAX } from "../domain/limits";
 
 export type FieldKind = "text" | "longtext" | "bool" | "scale" | "int" | "num" | "pct" | "date" | "list" | "activity" | "area";
-export interface Field { key: string; label: string; kind: FieldKind; list?: keyof typeof LABELS; required?: boolean; notNull?: boolean; max?: number; hint?: string }
+export interface Field { key: string; label: string; kind: FieldKind; list?: keyof typeof LABELS; required?: boolean; notNull?: boolean; min?: number; max?: number; hint?: string }
 export interface SheetDef { id: string; title: string; table: PgTable; keyCols: string[]; idCol: "id" | "studyId"; fields: Field[]; entity: string }
 
 const L = (key: string, label: string, list: keyof typeof LABELS, o: Partial<Field> = {}): Field => ({ key, label, kind: "list", list, ...o });
@@ -22,7 +22,8 @@ const N = (key: string, label: string, o: Partial<Field> = {}): Field => ({ key,
 
 export const SHEETS: SheetDef[] = [
   { id: "param", title: "Parámetros", table: studyParameters, keyCols: [], idCol: "studyId", entity: "parameters", fields: [
-    N("workDaysPerWeek", "Días laborales por semana", { notNull: true, max: 7 }),
+    N("workDaysPerWeek", "Días laborales por semana", { notNull: true, min: 1, max: 7, hint: "Días a la semana en que se ejecuta la operación: convierte las actividades «por día» en veces por semana." }),
+    N("dailyWorkHours", "Jornada laboral diaria (horas)", { min: 1, max: 24, hint: "Horas que trabaja un colaborador cada día (por ejemplo 7). Es informativo: no cambia los cálculos; junto con las horas semanales del cargo aclara cuántos días trabaja cada persona (42 h ÷ 7 h = 6 días, con 1 de descanso)." }),
     { key: "weeksPerYear", label: "Semanas por año", kind: "int", notNull: true, max: 53 }, { key: "reservePct", label: "Reserva de capacidad (%)", kind: "pct", notNull: true },
     { key: "overloadThreshold", label: "Umbral de sobrecarga (%)", kind: "pct", notNull: true }, { key: "lowLoadThreshold", label: "Umbral de carga baja (%)", kind: "pct", notNull: true },
     N("hourlyCostCop", "Costo por hora (COP)", { max: 1e9 }), L("scenario", "Escenario", "L_Escenario", { notNull: true }),
@@ -70,7 +71,8 @@ export function parseForm(def: SheetDef, raw: Record<string, FormDataEntryValue>
         const n = DECIMAL.test(body) ? Number(body.replace(",", ".")) : Number.NaN;
         const v = f.kind === "pct" ? n / 100 : n;
         const hi = f.kind === "pct" ? 1 : f.max ?? 1e12;
-        if (!Number.isFinite(n) || v < 0 || v > hi) errors.push(`${f.label}: escriba un número ${f.kind === "pct" ? "entre 0 y 100" : `entre 0 y ${hi}`}`);
+        const lo = f.kind === "pct" ? 0 : f.min ?? 0;
+        if (!Number.isFinite(n) || v < lo || v > hi) errors.push(`${f.label}: escriba un número ${f.kind === "pct" ? "entre 0 y 100" : `entre ${lo} y ${hi}`}`);
         else values[f.key] = f.kind === "pct" ? v.toFixed(4) : String(n);
         break;
       }
