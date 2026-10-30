@@ -22,8 +22,8 @@ const N = (key: string, label: string, o: Partial<Field> = {}): Field => ({ key,
 
 export const SHEETS: SheetDef[] = [
   { id: "param", title: "Parámetros", table: studyParameters, keyCols: [], idCol: "studyId", entity: "parameters", fields: [
-    N("workDaysPerWeek", "Días laborales por semana", { notNull: true, min: 1, max: 7, hint: "Días a la semana en que se ejecuta la operación: convierte las actividades «por día» en veces por semana." }),
-    N("dailyWorkHours", "Jornada laboral diaria (horas)", { min: 1, max: 24, hint: "Horas que trabaja un colaborador cada día (por ejemplo 7). Es informativo: no cambia los cálculos; junto con las horas semanales del cargo aclara cuántos días trabaja cada persona (42 h ÷ 7 h = 6 días, con 1 de descanso)." }),
+    N("workDaysPerWeek", "Días laborales por semana", { notNull: true, min: 1, max: 7, hint: "Días a la semana en que el cargo está disponible (la operación abre). Convierte las actividades «por día» en veces por semana. No es lo que trabaja cada colaborador: cada persona trabaja las horas semanales de su cargo." }),
+    N("dailyWorkHours", "Jornada laboral diaria (horas)", { min: 1, max: 24, hint: "Horas que trabaja un colaborador cada día (por ejemplo 7). Es informativo: no cambia los cálculos. Con las horas semanales del cargo aclara cuántos días trabaja cada persona (42 h ÷ 7 h = 6 días, con 1 de descanso): aunque el cargo esté disponible 7 días, cada colaborador realiza sus actividades en 6." }),
     { key: "weeksPerYear", label: "Semanas por año", kind: "int", notNull: true, max: 53 }, { key: "reservePct", label: "Reserva de capacidad (%)", kind: "pct", notNull: true },
     { key: "overloadThreshold", label: "Umbral de sobrecarga (%)", kind: "pct", notNull: true }, { key: "lowLoadThreshold", label: "Umbral de carga baja (%)", kind: "pct", notNull: true },
     N("hourlyCostCop", "Costo por hora (COP)", { max: 1e9 }), L("scenario", "Escenario", "L_Escenario", { notNull: true }),
