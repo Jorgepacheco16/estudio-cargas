@@ -26,7 +26,7 @@ export interface EntryDef {
 
 const SHORT_TEXT = new Set(["code", "name", "area", "site", "position", "regional", "employeeCode", "boss", "surveyor", "secondaryPosition", "otherPositions", "owner", "indicator", "receiving", "activityCode", "criterion", "process"]);
 const REQUIRED: Record<EntryId, string[]> = {
-  "2": ["area", "site", "position"], "3": ["code", "area", "site", "position", "name"], "5": ["code"], "6": ["code"], "7": ["code"], "8": ["code"], "9": ["area", "position"], "10": ["code", "action"],
+  "2": ["area", "site", "position"], "3": ["code", "area", "site", "position", "name"], "5": ["code"], "6": ["code"], "7": ["code"], "8": ["code", "area", "position"], "9": ["area", "position"], "10": ["code", "action", "area", "position"],
 };
 const SHORT_TITLE: Record<EntryId, string> = { "2": "Cargos y dotación", "3": "Actividades", "5": "Medibilidad", "6": "Pertinencia", "7": "Riesgos", "8": "Oportunidades", "9": "Rediseño", "10": "Plan de acción" };
 /** Campos de la lista (tabla) de cada hoja, además de los calculados. */
@@ -63,7 +63,10 @@ function build(id: EntryId): EntryDef {
     // D-75: «Centro de operaciones» (opcional), junto al cargo; no es una casilla del libro.
     const at = fields.findIndex((f) => f.field === "position");
     const near = fields[at];
-    fields.splice(at + 1, 0, { col: SITE_COL, field: "site", header: "Centro de operaciones (CO)", libroHeader: "Centro de operaciones (CO)", hint: "Centro de operaciones al que aplica. Debe estar ya registrado en Cargos y dotación. Opcional.", group: near.group, control: "site", required: false, extra: true });
+    fields.splice(at + 1, 0, { col: SITE_COL, field: "site", header: "Centro de operaciones (CO)", libroHeader: "Centro de operaciones (CO)", hint: "Centro de operaciones al que aplica. Debe estar ya registrado en Cargos y dotación.", group: near.group, control: "site", required: true, extra: true });
+    // D-90: el área, el centro y el cargo quedan amarrados a lo que generó el registro.
+    const origin = id === "8" ? " Si indica la actividad relacionada, se toma de ella." : id === "10" ? " Si en «Hallazgo u oportunidad de origen» escribe el código de una oportunidad (por ejemplo OP-001), se toma de ella." : "";
+    if (origin) for (const f of fields) if (["area", "position", "site"].includes(f.field)) f.hint = (f.hint ? f.hint.replace(/\s*Opcional\.?$/, "") : "") + origin;
   }
   const computed: EntryComputed[] = cat.columns.filter((c) => !c.input).map((c) => ({ col: c.col, header: ui(c.header), format: "text" as const }));
   return { id, adapter, sheetName: cat.sheetName, title: sentence(cat.title.replace(/^HOJA \d+ · /i, "")), note: ui(cat.note), short: SHORT_TITLE[id], fields, computed, listFields: LIST_FIELDS[id] };

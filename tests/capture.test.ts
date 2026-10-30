@@ -140,28 +140,49 @@ async function main() {
     await check("Hoja 8: escala fuera de rango se rechaza y el código duplicado no se duplica", async () => {
       const bad = await saveEntry(app.db, owner, studyId, "8", cells("8", { code: "O-1", impact: "9" }), {});
       if (bad.ok) throw new Error("aceptó impacto 9");
-      const ok = await saveEntry(app.db, owner, studyId, "8", cells("8", { code: "O-1", impact: "4", ease: "3", effort: "2", cost: "2", riskScore: "1", hours: "5" }), {});
+      const ok = await saveEntry(app.db, owner, studyId, "8", cells("8", { code: "O-1", area: "Cajas", site: "S1", position: "Cajero", impact: "4", ease: "3", effort: "2", cost: "2", riskScore: "1", hours: "5" }), {});
       if (!ok.ok) throw new Error(JSON.stringify(ok));
       recs["8"] = ok.recId;
-      const dup = await saveEntry(app.db, owner, studyId, "8", cells("8", { code: "O-1" }), {});
+      const dup = await saveEntry(app.db, owner, studyId, "8", cells("8", { code: "O-1", area: "Cajas", site: "S1", position: "Cajero" }), {});
       if (dup.ok) throw new Error("duplicó");
       const got = (await getEntry(app.db, owner, studyId, "8", ok.recId))!;
       if (typeof got.row.computed.Z !== "number") throw new Error(`puntaje ${got.row.computed.Z}`);
     });
 
     await check("Hojas 9 y 10: rediseño por (tipo, área, cargo) con sus fórmulas y plan con fechas incoherentes rechazado", async () => {
-      const r = await saveEntry(app.db, owner, studyId, "9", cells("9", { area: "Cajas", position: "Cajero", hoursOut: "2" }), {});
+      const r = await saveEntry(app.db, owner, studyId, "9", cells("9", { area: "Cajas", site: "S1", position: "Cajero", hoursOut: "2" }), {});
       if (!r.ok) throw new Error(JSON.stringify(r));
       recs["9"] = r.recId;
       const got = (await getEntry(app.db, owner, studyId, "9", r.recId))!;
       if (typeof got.row.computed.Q !== "number") throw new Error(`carga actual ${got.row.computed.Q}`);
-      const bad = await saveEntry(app.db, owner, studyId, "10", cells("10", { code: "P-1", action: "x", start: "2026-02-01", end: "2026-01-01" }), {});
+      const bad = await saveEntry(app.db, owner, studyId, "10", cells("10", { code: "P-1", action: "x", area: "Cajas", site: "S1", position: "Cajero", start: "2026-02-01", end: "2026-01-01" }), {});
       if (bad.ok) throw new Error("aceptó fechas incoherentes");
-      const ok = await saveEntry(app.db, owner, studyId, "10", cells("10", { code: "P-1", action: "x", start: "2026-01-01", end: "2026-02-01" }), {});
+      const ok = await saveEntry(app.db, owner, studyId, "10", cells("10", { code: "P-1", action: "x", area: "Cajas", site: "S1", position: "Cajero", start: "2026-01-01", end: "2026-02-01" }), {});
       if (!ok.ok) throw new Error(JSON.stringify(ok));
       recs["10"] = ok.recId;
       const g10 = (await getEntry(app.db, owner, studyId, "10", ok.recId))!;
       if (g10.row.computed.S !== 31) throw new Error(`duración ${g10.row.computed.S}`);
+    });
+
+    await check("Amarre al origen (D-90): la oportunidad toma área, centro y cargo de su actividad; el plan, de su oportunidad; un valor distinto o un cargo que no existe se rechaza y lo obligatorio no se omite", async () => {
+      const d8 = entryDef("8")!, d10 = entryDef("10")!;
+      const val = (d: typeof d8, row: { cells: Record<string, unknown> }, f: string) => String(row.cells[d.fields.find((x) => x.field === f)!.col] ?? "");
+      const o = await saveEntry(app.db, owner, studyId, "8", cells("8", { code: "O-2", activityCode: "C-1" }), {});
+      if (!o.ok) throw new Error("la oportunidad con actividad debía tomar el amarre de ella: " + JSON.stringify(o));
+      const go = (await getEntry(app.db, owner, studyId, "8", o.recId))!.row;
+      if (val(d8, go, "area") !== "Cajas" || val(d8, go, "site") !== "S1" || val(d8, go, "position") !== "Cajero") throw new Error(JSON.stringify(go.cells));
+      const p = await saveEntry(app.db, owner, studyId, "10", cells("10", { code: "P-2", action: "y", finding: "O-2" }), {});
+      if (!p.ok) throw new Error("el plan con su oportunidad de origen debía tomar el amarre de ella: " + JSON.stringify(p));
+      const gp = (await getEntry(app.db, owner, studyId, "10", p.recId))!.row;
+      if (val(d10, gp, "area") !== "Cajas" || val(d10, gp, "site") !== "S1" || val(d10, gp, "position") !== "Cajero") throw new Error(JSON.stringify(gp.cells));
+      const clash = await saveEntry(app.db, owner, studyId, "8", cells("8", { code: "O-3", activityCode: "C-1", area: "Domicilios" }), {});
+      if (clash.ok || !clash.errors.join().includes("no coincide")) throw new Error("aceptó un área distinta a la de la actividad");
+      const none = await saveEntry(app.db, owner, studyId, "8", cells("8", { code: "O-4" }), {});
+      if (none.ok || !none.errors.join().includes("obligatorio")) throw new Error("aceptó una oportunidad sin área, centro ni cargo");
+      const noPos = await saveEntry(app.db, owner, studyId, "10", cells("10", { code: "P-3", action: "z", area: "Cajas", site: "S1", position: "Inexistente" }), {});
+      if (noPos.ok || !noPos.errors.join().includes("no está registrado")) throw new Error("aceptó un cargo que no existe en Cargos y dotación");
+      const several = await saveEntry(app.db, owner, studyId, "8", cells("8", { code: "O-5", area: "Cajas", site: "S1", position: "Cajero; Otro cargo afectado" }), {});
+      if (!several.ok) throw new Error("con varios cargos, el primero debía ser el principal: " + JSON.stringify(several));
     });
 
     await check("Parámetros: se actualizan con control de versión y la reserva se guarda como fracción", async () => {
@@ -174,7 +195,7 @@ async function main() {
     });
 
     await check("Un viewer no puede crear ni borrar; el owner borra y quedan auditorías insert/update/delete con origen «app»", async () => {
-      await rejects(saveEntry(app.db, viewer, studyId, "8", cells("8", { code: "V-1" }), {}), "42501");
+      await rejects(saveEntry(app.db, viewer, studyId, "8", cells("8", { code: "V-1", area: "Cajas", site: "S1", position: "Cajero" }), {}), "42501");
       const del = await deleteEntry(app.db, viewer, studyId, "8", recs["8"]);
       if (del.ok) throw new Error("el viewer borró");
       const ok = await deleteEntry(app.db, owner, studyId, "8", recs["8"]);

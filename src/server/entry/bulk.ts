@@ -12,6 +12,7 @@ import { saveShiftTx, setActivityShiftsTx, setShiftTypeTx } from "../shifts";
 import { BULK_MAX_ROWS, type BulkSheet, type ParsedUpload } from "./bulk-file";
 import { entryDef, type EntryId } from "./defs";
 import { persistEntry, siteExtra, validateRaw } from "./service";
+import { applyOrigin } from "./origin";
 
 export interface BulkRowReport { sheet: "Datos" | "Turnos"; rowNo: number; label: string; action: "create" | "update" | "unchanged" | "error"; messages: string[] }
 export interface Counts { create: number; update: number; unchanged: number; error: number }
@@ -57,8 +58,10 @@ export async function runBulk(db: Db, sub: string, studyId: string, hoja: BulkSh
       for (const r of parsed.rows) {
         const label = labelOf(r.cells);
         if (r.error) { add("Datos", r.rowNo, label, "error", [r.error]); continue; }
-        const v = validateRaw(def, r.cells);
-        if (!v.ok) { add("Datos", r.rowNo, label, "error", v.errors); continue; }
+        const o = await applyOrigin(tx, studyId, def, r.cells); // D-90: área, centro y cargo desde el origen
+        const v = validateRaw(def, o.raw);
+        const verrors = [...(v.ok ? [] : v.errors), ...o.errors];
+        if (verrors.length || !v.ok) { add("Datos", r.rowNo, label, "error", verrors); continue; }
         const res = await attempt(tx, async (sp) => {
           // Cargos (hoja 2): no tienen código; la clave es tipo de dato + área + sede + cargo + código del colaborador (si lo trae). Si ya hay UNA fila con esa
           // clave se actualiza; si hay varias no se adivina (error); si no hay, se crea.
@@ -68,7 +71,7 @@ export async function runBulk(db: Db, sub: string, studyId: string, hoja: BulkSh
             if (found.length > 1) throw new RowFail(["Ya hay varias filas de dotación con esta clave (tipo, área, sede, cargo y código del colaborador). Edítelas en la aplicación o indique el código del colaborador."]);
             ref = found.length === 1 ? { recId: found[0].id, version: found[0].version } : {};
           }
-          const sx = await siteExtra(sp, studyId, def, r.cells, true); // D-75: centro de operaciones (8, 9 y 10); en blanco no cambia el actual
+          const sx = await siteExtra(sp, studyId, def, o.raw, true); // D-75: centro de operaciones (8, 9 y 10); en blanco no cambia el actual
           if ("error" in sx) throw new RowFail([sx.error]);
           ref = { ...ref, extra: sx.extra };
           const saved = await persistEntry(sp, sub, studyId, def, v.row, ref);

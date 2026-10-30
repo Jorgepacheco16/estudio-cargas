@@ -21,6 +21,7 @@ import { listConnections } from "../sheets/sync";
 import { todayBogota } from "../dashboard-data";
 import { loadStudyDataTx } from "../studies";
 import { SITE_COL, SITE_FIELD_SHEETS, entryDef, type EntryDef, type EntryId } from "./defs";
+import { applyOrigin } from "./origin";
 
 type Cells = Record<string, string | number | null>;
 export type ComputedValue = string | number | null;
@@ -191,10 +192,13 @@ export function validateRaw(def: EntryDef, raw: Record<string, string>): { ok: t
 
 export async function saveEntry(db: Db, sub: string, studyId: string, id: EntryId, raw: Record<string, string>, ref: { recId?: string; version?: number }): Promise<SaveResult> {
   const def = entryDef(id); if (!def) return { ok: false, errors: ["Hoja desconocida"] };
-  const v = validateRaw(def, raw);
-  if (!v.ok) return v;
   return withRls(db, { sub }, async (tx): Promise<SaveResult> => {
-    const x = await siteExtra(tx, studyId, def, raw, false);
+    // D-90: área, centro y cargo de oportunidades, rediseño y plan: se completan desde el origen y se comprueban contra Cargos y dotación.
+    const o = await applyOrigin(tx, studyId, def, raw);
+    const v = validateRaw(def, o.raw);
+    const errors = [...(v.ok ? [] : v.errors), ...o.errors];
+    if (errors.length || !v.ok) return { ok: false, errors };
+    const x = await siteExtra(tx, studyId, def, o.raw, false);
     if ("error" in x) return { ok: false, errors: [x.error] };
     return persistEntry(tx, sub, studyId, def, v.row, { ...ref, extra: x.extra });
   });

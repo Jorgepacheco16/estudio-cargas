@@ -90,12 +90,13 @@ async function main() {
       if ((await run("9", { co: "CO Prado" })).rows.length !== 1 || (await run("9", { co: "CO Norte" })).rows.length !== 0) throw new Error("rediseño");
       if ((await run("10", { co: "CO Prado" })).codes.join() !== "P-1" || (await run("10", { co: "CO Norte", estado: "No iniciada" })).codes.join() !== "P-2") throw new Error("plan de acción");
       for (const id of ["8", "9", "10"] as const) if (!(await run(id, {})).fields.some((x) => x.key === "co")) throw new Error(`la sección ${id} debe ofrecer el filtro de centro de operaciones`);
-      const bad = await saveEntry(app.db, owner, studyId, "8", cells("8", { code: "O-3", site: "CO Inventado" }), {});
+      const bad = await saveEntry(app.db, owner, studyId, "8", cells("8", { code: "O-3", area: "Cajas", position: "Cajero", site: "CO Inventado" }), {});
       if (bad.ok || !bad.errors.join().includes("no está registrado")) throw new Error("aceptó un centro de operaciones que no existe");
       const o1 = (await rows("8")).find((r) => Object.values(r.cells).includes("O-1"))!;
+      // D-90: el centro de operaciones ya es obligatorio; vaciarlo se rechaza y el registro conserva el suyo.
       const cleared = await saveEntry(app.db, owner, studyId, "8", cells("8", { code: "O-1", area: "Cajas", position: "Cajero", type: "Simplificar procedimiento", site: "" }), { recId: o1.id, version: o1.version });
-      if (!cleared.ok || cleared.result !== "updated") throw new Error(JSON.stringify(cleared));
-      if ((await run("8", { co: "CO Prado" })).rows.length !== 0) throw new Error("vaciar el centro de operaciones debía quitarlo");
+      if (cleared.ok || !cleared.errors.join().includes("obligatorio")) throw new Error("vaciar el centro de operaciones debía rechazarse");
+      if ((await run("8", { co: "CO Prado" })).rows.length !== 1) throw new Error("el registro debía conservar su centro de operaciones");
     });
   } finally {
     if (studyId) await admin.db.execute(sql`delete from public.studies where id = ${studyId}`);
