@@ -64,7 +64,7 @@ export default async function Calculo({ searchParams }: { searchParams: Promise<
                 : `${cmp.same} de ${cmp.compared} coinciden · ${cmp.diffs.length} con diferencias (marcadas abajo) · ${cmp.missingInSheet.length} no están en la hoja de Google.`}
             </div>
           )}
-          {cmp && loaded.params.dailyWorkHours ? <p className="note">Con la jornada diaria de {loaded.params.dailyWorkHours} h en Parámetros, la aplicación cuenta las actividades «por día» de cada colaborador en los días que trabaja la persona (horas semanales ÷ jornada diaria), mientras que las fórmulas del libro de Google usan los días laborales por semana. Por eso esas actividades pueden aparecer con diferencias: el valor de la aplicación es el vigente.</p> : null}
+          {cmp && loaded.params.dailyWorkHours ? <p className="note">Con la jornada diaria de {loaded.params.dailyWorkHours} h en Parámetros, la aplicación cuenta las actividades «por día» de cada colaborador en los días que trabaja la persona (horas semanales ÷ jornada diaria), y la aplicación mantiene la misma regla en la columna «Factor a semana» de la hoja 4a del libro de Google (se actualiza al sincronizar). Si ve diferencias en esas actividades, pulse «Sincronizar ahora» y compare de nuevo.</p> : null}
         </section></div></details>
       )}
 

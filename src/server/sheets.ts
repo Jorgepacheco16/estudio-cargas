@@ -12,6 +12,16 @@ export async function pushCells(spreadsheetId: string, updates: { range: string;
   const res = await api.spreadsheets.values.batchUpdate({ spreadsheetId, requestBody: { valueInputOption: "RAW", data: updates } });
   return res.data.totalUpdatedCells ?? 0;
 }
+/** Escribe FÓRMULAS (USER_ENTERED). Solo para las fórmulas constantes que la app mantiene en el libro (D-89): nunca con texto que venga de una persona. */
+export async function pushFormulas(spreadsheetId: string, updates: { range: string; values: string[][] }[]) {
+  const res = await sheetsClient().spreadsheets.values.batchUpdate({ spreadsheetId, requestBody: { valueInputOption: "USER_ENTERED", data: updates } });
+  return res.data.totalUpdatedCells ?? 0;
+}
+/** Lee las fórmulas tal como están escritas en la hoja (no sus resultados). */
+export async function readFormulas(spreadsheetId: string, range: string) {
+  const res = await sheetsClient().spreadsheets.values.get({ spreadsheetId, range, valueRenderOption: "FORMULA" });
+  return res.data.values ?? [];
+}
 /** hoja → app (lectura de reconciliación; la hoja puede cambiar sin avisar si falla el webhook). */
 export async function readRange(spreadsheetId: string, range: string) {
   const res = await sheetsClient().spreadsheets.values.get({ spreadsheetId, range, valueRenderOption: "UNFORMATTED_VALUE" });

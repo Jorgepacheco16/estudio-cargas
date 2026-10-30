@@ -15,6 +15,7 @@ import { MIRROR_ADAPTERS, cellsOf, lastInputCol, type Adapter } from "./adapters
 import type { CellValue, SheetGateway } from "./gateway";
 import { ensureInternal, findInternal, q, type Conn } from "./internal";
 import { mirrorExtras } from "./extras";
+import { CALC_SHEET, ensureCalcFormulas } from "./calcformulas";
 
 export interface PushStats { sheet: string; appended: number; refreshed: number; cleared: number; unchanged: number; unlinked: number; formulaLike: number; diffs?: string[] }
 export const PROTECTION_NOTE = "Datos desde la app (no editar aquí)";
@@ -192,6 +193,9 @@ export async function mirrorParameters(db: Db, conn: Conn, gw: SheetGateway, dry
 /** Espeja todo: supuestos, áreas y las 8 hojas de captura. En vista previa (dryRun) solo cuenta, sin escribir. */
 export async function pushAll(db: Db, conn: Conn, gw: SheetGateway, dryRun = false): Promise<PushStats[]> {
   const out: PushStats[] = [await mirrorParameters(db, conn, gw, dryRun)];
+  // D-89: la fórmula «Factor a semana» de la hoja 4a, para que el libro calcule igual que la app. Si no se puede, la sincronización sigue y se avisa.
+  try { const n = await ensureCalcFormulas(gw, dryRun); if (n > 0) out.push({ sheet: `${CALC_SHEET} (fórmula Factor a semana)`, appended: 0, refreshed: n, cleared: 0, unchanged: 0, unlinked: 0, formulaLike: 0 }); }
+  catch (e) { out.push({ sheet: `${CALC_SHEET} (fórmula Factor a semana)`, appended: 0, refreshed: 0, cleared: 0, unchanged: 0, unlinked: 0, formulaLike: 0, diffs: [`No se pudo actualizar la fórmula: ${e instanceof Error ? e.message.slice(0, 200) : "error"}`] }); }
   for (const a of MIRROR_ADAPTERS) { out.push(await mirrorSheet(db, conn, gw, a, dryRun)); if (!dryRun) await mirrorExtras(db, conn, gw, a); } // turnos y descripción de la operación (D-67, D-69)
   if (!dryRun) {
     for (const a of MIRROR_ADAPTERS) await gw.protect(a.sheet.sheetName, inputRanges(a), PROTECTION_NOTE);

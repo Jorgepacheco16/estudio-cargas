@@ -44,6 +44,16 @@ export class FakeSheet implements SheetGateway {
       this.writes++;
     }
   }
+  /** Las fórmulas se guardan como texto que empieza por «=» (esta hoja no las calcula). */
+  async readFormulas(range: string) { return this.read(range); }
+  formulaWrites = 0;
+  async writeFormulas(updates: { range: string; values: string[][] }[]) {
+    for (const u of updates) {
+      const { sheet, c1, r1 } = this.parse(u.range);
+      u.values.forEach((row, i) => row.forEach((v, j) => this.set(sheet, indexToCol(c1 + j), r1 + i, v)));
+      this.formulaWrites++;
+    }
+  }
   async columnCount(sheetName: string) { return this.cols.get(sheetName)!; }
   async appendHiddenColumns(sheetName: string, count: number) { this.cols.set(sheetName, this.cols.get(sheetName)! + count); this.hidden.set(sheetName, (this.hidden.get(sheetName) ?? 0) + count); }
   async appendColumns(sheetName: string, count: number) { this.cols.set(sheetName, this.cols.get(sheetName)! + count); }

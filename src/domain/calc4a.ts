@@ -4,6 +4,23 @@
  */
 import type { ActivityRow } from "./summary";
 
+/**
+ * Columna «Factor a semana» (AK) de la hoja 4a del libro y su fórmula (D-89). El libro original busca el período en la tabla de conversión (Día = días laborales
+ * por semana). La aplicación, desde D-88, cuenta las actividades «por día» de cada colaborador en los días que trabaja la persona (horas semanales del cargo ÷
+ * jornada laboral diaria, promedio ponderado por ocupantes, sin pasar de los días laborales). Esta fórmula hace lo mismo en el libro; si la jornada diaria
+ * (Parametros!C16) está vacía o el cargo no tiene horas y ocupantes, da lo mismo que la fórmula original. La app la mantiene en las filas 7 a 406.
+ */
+export const FACTOR_COL = "AK", FACTOR_FIRST_ROW = 7, FACTOR_LAST_ROW = 406, DAILY_HOURS_CELL = "C16";
+export function factorFormula(r: number): string {
+  const h = (c: string) => `'2_Caracterizacion'!$${c}$7:$${c}$206`;
+  const cond = `(${h("A")}=B${r})*(${h("B")}=D${r})*(${h("C")}=E${r})*(${h("E")}=F${r})*ISNUMBER(${h("K")})*(${h("K")}>0)`;
+  const heads = `SUMPRODUCT(${cond},${h("F")})`, hours = `SUMPRODUCT(${cond},${h("F")},${h("K")})`;
+  const daily = `Parametros!$${DAILY_HOURS_CELL[0]}$${DAILY_HOURS_CELL.slice(1)}`;
+  return `=IF(AI${r}<>"OK","",IF(AND(L${r}="Día",J${r}="Por colaborador",ISNUMBER(${daily}),N(${daily})>0,${heads}>0),MIN(Parametros!$C$5,${hours}/${heads}/${daily}),VLOOKUP(L${r},TblPeriodo,2,FALSE())))`;
+}
+/** Para comparar la fórmula escrita con la que devuelve Google (que puede cambiar espacios, mayúsculas o comillas de los nombres de hoja). */
+export const sameFormula = (a: unknown, b: string) => typeof a === "string" && a.replace(/[\s']/g, "").toUpperCase() === b.replace(/[\s']/g, "").toUpperCase();
+
 export interface CalcCol { key: keyof NonNullable<ActivityRow["result"]> | "occupants"; header: string; col: string; fmt: string }
 /** Columnas calculadas de la hoja 4a que reproduce el motor (letra de columna y encabezado tal como están en el libro). */
 export const CALC_4A: CalcCol[] = [
