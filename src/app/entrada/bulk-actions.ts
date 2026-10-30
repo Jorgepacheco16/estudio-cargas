@@ -3,6 +3,8 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { getDb } from "@/db/server";
 import { getUser } from "@/lib/supabase/server";
+import { canEdit, canRead, requireRead, NO_EDIT } from "@/lib/access";
+import { ENTRY_MODULE } from "@/domain/access";
 import { activeStudyId } from "@/data/source";
 import { rateLimit } from "@/lib/ratelimit";
 import { basePath } from "@/lib/entry-routes";
@@ -30,7 +32,7 @@ export async function bulkAction(_prev: BulkState, fd: FormData): Promise<BulkSt
   if (!bulkEnabled(hoja)) return { stage: "error", message: "Esta sección no tiene carga masiva." };
   const study = await activeStudyId(user!.id);
   if (!study) redirect("/estudio");
-  if (study!.role === "viewer") return { stage: "error", message: "Su rol es de solo lectura: no puede cargar datos." };
+  if (!canEdit(study, ENTRY_MODULE[hoja])) return { stage: "error", message: NO_EDIT(ENTRY_MODULE[hoja]) };
   if (!rateLimit(`bulk:${user!.id}`, 12, 60_000).ok) return { stage: "error", message: "Espere un momento antes de intentarlo de nuevo." };
   const def = entryDef(hoja)!;
   const intent = String(fd.get("intent") ?? "preview");

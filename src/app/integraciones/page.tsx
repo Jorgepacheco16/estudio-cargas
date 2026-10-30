@@ -3,6 +3,7 @@ import { PagedTable } from "@/components/PagedTable";
 import { redirect } from "next/navigation";
 import { getDb } from "@/db/server";
 import { getUser } from "@/lib/supabase/server";
+import { canEdit, requireRead } from "@/lib/access";
 import { activeStudyId } from "@/data/source";
 import { listConnections, openIssues, recentEvents } from "@/server/sheets/sync";
 import { connectAction, previewAction, syncAction } from "./actions";
@@ -16,10 +17,11 @@ export default async function Integraciones({ searchParams }: { searchParams: Pr
   if (!user) redirect("/login");
   const sp = await searchParams;
   const study = await activeStudyId(user!.id);
+  requireRead(study, "integraciones");
   const db = getDb();
   const [conns, events, issues] = study ? await Promise.all([listConnections(db, user!.id, study.id), recentEvents(db, user!.id, study.id), openIssues(db, user!.id, study.id)]) : [[], [], []];
   const email = process.env.GOOGLE_SERVICE_ACCOUNT_JSON ? (() => { try { return (JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_JSON) as { client_email?: string }).client_email ?? null; } catch { return null; } })() : null;
-  const isOwner = study?.role === "owner";
+  const isOwner = canEdit(study, "integraciones");
 
   return (
     <main>
@@ -39,7 +41,7 @@ export default async function Integraciones({ searchParams }: { searchParams: Pr
             <div style={{ display: "flex", gap: 8, marginTop: 12, flexWrap: "wrap" }}>
               <form action={previewAction}><button className="btn" type="submit" disabled={conns.length === 0}>Vista previa (no cambia nada)</button></form>
               <form action={syncAction} style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-                <button className="btn solid" type="submit" disabled={conns.length === 0 || study.role === "viewer"}>Sincronizar ahora</button>
+                <button className="btn solid" type="submit" disabled={conns.length === 0 || !isOwner}>Sincronizar ahora</button>
                 <label style={{ display: "flex", gap: 6, alignItems: "center", fontSize: ".8125rem" }}><input type="checkbox" name="confirmAutofix" value="yes" style={{ minHeight: 24, width: 24 }} />Confirmo aplicar las correcciones automáticas si son más de 50</label>
               </form>
             </div>

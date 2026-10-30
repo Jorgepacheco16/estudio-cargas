@@ -2,6 +2,8 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { getDb } from "@/db/server";
 import { getUser } from "@/lib/supabase/server";
+import { canEdit, canRead, requireRead, NO_EDIT } from "@/lib/access";
+import { ENTRY_MODULE } from "@/domain/access";
 import { activeStudyId } from "@/data/source";
 import { EntryForm } from "@/components/EntryForm";
 import { entryDef, type EntryId } from "@/server/entry/defs";
@@ -48,8 +50,9 @@ export async function EntrySection({ hoja, sp: rawSp, bar = true }: { hoja: Entr
   const viewer = await getUser();
   if (!viewer) return <section className="card" aria-label={`Registros de ${def.short}`}><h2>Registros capturados</h2><div className="empty">Inicie sesión para ver y capturar los registros de esta sección. <Link href="/login">Ingresar</Link></div></section>; // las vistas de demostración son públicas
   const { user, study } = await session();
+  if (study && !canRead(study, ENTRY_MODULE[hoja])) return <section className="card" aria-label={`Registros de ${def.short}`}><h2>{def.short}</h2><div className="empty">Su rol no tiene acceso a esta sección. Si la necesita, pídale acceso a quien administra los usuarios.</div></section>;
   const base = basePath(hoja);
-  const canWrite = !!study && study.role !== "viewer";
+  const canWrite = !!study && canEdit(study, ENTRY_MODULE[hoja]);
   const allRows = study ? (await listEntries(getDb(), user.id, study.id, hoja))?.rows ?? [] : [];
   const ef = entryFilters(def, allRows, rawSp);
   const rows = ef.rows;
@@ -110,11 +113,13 @@ export async function EntryNew({ hoja }: { hoja: EntryId }) {
   const def = entryDef(hoja)!;
   const { user, study } = await session();
   if (!study) redirect("/estudio");
+  requireRead(study, ENTRY_MODULE[hoja]);
+  if (!canEdit(study, ENTRY_MODULE[hoja])) redirect(`${basePath(hoja)}?error=${encodeURIComponent(NO_EDIT(ENTRY_MODULE[hoja]))}`);
   const lookups = await entryOptions(getDb(), user.id, study!.id);
   return (
     <main>
       <div className="head"><div><h1>Nuevo registro · {def.short}</h1><div className="sub">Los campos con * son obligatorios. Lo que deje vacío se guarda vacío.</div></div><div className="tools"><Link className="btn" href={basePath(hoja)}>← Volver a {def.short}</Link></div></div>
-      <EntryForm hoja={def.id} base={basePath(hoja)} {...formProps(def)} lookups={lookups} shifts={await shiftProps(user.id, study!.id, hoja)} shiftType={hoja === "2" ? { initial: "" } : undefined} canWrite={study!.role !== "viewer"} />
+      <EntryForm hoja={def.id} base={basePath(hoja)} {...formProps(def)} lookups={lookups} shifts={await shiftProps(user.id, study!.id, hoja)} shiftType={hoja === "2" ? { initial: "" } : undefined} canWrite={canEdit(study, ENTRY_MODULE[hoja])} />
     </main>
   );
 }
@@ -124,6 +129,7 @@ export async function EntryEdit({ hoja, id, sp }: { hoja: EntryId; id: string; s
   if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
   const { user, study } = await session();
   if (!study) redirect("/estudio");
+  requireRead(study, ENTRY_MODULE[hoja]);
   const found = await getEntry(getDb(), user.id, study!.id, hoja, id);
   if (!found) notFound();
   const lookups = await entryOptions(getDb(), user.id, study!.id);
@@ -131,9 +137,9 @@ export async function EntryEdit({ hoja, id, sp }: { hoja: EntryId; id: string; s
   return (
     <main>
       <div className="head"><div><h1>Editar registro · {def.short}</h1><div className="sub">Al guardar, la hoja de Google se actualiza con estos valores.</div></div><div className="tools"><Link className="btn" href={basePath(hoja)}>← Volver a {def.short}</Link></div></div>
-      <EntryForm key={found!.row.version} hoja={def.id} base={basePath(hoja)} coverage={hoja === "2" && found!.row.positionId ? { cargoId: found!.row.positionId, afterCol: "J" } : undefined} recId={id} version={found!.row.version} {...formProps(def, found!.row)} lookups={lookups} shifts={await shiftProps(user.id, study!.id, hoja, id)} shiftType={hoja === "2" ? { initial: shiftType ?? "" } : undefined} canWrite={study!.role !== "viewer"} />
-      {hoja === "2" && found!.row.positionId && <OperationPanel positionId={found!.row.positionId} entryId={id} text={await getOperation(getDb(), user.id, study!.id, found!.row.positionId).catch(() => "")} canWrite={study!.role !== "viewer"} ok={sp?.from === "operacion" ? sp.ok : undefined} error={sp?.from === "operacion" ? sp.error : undefined} />}
-      {hoja === "2" && found!.row.positionId && <ShiftsPanel type={shiftType} ok={sp?.from === "turnos" ? sp.ok : undefined} error={sp?.from === "turnos" ? sp.error : undefined} positionId={found!.row.positionId} entryId={id} shifts={await listShifts(getDb(), user.id, study!.id, found!.row.positionId).catch(() => [])} canWrite={study!.role !== "viewer"} />}
+      <EntryForm key={found!.row.version} hoja={def.id} base={basePath(hoja)} coverage={hoja === "2" && found!.row.positionId ? { cargoId: found!.row.positionId, afterCol: "J" } : undefined} recId={id} version={found!.row.version} {...formProps(def, found!.row)} lookups={lookups} shifts={await shiftProps(user.id, study!.id, hoja, id)} shiftType={hoja === "2" ? { initial: shiftType ?? "" } : undefined} canWrite={canEdit(study, ENTRY_MODULE[hoja])} />
+      {hoja === "2" && found!.row.positionId && <OperationPanel positionId={found!.row.positionId} entryId={id} text={await getOperation(getDb(), user.id, study!.id, found!.row.positionId).catch(() => "")} canWrite={canEdit(study, ENTRY_MODULE[hoja])} ok={sp?.from === "operacion" ? sp.ok : undefined} error={sp?.from === "operacion" ? sp.error : undefined} />}
+      {hoja === "2" && found!.row.positionId && <ShiftsPanel type={shiftType} ok={sp?.from === "turnos" ? sp.ok : undefined} error={sp?.from === "turnos" ? sp.error : undefined} positionId={found!.row.positionId} entryId={id} shifts={await listShifts(getDb(), user.id, study!.id, found!.row.positionId).catch(() => [])} canWrite={canEdit(study, ENTRY_MODULE[hoja])} />}
     </main>
   );
 }

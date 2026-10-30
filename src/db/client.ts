@@ -13,6 +13,15 @@ export function createDb(url: string, max = 5) {
   return { client, db: drizzle(client, { schema }) };
 }
 
+/** ¿La petición actual trae la cookie firmada de «ver como»? Fuera de Next (pruebas, scripts) siempre es falso. */
+async function viewAsActive(): Promise<boolean> {
+  try {
+    const { cookies } = await import("next/headers");
+    const { VIEWAS_COOKIE, verifyViewAs } = await import("../lib/viewas");
+    return verifyViewAs((await cookies()).get(VIEWAS_COOKIE)?.value, null) !== null;
+  } catch { return false; }
+}
+
 const claimsSchema = z.object({ sub: z.string().uuid(), email: z.string().email().max(254).optional() });
 
 /**
@@ -25,6 +34,8 @@ export async function withRls<T>(db: Db, claims: { sub: string; email?: string }
   return db.transaction(async (tx) => {
     await tx.execute(sql`select set_config('request.jwt.claims', ${JSON.stringify({ sub, role: "authenticated", ...(email ? { email } : {}) })}, true)`);
     await tx.execute(sql`set local role authenticated`);
+    // D-91 «ver como»: si el Super usuario está viendo como otra persona, la base de datos solo deja leer (cualquier escritura falla).
+    if (await viewAsActive()) await tx.execute(sql`set transaction read only`);
     return run(tx);
   });
 }

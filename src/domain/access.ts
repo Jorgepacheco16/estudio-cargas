@@ -94,3 +94,6 @@ export function summarizePermissions(p: Permissions): string {
   const parts = [n("edit") && `Edición en ${n("edit")}`, n("read") && `Lectura en ${n("read")}`, n("none") && `Sin acceso a ${n("none")}`].filter(Boolean);
   return parts.join(" · ");
 }
+
+/** Módulo de cada hoja de captura (identificador de la hoja del libro → módulo). */
+export const ENTRY_MODULE: Record<string, AppModule> = { "2": "cargos", "3": "actividades", "5": "medibilidad", "6": "pertinencia", "7": "riesgos", "8": "oportunidades", "9": "rediseno", "10": "plan" };

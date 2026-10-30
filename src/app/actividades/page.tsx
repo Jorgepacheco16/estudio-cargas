@@ -1,5 +1,6 @@
 import { PagedTable } from "@/components/PagedTable";
 import { Purpose } from "@/components/Purpose";
+import { guardModules } from "@/lib/guard";
 import { loadAnalysis, parseMode } from "@/data/source";
 import { ExportButtons, ModeForm, fmt } from "@/components/Tools";
 import { FilterBar } from "@/components/FilterBar";
@@ -9,6 +10,7 @@ import { activityFilters, type RawParams } from "@/lib/page-filters";
 
 export const metadata = { title: "Actividades" };
 export default async function Actividades({ searchParams }: { searchParams: Promise<RawParams> }) {
+  await guardModules("actividades");
   const raw = await searchParams;
   const modo = Array.isArray(raw.modo) ? raw.modo[0] : raw.modo;
   const { analysis: a, mode, label } = await loadAnalysis(parseMode(modo));

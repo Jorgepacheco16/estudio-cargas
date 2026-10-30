@@ -1,4 +1,5 @@
 import { Purpose } from "@/components/Purpose";
+import { guardModules } from "@/lib/guard";
 import { PagedTable } from "@/components/PagedTable";
 import Link from "next/link";
 import { getDb } from "@/db/server";
@@ -16,6 +17,7 @@ import { listActivityNames } from "@/server/studies";
 
 export const metadata = { title: "Cálculo de tiempos" };
 export default async function Calculo({ searchParams }: { searchParams: Promise<RawParams> }) {
+  await guardModules(["cargos", "actividades"]);
   const raw = await searchParams;
   const sp = Object.fromEntries(Object.entries(raw).map(([k, v]) => [k, Array.isArray(v) ? v[0] : v])) as Record<string, string | undefined>;
   const loaded = await loadAnalysis(parseMode(sp.modo));

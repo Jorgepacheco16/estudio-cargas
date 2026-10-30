@@ -2,6 +2,8 @@
 import { redirect } from "next/navigation";
 import { getDb } from "@/db/server";
 import { getUser } from "@/lib/supabase/server";
+import { canEdit, canRead, requireRead, NO_EDIT } from "@/lib/access";
+import { ENTRY_MODULE, type AppModule } from "@/domain/access";
 import { activeStudyId } from "@/data/source";
 import { basePath, PARAMETROS_PATH } from "@/lib/entry-routes";
 import { ENTRY_IDS, entryDef, type EntryId } from "@/server/entry/defs";
@@ -15,12 +17,12 @@ import { and, eq } from "drizzle-orm";
 
 export interface FormState { errors: string[]; values: Record<string, string>; notices?: string[] }
 
-async function session() {
+async function session(module: AppModule) {
   const user = await getUser();
   if (!user) redirect("/login");
   const study = await activeStudyId(user!.id);
   if (!study) redirect("/estudio");
-  if (study!.role === "viewer") redirect("/estudio?error=" + encodeURIComponent("Su rol es de solo lectura: no puede modificar este estudio."));
+  if (!canEdit(study, module)) redirect("/estudio?error=" + encodeURIComponent(NO_EDIT(module)));
   return { user: user!, study: study! };
 }
 const sheetId = (v: unknown): EntryId => {
@@ -31,8 +33,8 @@ const sheetId = (v: unknown): EntryId => {
 
 /** Guarda (crea o edita) un registro de una hoja de captura. Con errores devuelve el formulario con lo escrito; si guarda, vuelve a la lista. */
 export async function saveEntryAction(_prev: FormState, fd: FormData): Promise<FormState> {
-  const { user, study } = await session();
   const id = sheetId(fd.get("hoja"));
+  const { user, study } = await session(ENTRY_MODULE[id]);
   const def = entryDef(id)!;
   const raw: Record<string, string> = {};
   for (const f of def.fields) raw[f.col] = String(fd.get(`c_${f.col}`) ?? "");
@@ -72,8 +74,8 @@ export async function saveEntryAction(_prev: FormState, fd: FormData): Promise<F
 }
 
 export async function deleteEntryAction(fd: FormData) {
-  const { user, study } = await session();
   const id = sheetId(fd.get("hoja"));
+  const { user, study } = await session(ENTRY_MODULE[id]);
   const recId = String(fd.get("recId") ?? "");
   const r = await deleteEntry(getDb(), user.id, study.id, id, recId);
   if (!r.ok) redirect(`${basePath(id)}?error=${encodeURIComponent(r.error)}`);
@@ -83,7 +85,7 @@ export async function deleteEntryAction(fd: FormData) {
 
 /** Parámetros del estudio (hoja «Parametros»). */
 export async function saveParamsAction(_prev: FormState, fd: FormData): Promise<FormState> {
-  const { user, study } = await session();
+  const { user, study } = await session("parametros");
   const def = SHEETS[0];
   const raw: Record<string, string> = {};
   for (const f of def.fields) raw[f.key] = String(fd.get(f.key) ?? "");
@@ -99,7 +101,7 @@ export async function saveParamsAction(_prev: FormState, fd: FormData): Promise<
 
 /** Lista de áreas del estudio (se espeja a «Parametros»!E5). */
 export async function addAreaAction(fd: FormData) {
-  const { user, study } = await session();
+  const { user, study } = await session("parametros");
   const name = String(fd.get("name") ?? "").trim();
   if (!name || name.length > 120) redirect(PARAMETROS_PATH + "?error=" + encodeURIComponent("Escriba el nombre del área (máximo 120 caracteres)."));
   try {
@@ -115,7 +117,7 @@ export async function addAreaAction(fd: FormData) {
 }
 
 export async function removeAreaAction(fd: FormData) {
-  const { user, study } = await session();
+  const { user, study } = await session("parametros");
   const name = String(fd.get("name") ?? "");
   try {
     await withRls(getDb(), { sub: user.id }, async (tx) => { await tx.delete(areaTable).where(and(eq(areaTable.studyId, study.id), eq(areaTable.name, name))); });

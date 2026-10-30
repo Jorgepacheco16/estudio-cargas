@@ -8,6 +8,7 @@ import { createInvitation, deleteRole, getMyAccess, listInvitations, listMembers
 import { connectSheet, listConnections } from "../src/server/sheets/sync";
 import { roles, rolePermissions, memberships } from "../src/db/schema";
 import { eq } from "drizzle-orm";
+import { readFileSync } from "node:fs";
 import { check, summary, URL_ADMIN, URL_APP } from "./helpers";
 
 /**
@@ -211,6 +212,33 @@ async function main() {
       if ((await listEntries(app.db, legacy, studyId, "3"))!.rows.length !== 1) throw new Error("el viewer heredado debía leer");
       await admin.db.execute(sql`delete from public.memberships where user_id = ${legacy}`);
       await admin.db.execute(sql`delete from auth.users where id = ${legacy}`);
+    });
+
+    await check("Solo se registran personas invitadas: un disparador sobre auth.users rechaza el correo sin invitación vigente (clave o Google) y deja pasar al invitado; las cuentas sin correo no se afectan", async () => {
+      // La base local imita auth.users solo con id: se le agrega la columna email para probar el disparador y se deja todo como estaba.
+      await admin.db.execute(sql`alter table auth.users add column if not exists email text`);
+      try {
+        await admin.db.execute(sql.raw(readFileSync("sql/0006_signup_guard.sql", "utf8")));
+        const rid = await roleId("Lector");
+        const inv = await createInvitation(app.db, owner, studyId, { email: "nueva@persona.co", roleId: rid, allAreas: true, areaIds: [] });
+        if (!inv.ok) throw new Error(JSON.stringify(inv));
+        const a = randomUUID(), b = randomUUID(), c = randomUUID();
+        await admin.db.execute(sql`insert into auth.users (id, email) values (${a}, ${"Nueva@Persona.co "})`); // el invitado entra aunque cambie mayúsculas o espacios
+        await rejects(admin.db.execute(sql`insert into auth.users (id, email) values (${b}, ${"intruso@fuera.co"})`), "P0001", "registrar un correo sin invitación");
+        await admin.db.execute(sql`insert into auth.users (id) values (${c})`);
+        await admin.db.execute(sql`update public.invitations set expires_at = now() - interval '1 minute' where study_id = ${studyId}`);
+        await rejects(admin.db.execute(sql`insert into auth.users (id, email) values (${randomUUID()}, ${"nueva@persona.co"})`), "P0001", "registrar con una invitación vencida");
+        await admin.db.execute(sql`delete from auth.users where id in (${a}, ${c})`);
+      } finally {
+        await admin.db.execute(sql`drop trigger if exists signup_guard on auth.users`);
+        await admin.db.execute(sql`alter table auth.users drop column if exists email`);
+      }
+    });
+
+    await check("«Ver como»: con la transacción en solo lectura la base rechaza cualquier escritura (25006) y sigue permitiendo leer", async () => {
+      const ro = await withRls(app.db, { sub: owner }, async (tx) => { await tx.execute(sql`set transaction read only`); return (await tx.execute(sql`select count(*)::int n from public.areas where study_id = ${studyId}`)) as unknown as { n: number }[]; });
+      if (ro[0].n < 1) throw new Error("debía poder leer");
+      await rejects(withRls(app.db, { sub: owner }, async (tx) => { await tx.execute(sql`set transaction read only`); await tx.execute(sql`insert into public.areas (study_id, name, sort_order) values (${studyId}, 'Área de prueba solo lectura', 99)`); }), "25006", "escribir en solo lectura");
     });
 
     await check("Borrar el estudio borra sus roles, permisos, invitaciones y membresías sin chocar con las protecciones", async () => {

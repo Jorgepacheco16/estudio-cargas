@@ -3,6 +3,8 @@
  *  · Sin sesión: datos de demostración (ficticios, los mismos de la prueba dorada).
  *  · Con sesión: el estudio activo del usuario, leído de PostgreSQL con withRls().
  */
+import { cache } from "react";
+import { getMyAccess, type MyAccess } from "@/server/access";
 import { cookies } from "next/headers";
 import demo from "./demo.json";
 import { analyze, type Analysis, type Mode, type Thresholds } from "@/domain/summary";
@@ -29,11 +31,15 @@ function bare(analysis: Analysis, params: Params, thresholds: Thresholds, mode: 
   return buildDashboard({ mode, analysis, params, thresholds, areaNames, assumptionsValidated: false, hourlyCost: null, meta: [], meas: [], suit: [], risks: [], opps: [], plans: [] });
 }
 
-export async function activeStudyId(userId: string): Promise<{ id: string; name: string; role: string } | null> {
+/** Permisos de la persona en un estudio (se consulta una sola vez por petición). */
+const accessFor = cache((userId: string, studyId: string) => getMyAccess(getDb(), userId, studyId));
+
+export async function activeStudyId(userId: string): Promise<{ id: string; name: string; role: string; access: MyAccess | null } | null> {
   const list = await listStudies(getDb(), userId);
   if (list.length === 0) return null;
   const wanted = (await cookies()).get("estudio_id")?.value;
-  return list.find((s) => s.id === wanted) ?? list[0];
+  const s = list.find((x) => x.id === wanted) ?? list[0];
+  return { ...s, access: await accessFor(userId, s.id) };
 }
 
 export async function loadAnalysis(requested: Mode | undefined): Promise<Loaded> {

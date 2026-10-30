@@ -2,6 +2,8 @@ import { NextResponse, type NextRequest } from "next/server";
 import { activeStudyId } from "@/data/source";
 import { getDb } from "@/db/server";
 import { getUser } from "@/lib/supabase/server";
+import { canEdit, canRead } from "@/lib/access";
+import { ENTRY_MODULE } from "@/domain/access";
 import { rateLimit } from "@/lib/ratelimit";
 import { buildTemplate, bulkEnabled } from "@/server/entry/bulk-file";
 import { entryDef } from "@/server/entry/defs";
@@ -17,7 +19,7 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ hoja: stri
   if (!rateLimit(`plantilla:${user.id}`, 20, 60_000).ok) return err(429, "RATE_LIMITED", "Demasiadas descargas seguidas. Espere un momento.");
   const study = await activeStudyId(user.id);
   if (!study) return err(404, "NOT_FOUND", "Cree o seleccione un estudio primero.");
-  if (study.role === "viewer") return err(403, "FORBIDDEN", "Su rol es de solo lectura.");
+  if (!canEdit(study, ENTRY_MODULE[hoja])) return err(403, "FORBIDDEN", "Su rol no permite cargar datos en esta sección.");
   const def = entryDef(hoja)!;
   const { areas, activities } = await entryOptions(getDb(), user.id, study.id);
   const file = await buildTemplate(def, areas, activities.map((a) => a.code));

@@ -27,6 +27,10 @@ export const MENU: NavEntry[] = [
   { href: "/historia", label: "Historia y desviaciones" },
   { href: "/integraciones", label: "Integraciones" },
   { href: "/agente", label: "Agente de IA" },
+  { href: "/usuarios", label: "Usuarios y roles" },
 ];
+
+/** Todas las rutas del menú (incluidas las de los grupos). */
+export const menuHrefs = (): string[] => MENU.flatMap((e) => ("href" in e ? [e.href] : e.items.map((i) => i.href)));
 
 export const isActive = (path: string, href: string) => path === href || (href !== "/" && path.startsWith(href + "/"));

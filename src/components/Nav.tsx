@@ -17,6 +17,7 @@ const ICON: Record<string, string> = {
   "/sedes": "M3 21h18M5 21V8l7-5 7 5v13M9 21v-6h6v6",
   "/historia": "M3 3v18h18M7 15l4-4 3 3 5-6",
   "/integraciones": "M10 14a4 4 0 005.7 0l3-3a4 4 0 00-5.7-5.7l-1 1M14 10a4 4 0 00-5.7 0l-3 3a4 4 0 005.7 5.7l1-1",
+  "/usuarios": "M16 11a4 4 0 10-8 0 4 4 0 008 0zM3 21a7 7 0 0114 0M17 8h4M19 6v4M18 21a5 5 0 014-4.9",
   "/agente": "M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8L12 3zM19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8L19 15z",
 };
 
@@ -24,8 +25,10 @@ const Icon = ({ d }: { d?: string }) => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={d ?? ICON["/"]} /></svg>
 );
 
-export function Nav() {
+/** `allowed`: rutas del menú a las que la persona tiene acceso (D-91); null = sin restricción (demostración), donde «Usuarios y roles» no se ofrece. */
+export function Nav({ allowed = null }: { allowed?: string[] | null }) {
   const path = usePathname();
+  const ok = (href: string) => (allowed ? allowed.includes(href) : href !== "/usuarios");
   const [opened, setOpened] = useState(false);
   const link = (i: NavLink, sub = false) => (
     <Link key={i.href} href={i.href} className={sub ? "sub-link" : undefined} aria-current={isActive(path, i.href) ? "page" : undefined}>
@@ -35,8 +38,10 @@ export function Nav() {
   return (
     <nav className="nav" aria-label="Principal">
       <div className="nav-in">
-        {MENU.map((e) => {
-          if ("href" in e) return link(e);
+        {MENU.map((entry) => {
+          if ("href" in entry) return ok(entry.href) ? link(entry) : null;
+          const e = { ...entry, items: entry.items.filter((i) => ok(i.href)) };
+          if (e.items.length === 0) return null;
           const inside = e.items.some((i) => isActive(path, i.href));
           const open = opened || inside; // dentro de una subsección el grupo permanece desplegado
           return (
@@ -47,7 +52,9 @@ export function Nav() {
           );
         })}
       </div>
-      {MENU.filter((e): e is Extract<typeof e, { group: string }> => "group" in e).map((g) => {
+      {MENU.filter((e): e is Extract<typeof e, { group: string }> => "group" in e).map((g0) => {
+        const g = { ...g0, items: g0.items.filter((i) => ok(i.href)) };
+        if (g.items.length === 0) return null;
         const open = opened || g.items.some((i) => isActive(path, i.href));
         return open ? <div key={g.group} id="nav-sub" className="nav-sub" role="group" aria-label={g.group}><div className="nav-in">{g.items.map((i) => link(i, true))}</div></div> : null;
       })}

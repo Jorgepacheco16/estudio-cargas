@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { getDb } from "@/db/server";
 import { getUser } from "@/lib/supabase/server";
+import { canEdit, canRead, requireRead, NO_EDIT } from "@/lib/access";
 import { activeStudyId } from "@/data/source";
 import { rateLimit } from "@/lib/ratelimit";
 import { addMeasurement, deleteMeasurement, explainDeviation, runDetection, setDeviationStatus, takeSnapshot } from "@/server/history";
@@ -15,7 +16,7 @@ async function ctx(vista: string) {
   if (!user) redirect("/login");
   const study = await activeStudyId(user!.id);
   if (!study) back(vista, "error", "Cree o seleccione un estudio primero");
-  if (study!.role === "viewer") back(vista, "error", "Su rol es de solo lectura.");
+  if (!canEdit(study, "historia")) back(vista, "error", NO_EDIT("historia"));
   return { user: user!, study: study! };
 }
 const safe = (e: unknown) => {

@@ -399,3 +399,22 @@ dialog.confirm .confirm-warn { color: var(--red-dark); font-weight: 600; font-si
 .btn.danger-solid { background: var(--red); border-color: var(--red); color: #fff; }
 html[data-theme="dark"] .btn.danger-solid { color: #0f141b; }
 .btn.danger-solid:hover { background: var(--red-dark); border-color: var(--red-dark); }
+
+/* ───── Usuarios, roles e invitaciones (D-91) ───── */
+.area-picker { border: 1px solid var(--line); border-radius: var(--radius); padding: 12px 14px; margin: 12px 0 0; }
+.area-picker legend { padding: 0 6px; font-weight: 700; font-size: .875rem; }
+.ap-opt { display: inline-flex; align-items: center; gap: 6px; margin-right: 18px; font-size: .9375rem; }
+.ap-opt input, .ap-list input { height: auto; min-height: 0; padding: 0; accent-color: var(--blue); }
+.ap-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 4px 16px; margin-top: 10px; }
+.ap-list.off { opacity: .5; }
+.ap-list label { display: flex; align-items: center; gap: 8px; font-size: .875rem; }
+.invite-link .invite-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.invite-link input { flex: 1 1 320px; min-width: 0; }
+.invite-page { display: grid; place-items: start center; padding: 32px 16px; }
+.invite-card { width: min(460px, 100%); }
+.invite-brand { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; font-size: 1.25rem; }
+.invite-card h1 { font-size: 1.25rem; margin: 8px 0; }
+.invite-card h2 { font-size: 1rem; margin: 12px 0 0; }
+.invite-sep { display: flex; align-items: center; gap: 12px; margin: 18px 0; color: var(--muted); }
+.invite-sep::before, .invite-sep::after { content: ""; flex: 1; border-top: 1px solid var(--line); }
+.viewas-bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 12px; padding: 8px 16px; background: var(--amber-soft); color: var(--amber); font-size: .875rem; font-weight: 600; border-bottom: 1px solid var(--line); }

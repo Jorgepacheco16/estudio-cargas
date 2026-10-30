@@ -22,7 +22,7 @@ export default async function Estudio({ searchParams }: { searchParams: Promise<
   return (
     <main>
       <div className="head">
-        <div><h1>Estudio</h1><Purpose k="estudio" /><div className="sub">Sesión: {user!.email ?? "usuario"}{active ? ` · ${active.name} (${ROLE[active.role] ?? active.role})` : ""}</div></div>
+        <div><h1>Estudio</h1><Purpose k="estudio" /><div className="sub">Sesión: {user!.email ?? "usuario"}{active ? ` · ${active.name} (${active.access?.roleName ?? ROLE[active.role] ?? active.role})` : ""}</div></div>
       </div>
       {sp.ok && <div className="banner" style={{ background: "var(--blue-soft)", color: "var(--blue)" }}>{sp.ok}</div>}
       {sp.error && <div className="banner" style={{ background: "var(--red-soft)", color: "var(--red-dark)" }}>{sp.error}</div>}
@@ -36,7 +36,7 @@ export default async function Estudio({ searchParams }: { searchParams: Promise<
               <div className="field">
                 <label htmlFor="estudio-id">Estudio</label>
                 <select id="estudio-id" name="id" defaultValue={active?.id}>{studies.map((s) => <option key={s.id} value={s.id}>{s.name} · {ROLE[s.role] ?? s.role}</option>)}</select>
-                <p className="hint">{active ? `Su rol en este estudio: ${ROLE[active.role] ?? active.role}.` : ""}</p>
+                <p className="hint">{active ? `Su rol en este estudio: ${active.access?.roleName ?? ROLE[active.role] ?? active.role}.` : ""}</p>
               </div>
               <div><button className="btn" type="submit">Usar este estudio</button></div>
             </form>

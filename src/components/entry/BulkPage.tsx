@@ -2,6 +2,8 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { activeStudyId } from "@/data/source";
 import { getUser } from "@/lib/supabase/server";
+import { canEdit, canRead, requireRead, NO_EDIT } from "@/lib/access";
+import { ENTRY_MODULE } from "@/domain/access";
 import { basePath } from "@/lib/entry-routes";
 import { BULK_MAX_ROWS } from "@/server/entry/bulk-file";
 import { entryDef, type EntryId } from "@/server/entry/defs";
@@ -15,7 +17,7 @@ export async function BulkPage({ hoja }: { hoja: EntryId }) {
   const study = await activeStudyId(user!.id);
   if (!study) redirect("/estudio");
   const base = basePath(hoja);
-  if (study!.role === "viewer") redirect(`${base}?error=${encodeURIComponent("Su rol es de solo lectura: no puede cargar datos.")}`);
+  if (!canEdit(study, ENTRY_MODULE[hoja])) redirect(`${base}?error=${encodeURIComponent(NO_EDIT(ENTRY_MODULE[hoja]))}`);
   return (
     <main>
       <div className="head">

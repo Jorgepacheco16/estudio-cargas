@@ -25,7 +25,7 @@ const audit = (tx: Tx, studyId: string, sub: string, action: string, entity: str
 export interface MyAccess { roleId: string | null; roleName: string; perms: Permissions; allAreas: boolean; areaIds: string[]; isAdmin: boolean }
 
 /** Nivel de acceso de las membresías heredadas (sin role_id): mismas reglas que private.module_level. */
-function legacyPerms(role: string): Permissions {
+export function legacyPerms(role: string): Permissions {
   const p = role === "owner" ? allPermissions("edit") : role === "viewer" ? allPermissions("read") : allPermissions("edit");
   if (role !== "owner") p.usuarios = "none";
   return p;
@@ -125,6 +125,15 @@ export async function deleteRole(db: Db, sub: string, studyId: string, id: strin
     if (m.code === "42501") return { ok: false, error: "No tiene permiso para administrar roles." };
     throw e;
   }
+}
+
+/** Guarda el correo de quien administra en su propia membresía (las membresías creadas antes de D-91 no lo tienen y auth.users no se puede leer desde la aplicación). */
+export async function rememberOwnEmail(db: Db, sub: string, studyId: string, email: string | null): Promise<void> {
+  if (!email) return;
+  await withRls(db, { sub }, async (tx) => {
+    const [m] = await tx.select({ email: memberships.email }).from(memberships).where(and(eq(memberships.studyId, studyId), eq(memberships.userId, sub)));
+    if (m && !m.email) await tx.update(memberships).set({ email: email.toLowerCase() }).where(and(eq(memberships.studyId, studyId), eq(memberships.userId, sub)));
+  }).catch(() => undefined);
 }
 
 /* ───────── Personas ───────── */

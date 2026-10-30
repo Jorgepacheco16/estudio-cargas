@@ -1,6 +1,6 @@
 # Diseño: usuarios, roles y áreas
 
-Pedido del titular (D-91). Este documento fija el diseño antes de construir. Todo lo que dice «la base de datos lo hace cumplir» se prueba con pruebas de seguridad contra PostgreSQL real.
+Pedido del titular (D-91). Este documento fija el diseño; la Etapa 1 ya está construida (ver D-91 en `decisiones-pendientes.md`) y la Etapa 2 (áreas) está pendiente. Todo lo que dice «la base de datos lo hace cumplir» se prueba con pruebas de seguridad contra PostgreSQL real.
 
 ## 1. Vocabulario
 

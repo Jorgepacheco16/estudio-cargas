@@ -1,4 +1,6 @@
 import { notFound } from "next/navigation";
+import { guardModules } from "@/lib/guard";
+import { ENTRY_MODULE } from "@/domain/access";
 import { Help } from "@/components/Purpose";
 import { EntrySection } from "@/components/entry/views";
 import { DIAGNOSTICO_SLUG } from "@/lib/entry-routes";
@@ -14,6 +16,7 @@ export default async function Seccion({ params, searchParams }: { params: Promis
   const slug = (await params).seccion;
   const id = DIAGNOSTICO_SLUG[slug], info = SECCIONES[slug];
   if (!id || !info) notFound();
+  await guardModules(ENTRY_MODULE[id]);
   return (
     <main>
       <div className="head"><div><h1>{info!.titulo}{info!.ayuda && <> <Help text={info!.ayuda} /></>}</h1><div className="sub">{info!.proposito}</div></div></div>

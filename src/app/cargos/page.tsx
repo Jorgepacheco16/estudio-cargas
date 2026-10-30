@@ -1,4 +1,5 @@
 import { Purpose } from "@/components/Purpose";
+import { guardModules } from "@/lib/guard";
 import { loadAnalysis, parseMode } from "@/data/source";
 import { CargosTable } from "@/components/CargosTable";
 import { FilterBar } from "@/components/FilterBar";
@@ -9,6 +10,7 @@ import { positionFilters, type RawParams } from "@/lib/page-filters";
 
 export const metadata = { title: "Cargos y dotación" };
 export default async function Cargos({ searchParams }: { searchParams: Promise<RawParams> }) {
+  await guardModules("cargos");
   const raw = await searchParams;
   const modo = Array.isArray(raw.modo) ? raw.modo[0] : raw.modo;
   const { analysis: a, mode, label } = await loadAnalysis(parseMode(modo));

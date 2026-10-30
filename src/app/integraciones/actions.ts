@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { getDb } from "@/db/server";
 import { getUser } from "@/lib/supabase/server";
+import { canEdit } from "@/lib/access";
 import { activeStudyId } from "@/data/source";
 import { rateLimit } from "@/lib/ratelimit";
 import { googleGateway } from "@/server/sheets/gateway";
@@ -26,7 +27,7 @@ const sheetId = (s: string) => s.match(/\/spreadsheets\/d\/([a-zA-Z0-9_-]{20,})/
 
 export async function connectAction(fd: FormData) {
   const { user, study } = await ctx();
-  if (study.role !== "owner") back("error", "Solo el propietario del estudio puede conectar una hoja.");
+  if (!canEdit(study, "integraciones")) back("error", "Su rol no permite conectar ni sincronizar la hoja de Google.");
   const id = sheetId(String(fd.get("sheet") ?? ""));
   const mode = z.enum(["push", "pull", "bidirectional", "off"]).safeParse(fd.get("mode"));
   if (!id || !mode.success) back("error", "Indique la dirección de la hoja y el modo de sincronización.");
@@ -44,7 +45,7 @@ export async function connectAction(fd: FormData) {
 export async function syncAction(fd: FormData) {
   const confirm = fd.get("confirmAutofix") === "yes";
   const { user, study } = await ctx();
-  if (study.role === "viewer") back("error", "Su rol es de solo lectura.");
+  if (!canEdit(study, "integraciones")) back("error", "Su rol no permite conectar ni sincronizar la hoja de Google.");
   if (!rateLimit(`sync:${user.id}`, 3, 60_000).ok) back("error", "Espere un momento antes de sincronizar de nuevo.");
   let msg = "";
   let connId: string | null = null;

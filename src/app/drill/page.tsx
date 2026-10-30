@@ -1,4 +1,5 @@
 import { Purpose } from "@/components/Purpose";
+import { guardModules } from "@/lib/guard";
 import { PagedTable } from "@/components/PagedTable";
 import Link from "next/link";
 import { loadAnalysis, parseMode } from "@/data/source";
@@ -10,6 +11,7 @@ const q = (o: Record<string, string | undefined>) => Object.entries(o).filter(([
 
 export const metadata = { title: "Drill-down: Carga por áreas" };
 export default async function Drill({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
+  await guardModules(["cargos", "actividades"]);
   const sp = await searchParams;
   const { analysis, mode, label } = await loadAnalysis(parseMode(sp.modo));
   const config = PRESETS[sp.config ?? ""] ? sp.config! : "carga-por-area";

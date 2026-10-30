@@ -4,6 +4,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getDb } from "@/db/server";
 import { getUser } from "@/lib/supabase/server";
+import { canEdit, requireRead } from "@/lib/access";
 import { activeStudyId } from "@/data/source";
 import { ParamsForm } from "@/components/ParamsForm";
 import { SHEETS, listRows, optionsOf, toFormValue } from "@/server/capture";
@@ -17,10 +18,11 @@ export default async function Parametros({ searchParams }: { searchParams: Promi
   if (!user) redirect("/login");
   const study = await activeStudyId(user!.id);
   if (!study) redirect("/estudio");
+  requireRead(study, "parametros");
   const def = SHEETS[0], db = getDb();
   const [rows, areas] = await Promise.all([listRows(db, user!.id, study!.id, def), listAreas(db, user!.id, study!.id)]);
   const row = rows[0];
-  const canWrite = study!.role !== "viewer";
+  const canWrite = canEdit(study, "parametros");
   const fields = def.fields.map((f) => ({ key: f.key, label: f.label, kind: f.kind, hint: f.hint, options: f.kind === "list" ? optionsOf(f.list!) : [] }));
   const initial = Object.fromEntries(def.fields.map((f) => [f.key, row ? toFormValue(f, row[f.key]) : ""]));
   return (

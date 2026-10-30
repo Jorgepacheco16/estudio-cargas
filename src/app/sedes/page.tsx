@@ -1,4 +1,5 @@
 import { Purpose } from "@/components/Purpose";
+import { guardModules } from "@/lib/guard";
 import { PagedTable } from "@/components/PagedTable";
 import { getDb } from "@/db/server";
 import { getUser } from "@/lib/supabase/server";
@@ -9,6 +10,7 @@ import { loadUndocumented } from "@/server/studies";
 
 export const metadata = { title: "Comparador de centros de operaciones" };
 export default async function Sedes({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
+  await guardModules(["cargos", "actividades"]);
   const sp = await searchParams;
   const loaded = await loadAnalysis(parseMode(sp.modo));
   const { analysis, mode, params } = loaded;

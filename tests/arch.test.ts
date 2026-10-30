@@ -28,9 +28,9 @@ async function main() {
     if (bad.length) throw new Error(`consultas directas sobre db: ${bad.join(", ")}`);
   });
 
-  await check("Los únicos db.execute sin withRls() llaman a las funciones seguras sin sesión (conexión de hoja y objetivos de fotos), sin leer tablas", () => {
+  await check("Los únicos db.execute sin withRls() llaman a las funciones seguras sin sesión (conexión de hoja, objetivos de fotos y datos mínimos de una invitación), sin leer tablas", () => {
     const bad: string[] = [];
-    for (const f of outsideDb) for (const m of f.text.matchAll(/\bdb\.execute\(sql`([^`]*)`/g)) if (!/from public\.(sheet_connection_lookup|sheet_connections_active|snapshot_targets)\(/.test(m[1])) bad.push(`${f.path}: ${m[1].slice(0, 80)}`);
+    for (const f of outsideDb) for (const m of f.text.matchAll(/\bdb\.execute\(sql`([^`]*)`/g)) if (!/from public\.(sheet_connection_lookup|sheet_connections_active|snapshot_targets|invitation_lookup)\(/.test(m[1])) bad.push(`${f.path}: ${m[1].slice(0, 80)}`);
     if (bad.length) throw new Error(bad.join("; "));
   });
 

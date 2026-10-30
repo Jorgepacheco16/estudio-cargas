@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { getDb } from "@/db/server";
 import { getUser } from "@/lib/supabase/server";
+import { canEdit } from "@/lib/access";
 import { activeStudyId } from "@/data/source";
 import { decideProposal, runAgent } from "@/server/agent";
 import { rateLimit } from "@/lib/ratelimit";
@@ -21,7 +22,7 @@ async function ctx() {
 
 export async function runAgentAction() {
   const { user, study } = await ctx();
-  if (study.role === "viewer") back("error", "Su rol es de solo lectura.");
+  if (!canEdit(study, "agente")) back("error", "Su rol es de solo lectura.");
   if (!rateLimit(`agent:${user.id}`, 3, 60_000).ok) back("error", "Espere un momento antes de volver a ejecutar el agente.");
   let msg = "";
   try {
@@ -41,7 +42,7 @@ export async function validateCoverageAction(positionId: string): Promise<Covera
   if (!user) return { ok: false, code: "forbidden", message: "Su sesión terminó. Vuelva a ingresar." };
   const study = await activeStudyId(user.id);
   if (!study) return { ok: false, code: "not_found", message: "Cree o seleccione un estudio primero." };
-  if (study.role === "viewer") return { ok: false, code: "forbidden", message: "Su rol es de solo lectura: no puede ejecutar el agente." };
+  if (!canEdit(study, "agente")) return { ok: false, code: "forbidden", message: "Su rol es de solo lectura: no puede ejecutar el agente." };
   if (!z.string().uuid().safeParse(positionId).success) return { ok: false, code: "not_found", message: "Cargo inválido." };
   try { return await validateCoverage(getDb(), user.id, study.id, positionId); }
   catch { return { ok: false, code: "error", message: "No se pudo validar la cobertura. Puede reintentar." }; }
@@ -67,7 +68,7 @@ export async function decideAction(fd: FormData) {
   const id = z.string().uuid().safeParse(fd.get("id"));
   const approve = fd.get("decision") === "approve";
   if (!id.success) back("error", "Propuesta inválida");
-  if (study.role === "viewer") back("error", "Su rol es de solo lectura.");
+  if (!canEdit(study, "agente")) back("error", "Su rol es de solo lectura.");
   let msg = "";
   try {
     const r = await decideProposal(getDb(), user.id, study.id, id.data!, approve);

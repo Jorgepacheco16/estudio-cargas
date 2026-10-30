@@ -5,6 +5,7 @@ import { COVERAGE_DAILY_LIMIT, listCoverageCargos } from "@/server/coverage";
 import { redirect } from "next/navigation";
 import { getDb } from "@/db/server";
 import { getUser } from "@/lib/supabase/server";
+import { canEdit, requireRead } from "@/lib/access";
 import { activeStudyId } from "@/data/source";
 import { ExportButtons } from "@/components/Tools";
 import { AGENT_DAILY_LIMIT, agentModel, listProposals } from "@/server/agent";
@@ -27,10 +28,11 @@ export default async function Agente({ searchParams }: { searchParams: Promise<R
   const user = await getUser();
   if (!user) redirect("/login");
   const study = await activeStudyId(user.id);
+  requireRead(study, "agente");
   const proposals = study ? await listProposals(getDb(), user.id, study.id) : [];
   const cargos = study ? await listCoverageCargos(getDb(), user.id, study.id) : [];
   const configured = Boolean(process.env.ANTHROPIC_API_KEY);
-  const canWrite = !!study && study.role !== "viewer";
+  const canWrite = !!study && canEdit(study, "agente");
   const blocked = !configured ? "El agente no está configurado (falta ANTHROPIC_API_KEY)." : !canWrite ? "Su rol es de solo lectura." : null;
 
   return (

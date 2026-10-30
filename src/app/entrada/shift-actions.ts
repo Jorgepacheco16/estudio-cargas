@@ -2,6 +2,7 @@
 import { redirect } from "next/navigation";
 import { getDb } from "@/db/server";
 import { getUser } from "@/lib/supabase/server";
+import { canEdit, canRead, requireRead, NO_EDIT } from "@/lib/access";
 import { activeStudyId } from "@/data/source";
 import { basePath } from "@/lib/entry-routes";
 import { scheduleMirror } from "@/server/entry/service";
@@ -14,7 +15,7 @@ async function session() {
   if (!user) redirect("/login");
   const study = await activeStudyId(user!.id);
   if (!study) redirect("/estudio");
-  if (study!.role === "viewer") redirect("/estudio?error=" + encodeURIComponent("Su rol es de solo lectura: no puede modificar este estudio."));
+  if (!canEdit(study, "cargos")) redirect("/estudio?error=" + encodeURIComponent(NO_EDIT("cargos")));
   return { user: user!, study: study! };
 }
 const UUID = /^[0-9a-f-]{36}$/i;
