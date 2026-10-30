@@ -16,7 +16,7 @@ export function AreaPicker({ areas, allAreas = true, selected = [], disabled = f
           <label key={a.id}><input type="checkbox" name="area" value={a.id} checked={chosen.has(a.id)} onChange={() => toggle(a.id)} disabled={todas} /> <span>{a.name}</span></label>
         ))}
       </div>
-      <p className="note" style={{ margin: "10px 0 0" }}><b>Importante:</b> las áreas se guardan, pero la restricción por áreas todavía no está activa (llega en la siguiente etapa): hasta entonces la persona ve todas las áreas, con el alcance de su rol.</p>
+      <p className="note" style={{ margin: "10px 0 0" }}>Con «Solo estas áreas», la persona ve y edita únicamente los registros de esas áreas en todos los módulos, y sus totales y exportaciones son solo de ellas. Lo que no pertenece a un área (fotos del estudio, auditoría, agente de IA y conexión con Google) solo lo ve quien tiene todas las áreas.</p>
       {!todas && chosen.size === 0 && <p className="hint" style={{ color: "var(--red-dark)" }}>Marque al menos un área.</p>}
     </fieldset>
   );

@@ -38,6 +38,8 @@ jobs:
           psql "$DATABASE_URL_ADMIN" -v ON_ERROR_STOP=1 -f drizzle/0009_daily_work_hours.sql
           psql "$DATABASE_URL_ADMIN" -v ON_ERROR_STOP=1 -f drizzle/0010_roles_usuarios.sql
           psql "$DATABASE_URL_ADMIN" -v ON_ERROR_STOP=1 -f sql/0005_roles_rls.sql
+          psql "$DATABASE_URL_ADMIN" -v ON_ERROR_STOP=1 -f drizzle/0011_area_obligatoria.sql
+          psql "$DATABASE_URL_ADMIN" -v ON_ERROR_STOP=1 -f sql/0007_areas_rls.sql
       - run: npm run test:rls
       - run: npm run test:f3
       - run: npm run test:capture
@@ -45,6 +47,7 @@ jobs:
       - run: npm run test:bulkdb
       - run: npm run test:filtersdb
       - run: npm run test:rolesdb
+      - run: npm run test:areasdb
       - run: npm run test:matrix
       - run: npm run test:policies
       - run: npm run test:backup
@@ -120,7 +123,7 @@ jobs:
       - name: Migraciones reales sobre PostgreSQL real
         run: |
           psql "$DATABASE_URL_ADMIN" -v ON_ERROR_STOP=1 -f sql/local_bootstrap.sql
-          for f in drizzle/0000_init.sql sql/0001_rls.sql drizzle/0001_weeks_per_month_precision.sql drizzle/0002_sheet_connections_actor.sql sql/0002_sheets.sql drizzle/0003_deviation_thresholds.sql sql/0003_history.sql drizzle/0004_position_shifts.sql sql/0004_shifts.sql drizzle/0005_shift_days.sql drizzle/0006_position_operation.sql drizzle/0007_diagnostico_centro_operaciones.sql drizzle/0008_position_shift_type.sql drizzle/0009_daily_work_hours.sql drizzle/0010_roles_usuarios.sql sql/0005_roles_rls.sql; do
+          for f in drizzle/0000_init.sql sql/0001_rls.sql drizzle/0001_weeks_per_month_precision.sql drizzle/0002_sheet_connections_actor.sql sql/0002_sheets.sql drizzle/0003_deviation_thresholds.sql sql/0003_history.sql drizzle/0004_position_shifts.sql sql/0004_shifts.sql drizzle/0005_shift_days.sql drizzle/0006_position_operation.sql drizzle/0007_diagnostico_centro_operaciones.sql drizzle/0008_position_shift_type.sql drizzle/0009_daily_work_hours.sql drizzle/0010_roles_usuarios.sql sql/0005_roles_rls.sql drizzle/0011_area_obligatoria.sql sql/0007_areas_rls.sql; do
             psql "$DATABASE_URL_ADMIN" -v ON_ERROR_STOP=1 -f "$f"
           done
       - run: npm run build
@@ -150,7 +153,7 @@ jobs:
       - name: Migraciones reales sobre PostgreSQL real
         run: |
           psql "$DATABASE_URL_ADMIN" -v ON_ERROR_STOP=1 -f sql/local_bootstrap.sql
-          for f in drizzle/0000_init.sql sql/0001_rls.sql drizzle/0001_weeks_per_month_precision.sql drizzle/0002_sheet_connections_actor.sql sql/0002_sheets.sql drizzle/0003_deviation_thresholds.sql sql/0003_history.sql drizzle/0004_position_shifts.sql sql/0004_shifts.sql drizzle/0005_shift_days.sql drizzle/0006_position_operation.sql drizzle/0007_diagnostico_centro_operaciones.sql drizzle/0008_position_shift_type.sql drizzle/0009_daily_work_hours.sql drizzle/0010_roles_usuarios.sql sql/0005_roles_rls.sql; do
+          for f in drizzle/0000_init.sql sql/0001_rls.sql drizzle/0001_weeks_per_month_precision.sql drizzle/0002_sheet_connections_actor.sql sql/0002_sheets.sql drizzle/0003_deviation_thresholds.sql sql/0003_history.sql drizzle/0004_position_shifts.sql sql/0004_shifts.sql drizzle/0005_shift_days.sql drizzle/0006_position_operation.sql drizzle/0007_diagnostico_centro_operaciones.sql drizzle/0008_position_shift_type.sql drizzle/0009_daily_work_hours.sql drizzle/0010_roles_usuarios.sql sql/0005_roles_rls.sql drizzle/0011_area_obligatoria.sql sql/0007_areas_rls.sql; do
             psql "$DATABASE_URL_ADMIN" -v ON_ERROR_STOP=1 -f "$f"
           done
       - name: Sembrar un estudio completo en la base de origen

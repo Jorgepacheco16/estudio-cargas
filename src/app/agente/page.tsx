@@ -33,7 +33,7 @@ export default async function Agente({ searchParams }: { searchParams: Promise<R
   const cargos = study ? await listCoverageCargos(getDb(), user.id, study.id) : [];
   const configured = Boolean(process.env.ANTHROPIC_API_KEY);
   const canWrite = !!study && canEdit(study, "agente");
-  const blocked = !configured ? "El agente no está configurado (falta ANTHROPIC_API_KEY)." : !canWrite ? "Su rol es de solo lectura." : null;
+  const blocked = !configured ? "El agente no está configurado (falta ANTHROPIC_API_KEY)." : study && !study.access?.allAreas && study.access ? "El agente analiza todo el estudio: requiere acceso a todas las áreas." : !canWrite ? "Su rol es de solo lectura." : null;
 
   return (
     <main>

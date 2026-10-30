@@ -35,6 +35,7 @@
     "test:access": "tsx tests/access.test.ts",
     "test:viewas": "tsx tests/viewas.test.ts",
     "test:rolesdb": "tsx tests/roles-db.test.ts",
+    "test:areasdb": "tsx tests/areas-db.test.ts",
     "test:calcformulas": "tsx tests/calcformulas.test.ts",
     "test:bulk": "tsx tests/bulk.test.ts",
     "test:filters": "tsx tests/filters.test.ts",

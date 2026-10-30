@@ -10,6 +10,8 @@ import { getUser } from "@/lib/supabase/server";
 import { activeStudyId } from "@/data/source";
 import { allowedHrefs } from "@/lib/access";
 import { menuHrefs } from "@/lib/nav";
+import { getDb } from "@/db/server";
+import { listAreas } from "@/server/studies";
 import { exitViewAsAction } from "@/app/usuarios/actions";
 
 export const metadata: Metadata = {
@@ -25,6 +27,8 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const user = bare ? null : await getUser();
   const study = user ? await activeStudyId(user.id).catch(() => null) : null;
   const allowed = allowedHrefs(menuHrefs(), study);
+  // D-92: quien trabaja con algunas áreas lo ve siempre a la vista, porque todas las cifras son solo de esas áreas.
+  const myAreas = study?.access && !study.access.allAreas && user ? (await listAreas(getDb(), user.id, study.id).catch(() => [])).map((a) => a.name) : null;
   return (
     <html lang="es">
       <body>
@@ -51,6 +55,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
               </div>
             )}
             <Nav allowed={allowed} />
+            {myAreas && <div className="areas-bar" role="note">Trabaja solo con {myAreas.length === 1 ? "el área" : "las áreas"}: <b>{myAreas.join(", ") || "ninguna asignada"}</b>. Los registros, los totales y las exportaciones son solo de {myAreas.length === 1 ? "esa área" : "esas áreas"}.</div>}
             <div className="wrap">{children}</div>
           </>
         )}

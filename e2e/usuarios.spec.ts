@@ -75,6 +75,8 @@ test("la persona ve y edita lo que su rol permite, y nada más", async () => {
   await ana.goto("/actividades");
   await listo(ana, "Actividades");
   await expect(ana.getByText("E-1").first()).toBeVisible();
+  await expect(ana.getByText("E-2")).toHaveCount(0); // la actividad de Domicilios no es de su área
+  await expect(ana.getByText(/Trabaja solo con el área/)).toContainText("Cajas");
   await expect(ana.getByRole("link", { name: "+ Agregar registro" }).first()).toBeVisible();
   const menu = await ana.locator("nav.nav").innerText();
   expect(menu).toContain("Cargos y dotación");
@@ -92,6 +94,11 @@ test("la persona ve y edita lo que su rol permite, y nada más", async () => {
 });
 
 test("el Super usuario ve el cuadro de permisos y usa «Ver como» (solo lectura)", async () => {
+  // El Super usuario (todas las áreas) sí ve la actividad de Domicilios y no tiene la franja de áreas.
+  await admin.goto("/actividades");
+  await listo(admin, "Actividades");
+  await expect(admin.getByText("E-2").first()).toBeVisible();
+  await expect(admin.getByText(/Trabaja solo con/)).toHaveCount(0);
   await admin.goto("/usuarios?vista=permisos");
   await listo(admin, "Cuadro de permisos");
   await expect(admin.getByText("ana@prueba.co").first()).toBeVisible();

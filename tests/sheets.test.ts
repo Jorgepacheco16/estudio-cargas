@@ -122,8 +122,8 @@ async function main() {
       sheet.setRow("5_Medibilidad", 8, { B: "NO-EXISTE", G: "Sí" });
       sheet.setRow("6_Pertinencia", 7, { B: "T-1", F: "Alta", T: "1. Corresponde al cargo, requiere capacitación" });
       sheet.setRow("7_Riesgos", 7, { B: "T-1", H: 3, K: 5, M: 3, Q: 2 });
-      sheet.setRow("8_Oportunidades", 7, { A: "REAL", B: "OP-1", C: "Simplificar procedimiento", D: "Hallazgo confirmado", F: "T-1", M: 2, Q: 4 });
-      sheet.setRow("10_Plan_accion", 7, { A: "REAL", B: "AC-1", D: "Simplificar el arqueo", K: 46000, L: 46030, P: 10 });
+      sheet.setRow("8_Oportunidades", 7, { A: "REAL", B: "OP-1", C: "Simplificar procedimiento", D: "Hallazgo confirmado", F: "T-1", J: "Cajas", M: 2, Q: 4 });
+      sheet.setRow("10_Plan_accion", 7, { A: "REAL", B: "AC-1", D: "Simplificar el arqueo", E: "Cajas", K: 46000, L: 46030, P: 10 });
       const out: Record<string, string> = {};
       for (const [name, rows] of [["5_Medibilidad", 2], ["6_Pertinencia", 1], ["7_Riesgos", 1], ["8_Oportunidades", 1], ["10_Plan_accion", 1]] as const) {
         const r = await handleEvent(app.db, mk(name, 7, rows), sheet);

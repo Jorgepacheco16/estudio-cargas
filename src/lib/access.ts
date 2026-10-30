@@ -18,6 +18,7 @@ export function allowedHrefs(hrefs: string[], s: WithAccess | null | undefined):
   if (!s?.access) return null;
   return hrefs.filter((h) => {
     if (h === "/usuarios") return s.access!.isAdmin;
+    if (h === "/agente" && !s.access!.allAreas) return false; // el agente analiza todo el estudio: exige todas las áreas
     const m = moduleOfPath(h);
     if (m === null) return true;
     return (Array.isArray(m) ? m : [m]).every((x) => canRead(s, x));

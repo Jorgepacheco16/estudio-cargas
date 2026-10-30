@@ -403,7 +403,8 @@ export const improvementOpportunities = pgTable("improvement_opportunities", {
   evidence: text("evidence"),
   probableCause: text("probable_cause"),
   proposal: text("proposal"),
-  areaId: uuid("area_id"),
+  /** D-92: obligatoria (la restricción por áreas se apoya en ella). */
+  areaId: uuid("area_id").notNull(),
   /** D-75: centro de operaciones al que aplica (opcional). */
   siteId: uuid("site_id"),
   positionName: text("position_name"),
@@ -471,7 +472,8 @@ export const actionItems = pgTable("action_items", {
   code: text("code").notNull(),
   finding: text("finding"),
   action: text("action").notNull(),
-  areaId: uuid("area_id"),
+  /** D-92: obligatoria (la restricción por áreas se apoya en ella). */
+  areaId: uuid("area_id").notNull(),
   /** D-75: centro de operaciones al que aplica (opcional). */
   siteId: uuid("site_id"),
   positionName: text("position_name"),
