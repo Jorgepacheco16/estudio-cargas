@@ -183,6 +183,7 @@ async function main() {
       if (noPos.ok || !noPos.errors.join().includes("no está registrado")) throw new Error("aceptó un cargo que no existe en Cargos y dotación");
       const several = await saveEntry(app.db, owner, studyId, "8", cells("8", { code: "O-5", area: "Cajas", site: "S1", position: "Cajero; Otro cargo afectado" }), {});
       if (!several.ok) throw new Error("con varios cargos, el primero debía ser el principal: " + JSON.stringify(several));
+      for (const [id, rec] of [["8", o.recId], ["10", p.recId], ["8", several.recId]] as const) { const del = await deleteEntry(app.db, owner, studyId, id, rec); if (!del.ok) throw new Error("no se pudo limpiar " + id); } // deja el estudio como lo encontró la prueba siguiente
     });
 
     await check("Parámetros: se actualizan con control de versión y la reserva se guarda como fracción", async () => {

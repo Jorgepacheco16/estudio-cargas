@@ -35,7 +35,7 @@ async function main() {
   };
   await put("5", { code: "R-Norte", direct: "Sí", hasIndicators: "Sí", hasHistory: "Sí", hasStandard: "Sí", reliability: "Alta", verifiable: "Sí" });
   await put("7", { code: "R-Norte", impLegal: "5", probability: "3", people: "1" });
-  await put("8", { kind: "REAL", code: "OP-1", finding: "Hallazgo confirmado", evidence: "registro", hours: "2", impact: "4", ease: "3", effort: "2", cost: "2", riskScore: "2" });
+  await put("8", { kind: "REAL", code: "OP-1", activityCode: "R-Norte", finding: "Hallazgo confirmado", evidence: "registro", hours: "2", impact: "4", ease: "3", effort: "2", cost: "2", riskScore: "2" });
   await addMeasurement(app.db, owner, studyId, { activityId: acts[0].id, observedAt: new Date(), unitsProcessed: 10, personHours: 1, method: "timed", observer: null });
   await takeSnapshot(app.db, owner, studyId, "Foto de la prueba de restauración");
   await connectSheet(app.db, owner, studyId, `restore-${randomUUID()}`, "bidirectional");
