@@ -20,7 +20,7 @@ export const metadata: Metadata = {
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   // La página de ingreso se muestra sola, sin encabezado ni menú (el proxy entrega la ruta en x-pathname).
   const path = (await headers()).get("x-pathname") ?? "";
-  const bare = path.startsWith("/ingreso") || path.startsWith("/invitacion");
+  const bare = path.startsWith("/ingreso") || path.startsWith("/invitacion") || path.startsWith("/privacidad");
   // D-91: el menú solo ofrece lo que el rol de la persona permite (sin sesión, la demostración no tiene restricciones).
   const user = bare ? null : await getUser();
   const study = user ? await activeStudyId(user.id).catch(() => null) : null;

@@ -9,7 +9,7 @@ import { GUEST_COOKIE, verifyGuest } from "@/lib/guest";
  * 3) Puerta de entrada (D-76): sin sesión de usuario ni cookie de invitado, ninguna pantalla interna se puede ver; se lleva a /ingreso (o 401 en la API).
  *    Siguen públicas la página de ingreso, el regreso de Google y las rutas que se autentican solas (webhook firmado y tareas programadas con CRON_SECRET).
  */
-const PUBLIC_PATHS = ["/ingreso", "/login", "/invitacion", "/auth/callback", "/api/sheets/webhook", "/api/sheets/reconcile", "/api/history/snapshot"];
+const PUBLIC_PATHS = ["/ingreso", "/login", "/invitacion", "/privacidad", "/auth/callback", "/api/sheets/webhook", "/api/sheets/reconcile", "/api/history/snapshot"];
 const isPublic = (p: string) => PUBLIC_PATHS.some((x) => p === x || p.startsWith(`${x}/`));
 function csp(nonce: string): string {
   const supabase = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";

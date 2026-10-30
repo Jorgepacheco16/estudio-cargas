@@ -77,6 +77,7 @@ export default async function Ingreso({ searchParams }: { searchParams: Promise<
               <p className="auth-guest">¿Solo quiere conocer la aplicación? <Link className="auth-link" href="/ingreso?modo=invitado">Ingresar como invitado</Link></p>
             </>
           )}
+          <p className="auth-guest"><Link className="auth-link" href="/privacidad">Política de privacidad</Link></p>
         </div>
       </section>
       <aside className="auth-art" aria-hidden="true">

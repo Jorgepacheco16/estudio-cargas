@@ -224,3 +224,10 @@ test("las listas se muestran de 10 en 10, con «Filas por página» y navegació
   await page.getByLabel("Filas por página:").first().selectOption("25");
   await expect(page.getByText(/^1–15 de 15$/).first()).toBeVisible();
 });
+test("[anónimo] la política de privacidad es pública y se enlaza desde la página de ingreso (la pide Google para publicar el inicio de sesión)", async ({ page }) => {
+  await page.goto("/ingreso");
+  await page.getByRole("link", { name: "Política de privacidad" }).click();
+  await expect(page).toHaveURL(/\/privacidad$/);
+  await expect(page.getByRole("heading", { name: "Política de privacidad" })).toBeVisible();
+  await expect(page.getByText("Política de datos de usuario de los servicios de API de Google")).toBeVisible();
+});

@@ -418,3 +418,11 @@ html[data-theme="dark"] .btn.danger-solid { color: #0f141b; }
 .invite-sep { display: flex; align-items: center; gap: 12px; margin: 18px 0; color: var(--muted); }
 .invite-sep::before, .invite-sep::after { content: ""; flex: 1; border-top: 1px solid var(--line); }
 .viewas-bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 12px; padding: 8px 16px; background: var(--amber-soft); color: var(--amber); font-size: .875rem; font-weight: 600; border-bottom: 1px solid var(--line); }
+
+/* Política de privacidad (pública) */
+.legal { display: grid; place-items: start center; padding: 32px 16px; }
+.legal-card { width: min(780px, 100%); line-height: 1.55; }
+.legal-card h1 { font-size: 1.5rem; margin: 8px 0 4px; }
+.legal-card h2 { font-size: 1.0625rem; margin: 22px 0 6px; }
+.legal-card ul { padding-left: 20px; display: grid; gap: 6px; }
+.legal-card a { color: var(--blue); text-decoration: underline; }
