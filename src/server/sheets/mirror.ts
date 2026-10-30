@@ -195,7 +195,7 @@ export async function pushAll(db: Db, conn: Conn, gw: SheetGateway, dryRun = fal
   const out: PushStats[] = [await mirrorParameters(db, conn, gw, dryRun)];
   // D-89: la fórmula «Factor a semana» de la hoja 4a, para que el libro calcule igual que la app. Si no se puede, la sincronización sigue y se avisa.
   try { const n = await ensureCalcFormulas(gw, dryRun); if (n > 0) out.push({ sheet: `${CALC_SHEET} (fórmula Factor a semana)`, appended: 0, refreshed: n, cleared: 0, unchanged: 0, unlinked: 0, formulaLike: 0 }); }
-  catch (e) { out.push({ sheet: `${CALC_SHEET} (fórmula Factor a semana)`, appended: 0, refreshed: 0, cleared: 0, unchanged: 0, unlinked: 0, formulaLike: 0, diffs: [`No se pudo actualizar la fórmula: ${e instanceof Error ? e.message.slice(0, 200) : "error"}`] }); }
+  catch (e) { out[0].diffs = [...(out[0].diffs ?? []), `No se pudo actualizar la fórmula «Factor a semana» de la hoja 4a: ${e instanceof Error ? e.message.slice(0, 200) : "error"}`]; }
   for (const a of MIRROR_ADAPTERS) { out.push(await mirrorSheet(db, conn, gw, a, dryRun)); if (!dryRun) await mirrorExtras(db, conn, gw, a); } // turnos y descripción de la operación (D-67, D-69)
   if (!dryRun) {
     for (const a of MIRROR_ADAPTERS) await gw.protect(a.sheet.sheetName, inputRanges(a), PROTECTION_NOTE);
