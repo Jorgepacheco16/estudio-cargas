@@ -1,4 +1,4 @@
-import { FACTOR_COL, FACTOR_FIRST_ROW, FACTOR_LAST_ROW, factorFormula, sameFormula } from "../src/domain/calc4a";
+import { FACTOR_COL, FACTOR_FIRST_ROW, FACTOR_LAST_ROW, factorFormula, localizeFormula, sameFormula } from "../src/domain/calc4a";
 import { CALC_SHEET, ensureCalcFormulas } from "../src/server/sheets/calcformulas";
 import { FakeSheet } from "./fakesheet";
 import { check, summary } from "./helpers";
@@ -31,6 +31,28 @@ async function main() {
     if ((await ensureCalcFormulas(sheet)) !== 0 || writes() !== 1) throw new Error("no debía volver a escribir");
     sheet.set(CALC_SHEET, FACTOR_COL, 100, "=1");
     if ((await ensureCalcFormulas(sheet)) !== 1 || sheet.cell(CALC_SHEET, FACTOR_COL, 100) !== factorFormula(100)) throw new Error("reparar una fila");
+  });
+
+  await check("Hoja con coma decimal (es_ES): la fórmula se escribe con «;» (sin tocar las comas de los textos), se reconoce al leerla y no se reescribe", async () => {
+    const f = factorFormula(9), l = localizeFormula(f, ";");
+    if (l.includes(",") && !/"[^"]*,[^"]*"/.test(l)) throw new Error("quedaron comas de argumentos: " + l);
+    if (localizeFormula('=IF(A1="a,b",1,2)', ";") !== '=IF(A1="a,b";1;2)') throw new Error("las comas dentro de textos no se tocan");
+    if (!sameFormula(l, f) || !sameFormula(f, l)) throw new Error("con ; o con , debe reconocerse como la misma fórmula");
+    const sheet = new FakeSheet({ [CALC_SHEET]: 63 }); sheet.localeSep = ";";
+    if ((await ensureCalcFormulas(sheet)) !== 400 || !String(sheet.cell(CALC_SHEET, FACTOR_COL, 9)).includes(";")) throw new Error("debía escribirse con ;");
+    const w = sheet.formulaWrites;
+    if ((await ensureCalcFormulas(sheet)) !== 0 || sheet.formulaWrites !== w) throw new Error("no debía reescribir lo que ya está (leído con ;)");
+  });
+
+  await check("Si Google no entiende la fórmula nueva (aparecen errores), se devuelve la que había y se avisa: el libro nunca queda roto", async () => {
+    const sheet = new FakeSheet({ [CALC_SHEET]: 63 }), orig = (r: number) => `=IF(AI${r}<>"OK";"";VLOOKUP(L${r};TblPeriodo;2;FALSE()))`;
+    for (let r = FACTOR_FIRST_ROW; r <= FACTOR_LAST_ROW; r++) sheet.set(CALC_SHEET, FACTOR_COL, r, orig(r));
+    sheet.breakFormulas = true;
+    let msg = "";
+    try { await ensureCalcFormulas(sheet); } catch (e) { msg = (e as Error).message; }
+    if (!msg.includes("no aceptó")) throw new Error("debía avisar: " + msg);
+    if (sheet.cell(CALC_SHEET, FACTOR_COL, 7) !== orig(7) || sheet.cell(CALC_SHEET, FACTOR_COL, 406) !== orig(406)) throw new Error("no restauró la fórmula original");
+    if (sheet.errorCells.size !== 0) throw new Error("quedaron celdas con error");
   });
 
   await check("Solo se toca la columna «Factor a semana»: el resto de la hoja 4a queda igual", async () => {

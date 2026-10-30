@@ -1,5 +1,6 @@
 /** Acceso a una hoja de Google. La interfaz permite probar la lógica de sincronización contra una hoja simulada además de la real. */
 import { pushCells, pushFormulas, readFormulas, readRange, sheetsClient } from "../sheets";
+import { localizeFormula } from "../../domain/calc4a";
 
 export type CellValue = string | number | boolean | null;
 export interface SheetGateway {
@@ -8,8 +9,8 @@ export interface SheetGateway {
   write(updates: { range: string; values: CellValue[][] }[]): Promise<void>;
   /** Lee las fórmulas escritas (no sus resultados). */
   readFormulas(range: string): Promise<unknown[][]>;
-  /** Escribe fórmulas (USER_ENTERED). Solo para las fórmulas constantes que mantiene la app (D-89). */
-  writeFormulas(updates: { range: string; values: string[][] }[]): Promise<void>;
+  /** Escribe fórmulas (USER_ENTERED). Solo para las fórmulas constantes que mantiene la app (D-89). Las escritas con comas se pasan al separador de la hoja; con `asRead` ya vienen tal como las devolvió readFormulas y se escriben sin cambios. */
+  writeFormulas(updates: { range: string; values: string[][] }[], asRead?: boolean): Promise<void>;
   /** Cantidad de columnas de la cuadrícula de una pestaña. */
   columnCount(sheetName: string): Promise<number>;
   /** Agrega columnas al final de la pestaña y las oculta. */
@@ -35,7 +36,7 @@ async function withBackoff<T>(fn: () => Promise<T>): Promise<T> {
 export function googleGateway(spreadsheetId: string): SheetGateway {
   const raw = rawGateway(spreadsheetId);
   return {
-    read: (r) => withBackoff(() => raw.read(r)), readFormulas: (r) => withBackoff(() => raw.readFormulas(r)), writeFormulas: (u) => withBackoff(() => raw.writeFormulas(u)), write: (u) => withBackoff(() => raw.write(u)), columnCount: (s) => withBackoff(() => raw.columnCount(s)),
+    read: (r) => withBackoff(() => raw.read(r)), readFormulas: (r) => withBackoff(() => raw.readFormulas(r)), writeFormulas: (u, asRead) => withBackoff(() => raw.writeFormulas(u, asRead)), write: (u) => withBackoff(() => raw.write(u)), columnCount: (s) => withBackoff(() => raw.columnCount(s)),
     appendHiddenColumns: (s, c) => withBackoff(() => raw.appendHiddenColumns(s, c)), appendColumns: (s, c) => withBackoff(() => raw.appendColumns(s, c)),
     title: () => withBackoff(() => raw.title()), protect: (s, r, d) => withBackoff(() => raw.protect(s, r, d)),
   };
@@ -52,7 +53,15 @@ function rawGateway(spreadsheetId: string): SheetGateway {
     read: (range) => readRange(spreadsheetId, range),
     async write(updates) { if (updates.length) await pushCells(spreadsheetId, updates); },
     readFormulas: (range) => readFormulas(spreadsheetId, range),
-    async writeFormulas(updates) { if (updates.length) await pushFormulas(spreadsheetId, updates); },
+    async writeFormulas(updates, asRead = false) {
+      if (!updates.length) return;
+      if (asRead) { await pushFormulas(spreadsheetId, updates); return; }
+      // El separador de argumentos depende del idioma de la hoja (coma decimal → «;»).
+      const r = await sheetsClient().spreadsheets.get({ spreadsheetId, fields: "properties.locale" });
+      const locale = (r.data.properties?.locale ?? "en_US").replace("_", "-");
+      const sep = new Intl.NumberFormat(locale).format(1.5).includes(",") ? ";" : ",";
+      await pushFormulas(spreadsheetId, updates.map((u) => ({ ...u, values: u.values.map((row) => row.map((f) => localizeFormula(f, sep))) })));
+    },
     async columnCount(sheetName) { return (await meta(sheetName)).cols; },
     async appendColumns(sheetName, count) {
       const { sheetId } = await meta(sheetName);

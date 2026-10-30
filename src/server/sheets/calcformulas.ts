@@ -12,6 +12,7 @@ export const CALC_SHEET = "4a_Calculo_tiempos";
 /** Devuelve cuántas filas cambió (o cambiaría). Una fila cuya fórmula ya coincide no se vuelve a escribir. */
 export async function ensureCalcFormulas(gw: SheetGateway, dryRun = false): Promise<number> {
   const range = `${q(CALC_SHEET)}!${FACTOR_COL}${FACTOR_FIRST_ROW}:${FACTOR_COL}${FACTOR_LAST_ROW}`;
+  const errors = async () => (await gw.read(range)).flat().filter((v) => typeof v === "string" && v.startsWith("#")).length;
   const now = await gw.readFormulas(range);
   const want: string[][] = [];
   let changed = 0;
@@ -20,6 +21,14 @@ export async function ensureCalcFormulas(gw: SheetGateway, dryRun = false): Prom
     if (!sameFormula(cur, f)) changed++;
     want.push([f]);
   }
-  if (changed && !dryRun) await gw.writeFormulas([{ range, values: want }]);
+  if (changed && !dryRun) {
+    // Red de seguridad: si Google no entiende la fórmula (aparecen errores nuevos), se devuelve la que había y se avisa; el libro nunca queda roto.
+    const before = await errors();
+    await gw.writeFormulas([{ range, values: want }]);
+    if ((await errors()) > before) {
+      await gw.writeFormulas([{ range, values: Array.from({ length: FACTOR_LAST_ROW - FACTOR_FIRST_ROW + 1 }, (_, i) => [String((now[i] ?? [])[0] ?? "")]) }], true);
+      throw new Error("Google no aceptó la fórmula nueva; se dejó la que había.");
+    }
+  }
   return changed;
 }

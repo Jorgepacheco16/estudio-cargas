@@ -1,5 +1,6 @@
 import type { CellValue, SheetGateway } from "../src/server/sheets/gateway";
 import { colToIndex, indexToCol } from "../src/domain/sheetmap";
+import { localizeFormula } from "../src/domain/calc4a";
 
 /**
  * Hoja de cálculo en memoria que cumple la interfaz de Google (lectura UNFORMATTED, escritura RAW, columnas que se agregan).
@@ -25,12 +26,15 @@ export class FakeSheet implements SheetGateway {
   }
   setRow(sheet: string, row: number, cells: Record<string, unknown>) { for (const [c, v] of Object.entries(cells)) this.set(sheet, c, row, v); }
 
-  async read(range: string): Promise<unknown[][]> {
+  /** Celdas cuya fórmula «Google no entiende» (simulación): su valor se lee como #ERROR!. */
+  errorCells = new Set<string>();
+  async read(range: string): Promise<unknown[][]> { return this.readGrid(range, true); }
+  private readGrid(range: string, values: boolean): unknown[][] {
     const { sheet, c1, r1, c2, r2 } = this.parse(range);
     const g = this.grids.get(sheet); if (!g) throw new Error(`no existe ${sheet}`);
     const out: unknown[][] = [];
     for (let r = r1; r <= Math.min(r2, g.length); r++) {
-      const row = (g[r - 1] ?? []).slice(c1 - 1, c2).map((v) => (v === undefined || v === null ? "" : v));
+      const row = (g[r - 1] ?? []).slice(c1 - 1, c2).map((v, j) => (values && this.errorCells.has(`${sheet}!${indexToCol(c1 + j)}${r}`) ? "#ERROR!" : v === undefined || v === null ? "" : v));
       while (row.length && row[row.length - 1] === "") row.pop(); // la API recorta celdas vacías al final
       out.push(row);
     }
@@ -45,12 +49,15 @@ export class FakeSheet implements SheetGateway {
     }
   }
   /** Las fórmulas se guardan como texto que empieza por «=» (esta hoja no las calcula). */
-  async readFormulas(range: string) { return this.read(range); }
+  async readFormulas(range: string) { return this.readGrid(range, false); }
   formulaWrites = 0;
-  async writeFormulas(updates: { range: string; values: string[][] }[]) {
+  /** `localeSep`: separador de la hoja simulada (como es_ES: «;»); `breakFormulas`: simula que Google no entiende la fórmula nueva. */
+  localeSep: "," | ";" = ",";
+  breakFormulas = false;
+  async writeFormulas(updates: { range: string; values: string[][] }[], asRead = false) {
     for (const u of updates) {
       const { sheet, c1, r1 } = this.parse(u.range);
-      u.values.forEach((row, i) => row.forEach((v, j) => this.set(sheet, indexToCol(c1 + j), r1 + i, v)));
+      u.values.forEach((row, i) => row.forEach((v, j) => { const col = indexToCol(c1 + j), key = `${sheet}!${col}${r1 + i}`; this.set(sheet, col, r1 + i, asRead ? v : localizeFormula(v, this.localeSep)); if (this.breakFormulas && !asRead) this.errorCells.add(key); else this.errorCells.delete(key); }));
       this.formulaWrites++;
     }
   }

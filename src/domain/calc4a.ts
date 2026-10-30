@@ -19,7 +19,18 @@ export function factorFormula(r: number): string {
   return `=IF(AI${r}<>"OK","",IF(AND(L${r}="Día",J${r}="Por colaborador",ISNUMBER(${daily}),N(${daily})>0,${heads}>0),MIN(Parametros!$C$5,${hours}/${heads}/${daily}),VLOOKUP(L${r},TblPeriodo,2,FALSE())))`;
 }
 /** Para comparar la fórmula escrita con la que devuelve Google (que puede cambiar espacios, mayúsculas o comillas de los nombres de hoja). */
-export const sameFormula = (a: unknown, b: string) => typeof a === "string" && a.replace(/[\s']/g, "").toUpperCase() === b.replace(/[\s']/g, "").toUpperCase();
+const canon = (f: string) => f.replace(/[\s']/g, "").replace(/;/g, ",").toUpperCase();
+export const sameFormula = (a: unknown, b: string) => typeof a === "string" && canon(a) === canon(b);
+/**
+ * Las hojas de Google escriben y leen las fórmulas con el separador de argumentos de su idioma: «;» si el idioma usa coma decimal (es_ES, es_CO, de_DE…) y «,»
+ * en los demás. Esta función pasa una fórmula escrita con comas al separador de la hoja (las comas dentro de textos entre comillas no se tocan).
+ */
+export function localizeFormula(f: string, sep: "," | ";"): string {
+  if (sep === ",") return f;
+  let inText = false, out = "";
+  for (const ch of f) { if (ch === '"') inText = !inText; out += ch === "," && !inText ? ";" : ch; }
+  return out;
+}
 
 export interface CalcCol { key: keyof NonNullable<ActivityRow["result"]> | "occupants"; header: string; col: string; fmt: string }
 /** Columnas calculadas de la hoja 4a que reproduce el motor (letra de columna y encabezado tal como están en el libro). */
