@@ -1,6 +1,6 @@
 /**
- * Roles, usuarios e invitaciones (D-91). Todo corre con withRls(): la base de datos hace cumplir quiÃ©n puede quÃ©. Las pantallas de administraciÃ³n son solo del
- * Super usuario (mÃ³dulo Â«usuariosÂ»); cualquier miembro puede consultar sus propios permisos.
+ * Roles, usuarios e invitaciones (D-91). Todo corre con withRls(): la base de datos hace cumplir quién puede qué. Las pantallas de administración son solo del
+ * Super usuario (módulo «usuarios»); cualquier miembro puede consultar sus propios permisos.
  */
 import { createHash, randomBytes } from "node:crypto";
 import { bumpRequestEpoch } from "../lib/request-cache";
@@ -13,7 +13,7 @@ export const hashToken = (token: string) => createHash("sha256").update(token).d
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const INVITE_DAYS = 7;
 
-/** Mensaje de una excepciÃ³n de PostgreSQL (drizzle la envuelve en Â«Failed queryÂ»). */
+/** Mensaje de una excepción de PostgreSQL (drizzle la envuelve en «Failed query»). */
 export function pgMessage(e: unknown): { code?: string; message: string } {
   const x = e as { code?: string; message?: string; cause?: { code?: string; message?: string } };
   return { code: x?.cause?.code ?? x?.code, message: x?.cause?.message ?? x?.message ?? "error" };
@@ -22,10 +22,10 @@ export function pgMessage(e: unknown): { code?: string; message: string } {
 const audit = (tx: Tx, studyId: string, sub: string, action: string, entity: string, entityId: string | null, diff: Record<string, { from: unknown; to: unknown }> | null) =>
   tx.insert(auditLog).values({ studyId, actorId: sub, origin: "app", action, entity, entityId, diff });
 
-/* â”€â”€â”€â”€â”€â”€â”€â”€â”€ Permisos de quien estÃ¡ en sesiÃ³n â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ───────── Permisos de quien está en sesión ───────── */
 export interface MyAccess { displayName: string | null; roleId: string | null; roleName: string; perms: Permissions; allAreas: boolean; areaIds: string[]; isAdmin: boolean }
 
-/** Nivel de acceso de las membresÃ­as heredadas (sin role_id): mismas reglas que private.module_level. */
+/** Nivel de acceso de las membresías heredadas (sin role_id): mismas reglas que private.module_level. */
 export function legacyPerms(role: string): Permissions {
   const p = role === "owner" ? allPermissions("edit") : role === "viewer" ? allPermissions("read") : allPermissions("edit");
   if (role !== "owner") p.usuarios = "none";
@@ -45,7 +45,7 @@ export async function getMyAccess(db: Db, sub: string, studyId: string): Promise
   });
 }
 
-/* â”€â”€â”€â”€â”€â”€â”€â”€â”€ Roles â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ───────── Roles ───────── */
 /** Crea los roles iniciales de un estudio nuevo y devuelve su id por nombre. Lo usa createStudy (el creador es, a la vez, el primer Super usuario). */
 export async function seedRoles(tx: Tx, studyId: string): Promise<Record<string, string>> {
   const ids: Record<string, string> = {};
@@ -73,12 +73,12 @@ export async function listRoles(db: Db, sub: string, studyId: string): Promise<R
 }
 
 export type RoleResult = { ok: true; id: string; raised: { module: AppModule; to: Level; because: AppModule }[] } | { ok: false; error: string };
-/** Crea (sin id) o edita un rol. El mÃ³dulo Â«usuariosÂ» no se puede dar a otros roles; las dependencias entre mÃ³dulos se suben a Lectura y se avisan. */
+/** Crea (sin id) o edita un rol. El módulo «usuarios» no se puede dar a otros roles; las dependencias entre módulos se suben a Lectura y se avisan. */
 export async function saveRole(db: Db, sub: string, studyId: string, input: { id?: string; name: string; perms: Partial<Record<AppModule, Level>> }): Promise<RoleResult> {
   bumpRequestEpoch();
   const name = input.name.trim().replace(/\s+/g, " ");
   if (name.length < 1 || name.length > 60) return { ok: false, error: "El nombre del rol debe tener entre 1 y 60 caracteres." };
-  if (name.toLowerCase() === SUPER_ROLE.toLowerCase() && !input.id) return { ok: false, error: `Â«${SUPER_ROLE}Â» es un rol del sistema; use otro nombre.` };
+  if (name.toLowerCase() === SUPER_ROLE.toLowerCase() && !input.id) return { ok: false, error: `«${SUPER_ROLE}» es un rol del sistema; use otro nombre.` };
   const { perms, raised } = normalizePermissions({ ...input.perms, usuarios: "none" });
   try {
     return await withRls(db, { sub }, async (tx): Promise<RoleResult> => {
@@ -88,7 +88,7 @@ export async function saveRole(db: Db, sub: string, studyId: string, input: { id
       if (id) {
         const [cur] = await tx.select().from(roles).where(and(eq(roles.id, id), eq(roles.studyId, studyId)));
         if (!cur) return { ok: false, error: "El rol ya no existe." };
-        if (cur.isSystem) return { ok: false, error: `El rol Â«${cur.name}Â» es del sistema: no se puede modificar.` };
+        if (cur.isSystem) return { ok: false, error: `El rol «${cur.name}» es del sistema: no se puede modificar.` };
         await tx.update(roles).set({ name }).where(and(eq(roles.id, id), eq(roles.studyId, studyId)));
         await tx.delete(rolePermissions).where(and(eq(rolePermissions.roleId, id), eq(rolePermissions.studyId, studyId)));
       } else {
@@ -114,9 +114,9 @@ export async function deleteRole(db: Db, sub: string, studyId: string, id: strin
     return await withRls(db, { sub }, async (tx) => {
       const [cur] = await tx.select().from(roles).where(and(eq(roles.id, id), eq(roles.studyId, studyId)));
       if (!cur) return { ok: false as const, error: "El rol ya no existe." };
-      if (cur.isSystem) return { ok: false as const, error: `El rol Â«${cur.name}Â» es del sistema: no se puede borrar.` };
+      if (cur.isSystem) return { ok: false as const, error: `El rol «${cur.name}» es del sistema: no se puede borrar.` };
       const used = (await tx.select({ id: memberships.id }).from(memberships).where(and(eq(memberships.studyId, studyId), eq(memberships.roleId, id)))).length;
-      if (used > 0) return { ok: false as const, error: `El rol lo tienen ${used} persona(s). CÃ¡mbieles el rol antes de borrarlo.` };
+      if (used > 0) return { ok: false as const, error: `El rol lo tienen ${used} persona(s). Cámbieles el rol antes de borrarlo.` };
       await tx.delete(invitations).where(and(eq(invitations.studyId, studyId), eq(invitations.roleId, id), isNull(invitations.usedAt)));
       await tx.delete(roles).where(and(eq(roles.id, id), eq(roles.studyId, studyId)));
       await audit(tx, studyId, sub, "delete", "role", id, { name: { from: cur.name, to: null } });
@@ -124,13 +124,13 @@ export async function deleteRole(db: Db, sub: string, studyId: string, id: strin
     });
   } catch (e) {
     const m = pgMessage(e);
-    if (m.code === "23503") return { ok: false, error: "El rol estÃ¡ en uso (personas o invitaciones ya aceptadas). CÃ¡mbieles el rol antes de borrarlo." };
+    if (m.code === "23503") return { ok: false, error: "El rol está en uso (personas o invitaciones ya aceptadas). Cámbieles el rol antes de borrarlo." };
     if (m.code === "42501") return { ok: false, error: "No tiene permiso para administrar roles." };
     throw e;
   }
 }
 
-/** Guarda el correo de quien administra en su propia membresÃ­a (las membresÃ­as creadas antes de D-91 no lo tienen y auth.users no se puede leer desde la aplicaciÃ³n). */
+/** Guarda el correo de quien administra en su propia membresía (las membresías creadas antes de D-91 no lo tienen y auth.users no se puede leer desde la aplicación). */
 export async function rememberOwnEmail(db: Db, sub: string, studyId: string, email: string | null): Promise<void> {
   if (!email) return;
   await withRls(db, { sub }, async (tx) => {
@@ -139,7 +139,7 @@ export async function rememberOwnEmail(db: Db, sub: string, studyId: string, ema
   }).catch(() => undefined);
 }
 
-/** La persona cambia SU nombre (vacÃ­o lo quita). La base de datos valida y deja constancia; nadie puede cambiar el de otra persona. */
+/** La persona cambia SU nombre (vacío lo quita). La base de datos valida y deja constancia; nadie puede cambiar el de otra persona. */
 export async function setMyDisplayName(db: Db, sub: string, studyId: string, name: string): Promise<{ ok: true } | { ok: false; error: string }> {
   bumpRequestEpoch();
   try {
@@ -148,13 +148,13 @@ export async function setMyDisplayName(db: Db, sub: string, studyId: string, nam
   } catch (e) {
     const m = pgMessage(e);
     if (m.code === "P0001" || m.code === "28000") return { ok: false, error: m.message };
-    if (m.code === "25006") return { ok: false, error: "EstÃ¡ viendo la aplicaciÃ³n como otra persona (solo lectura): no se puede guardar." };
+    if (m.code === "25006") return { ok: false, error: "Está viendo la aplicación como otra persona (solo lectura): no se puede guardar." };
     throw e;
   }
 }
 
-/* â”€â”€â”€â”€â”€â”€â”€â”€â”€ Personas â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
-export interface MemberView { userId: string; name: string | null; email: string | null; roleId: string | null; roleName: string; allAreas: boolean; areas: string[]; isSelf: boolean; since: Date; /** false si entra solo con Google (no tiene clave en la aplicaciÃ³n) */ hasPassword: boolean }
+/* ───────── Personas ───────── */
+export interface MemberView { userId: string; name: string | null; email: string | null; roleId: string | null; roleName: string; allAreas: boolean; areas: string[]; isSelf: boolean; since: Date; /** false si entra solo con Google (no tiene clave en la aplicación) */ hasPassword: boolean }
 export async function listMembers(db: Db, sub: string, studyId: string): Promise<MemberView[]> {
   return withRls(db, { sub }, async (tx) => {
     const ms = await tx.select().from(memberships).where(eq(memberships.studyId, studyId)).orderBy(asc(memberships.createdAt));
@@ -181,15 +181,15 @@ async function checkRoleAndAreas(tx: Tx, studyId: string, roleId: string, allAre
   const [r] = await tx.select({ id: roles.id }).from(roles).where(and(eq(roles.id, roleId), eq(roles.studyId, studyId)));
   if (!r) return "El rol elegido ya no existe.";
   if (!allAreas) {
-    if (areaIds.length === 0) return "Marque al menos un Ã¡rea, o elija Â«Todas las Ã¡reasÂ».";
+    if (areaIds.length === 0) return "Marque al menos un área, o elija «Todas las áreas».";
     const ok = await tx.select({ id: areas.id }).from(areas).where(and(eq(areas.studyId, studyId), inArray(areas.id, areaIds)));
-    if (ok.length !== new Set(areaIds).size) return "Alguna de las Ã¡reas elegidas ya no existe.";
+    if (ok.length !== new Set(areaIds).size) return "Alguna de las áreas elegidas ya no existe.";
   }
   return null;
 }
 const isSuper = async (tx: Tx, studyId: string, roleId: string) => (await tx.select({ l: rolePermissions.level }).from(rolePermissions).where(and(eq(rolePermissions.roleId, roleId), eq(rolePermissions.studyId, studyId), eq(rolePermissions.module, "usuarios"))))[0]?.l === "edit";
 
-/** Cambia el rol y las Ã¡reas de una persona. */
+/** Cambia el rol y las áreas de una persona. */
 export async function updateMember(db: Db, sub: string, studyId: string, userId: string, input: { roleId: string; allAreas: boolean; areaIds: string[] }): Promise<Res> {
   bumpRequestEpoch();
   try {
@@ -198,22 +198,22 @@ export async function updateMember(db: Db, sub: string, studyId: string, userId:
       if (bad) return { ok: false, error: bad };
       const [cur] = await tx.select().from(memberships).where(and(eq(memberships.studyId, studyId), eq(memberships.userId, userId)));
       if (!cur) return { ok: false, error: "La persona ya no tiene acceso a este estudio." };
-      if (userId === sub && !(await isSuper(tx, studyId, input.roleId))) return { ok: false, error: "No puede quitarse a sÃ­ mismo el rol de Super usuario: pÃ­daselo a otro Super usuario." };
+      if (userId === sub && !(await isSuper(tx, studyId, input.roleId))) return { ok: false, error: "No puede quitarse a sí mismo el rol de Super usuario: pídaselo a otro Super usuario." };
       const legacy = (await isSuper(tx, studyId, input.roleId)) ? "owner" : "editor";
       await tx.update(memberships).set({ roleId: input.roleId, allAreas: input.allAreas, role: legacy }).where(and(eq(memberships.studyId, studyId), eq(memberships.userId, userId)));
       await tx.delete(memberAreas).where(and(eq(memberAreas.studyId, studyId), eq(memberAreas.userId, userId)));
       if (!input.allAreas) await tx.insert(memberAreas).values([...new Set(input.areaIds)].map((areaId) => ({ studyId, userId, areaId })));
-      await audit(tx, studyId, sub, "update", "membership", cur.id, { rol: { from: cur.roleId, to: input.roleId }, areas: { from: cur.allAreas ? "todas" : "algunas", to: input.allAreas ? "todas" : `${new Set(input.areaIds).size} Ã¡rea(s)` } });
+      await audit(tx, studyId, sub, "update", "membership", cur.id, { rol: { from: cur.roleId, to: input.roleId }, areas: { from: cur.allAreas ? "todas" : "algunas", to: input.allAreas ? "todas" : `${new Set(input.areaIds).size} área(s)` } });
       return { ok: true };
     });
   } catch (e) { return friendly(e, "No se pudo guardar"); }
 }
 
-/** Quita el acceso de una persona (lo que editÃ³ se conserva). Siempre debe quedar al menos un Super usuario. */
+/** Quita el acceso de una persona (lo que editó se conserva). Siempre debe quedar al menos un Super usuario. */
 export async function removeMember(db: Db, sub: string, studyId: string, userId: string): Promise<Res> {
   bumpRequestEpoch();
   try {
-    if (userId === sub) return { ok: false, error: "No puede quitarse su propio acceso: pÃ­daselo a otro Super usuario." };
+    if (userId === sub) return { ok: false, error: "No puede quitarse su propio acceso: pídaselo a otro Super usuario." };
     return await withRls(db, { sub }, async (tx): Promise<Res> => {
       const gone = await tx.delete(memberships).where(and(eq(memberships.studyId, studyId), eq(memberships.userId, userId))).returning({ id: memberships.id });
       if (!gone.length) return { ok: false, error: "La persona ya no tiene acceso a este estudio." };
@@ -223,7 +223,7 @@ export async function removeMember(db: Db, sub: string, studyId: string, userId:
   } catch (e) { return friendly(e, "No se pudo quitar el acceso"); }
 }
 
-/* â”€â”€â”€â”€â”€â”€â”€â”€â”€ Invitaciones â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ───────── Invitaciones ───────── */
 export interface InvitationView { id: string; email: string; roleName: string; allAreas: boolean; areaCount: number; expiresAt: Date; usedAt: Date | null; createdAt: Date; status: "pendiente" | "usada" | "vencida" }
 export async function listInvitations(db: Db, sub: string, studyId: string): Promise<InvitationView[]> {
   return withRls(db, { sub }, async (tx) => {
@@ -234,49 +234,49 @@ export async function listInvitations(db: Db, sub: string, studyId: string): Pro
   });
 }
 
-/** Crea una invitaciÃ³n y devuelve el enlace (token) UNA sola vez: en la base solo queda su hash. */
+/** Crea una invitación y devuelve el enlace (token) UNA sola vez: en la base solo queda su hash. */
 export async function createInvitation(db: Db, sub: string, studyId: string, input: { email: string; roleId: string; allAreas: boolean; areaIds: string[] }): Promise<{ ok: true; token: string; expiresAt: Date } | { ok: false; error: string }> {
   const email = input.email.trim().toLowerCase();
-  if (!EMAIL.test(email) || email.length > 254) return { ok: false, error: "Escriba un correo vÃ¡lido." };
+  if (!EMAIL.test(email) || email.length > 254) return { ok: false, error: "Escriba un correo válido." };
   try {
     return await withRls(db, { sub }, async (tx) => {
       const bad = await checkRoleAndAreas(tx, studyId, input.roleId, input.allAreas, input.areaIds);
       if (bad) return { ok: false as const, error: bad };
       const already = (await tx.select({ id: memberships.id }).from(memberships).where(and(eq(memberships.studyId, studyId), sql`lower(${memberships.email}) = ${email}`))).length;
-      if (already) return { ok: false as const, error: "Esa persona ya tiene acceso: cÃ¡mbiele el rol en la lista de usuarios." };
+      if (already) return { ok: false as const, error: "Esa persona ya tiene acceso: cámbiele el rol en la lista de usuarios." };
       const token = randomBytes(32).toString("base64url");
       const expiresAt = new Date(Date.now() + INVITE_DAYS * 86400_000);
-      // Una invitaciÃ³n nueva para el mismo correo reemplaza a las pendientes anteriores (solo sirve el Ãºltimo enlace).
+      // Una invitación nueva para el mismo correo reemplaza a las pendientes anteriores (solo sirve el último enlace).
       await tx.delete(invitations).where(and(eq(invitations.studyId, studyId), eq(invitations.email, email), isNull(invitations.usedAt)));
       const [row] = await tx.insert(invitations).values({ studyId, email, roleId: input.roleId, allAreas: input.allAreas, areaIds: input.allAreas ? [] : [...new Set(input.areaIds)], tokenHash: hashToken(token), expiresAt, createdBy: sub }).returning({ id: invitations.id });
       await audit(tx, studyId, sub, "insert", "invitation", row.id, { correo: { from: null, to: email }, rol: { from: null, to: input.roleId } });
       return { ok: true as const, token, expiresAt };
     });
-  } catch (e) { const r = friendly(e, "No se pudo crear la invitaciÃ³n"); return { ok: false, error: (r as { error: string }).error }; }
+  } catch (e) { const r = friendly(e, "No se pudo crear la invitación"); return { ok: false, error: (r as { error: string }).error }; }
 }
 
 export async function revokeInvitation(db: Db, sub: string, studyId: string, id: string): Promise<Res> {
   try {
     return await withRls(db, { sub }, async (tx): Promise<Res> => {
       const gone = await tx.delete(invitations).where(and(eq(invitations.id, id), eq(invitations.studyId, studyId), isNull(invitations.usedAt))).returning({ email: invitations.email });
-      if (!gone.length) return { ok: false, error: "La invitaciÃ³n ya no existe o ya fue usada." };
+      if (!gone.length) return { ok: false, error: "La invitación ya no existe o ya fue usada." };
       await audit(tx, studyId, sub, "delete", "invitation", id, { correo: { from: gone[0].email, to: null } });
       return { ok: true };
     });
   } catch (e) { return friendly(e, "No se pudo revocar"); }
 }
 
-/** Datos mÃ­nimos de una invitaciÃ³n para la pÃ¡gina del enlace (todavÃ­a sin sesiÃ³n). Usa la funciÃ³n segura invitation_lookup. */
+/** Datos mínimos de una invitación para la página del enlace (todavía sin sesión). Usa la función segura invitation_lookup. */
 export async function lookupInvitation(db: Db, token: string): Promise<{ email: string; roleName: string; studyName: string; valid: boolean } | null> {
   if (!/^[A-Za-z0-9_-]{20,100}$/.test(token)) return null;
   const rows = (await db.execute(sql`select email, role_name, study_name, valid from public.invitation_lookup(${hashToken(token)})`)) as unknown as { email: string; role_name: string; study_name: string; valid: boolean }[];
   return rows[0] ? { email: rows[0].email, roleName: rows[0].role_name, studyName: rows[0].study_name, valid: rows[0].valid } : null;
 }
 
-/** Acepta la invitaciÃ³n con la sesiÃ³n actual: la base comprueba que el correo de la sesiÃ³n es el invitado y que el enlace sirve. */
+/** Acepta la invitación con la sesión actual: la base comprueba que el correo de la sesión es el invitado y que el enlace sirve. */
 export async function redeemInvitation(db: Db, sub: string, email: string, token: string): Promise<{ ok: true; studyId: string } | { ok: false; error: string }> {
   bumpRequestEpoch();
-  if (!/^[A-Za-z0-9_-]{20,100}$/.test(token)) return { ok: false, error: "La invitaciÃ³n no es vÃ¡lida, ya se usÃ³ o venciÃ³." };
+  if (!/^[A-Za-z0-9_-]{20,100}$/.test(token)) return { ok: false, error: "La invitación no es válida, ya se usó o venció." };
   try {
     const rows = await withRls(db, { sub, email }, (tx) => tx.execute(sql`select private.redeem_invitation(${hashToken(token)}) as study_id`)) as unknown as { study_id: string }[];
     return { ok: true, studyId: rows[0].study_id };
@@ -287,8 +287,8 @@ export async function redeemInvitation(db: Db, sub: string, email: string, token
   }
 }
 
-/* â”€â”€â”€â”€â”€â”€â”€â”€â”€ Clave de otra persona (D-94) â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
-/** QuiÃ©nes del estudio tienen clave propia (los que entran solo con Google no): solo para mostrar el botÃ³n Â«Cambiar claveÂ» donde corresponde. */
+/* ───────── Clave de otra persona (D-94) ───────── */
+/** Quiénes del estudio tienen clave propia (los que entran solo con Google no): solo para mostrar el botón «Cambiar clave» donde corresponde. */
 export async function membersWithPassword(db: Db, sub: string, studyId: string): Promise<Set<string>> {
   const rows = await withRls(db, { sub }, (tx) => tx.execute(sql`select private.members_with_password(${studyId}::uuid) as user_id`)) as unknown as { user_id: string }[];
   return new Set(rows.map((r) => r.user_id));
