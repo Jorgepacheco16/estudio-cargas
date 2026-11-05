@@ -41,6 +41,7 @@
     "test:filters": "tsx tests/filters.test.ts",
     "test:terms": "tsx tests/terms.test.ts",
     "test:guest": "tsx tests/guest.test.ts",
+    "test:password": "tsx tests/password-change.test.ts",
     "test:shiftsdb": "tsx tests/shifts-db.test.ts",
     "test:bulkdb": "tsx tests/bulk-db.test.ts",
     "test:filtersdb": "tsx tests/filters-db.test.ts",
