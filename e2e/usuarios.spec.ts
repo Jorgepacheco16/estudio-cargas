@@ -125,6 +125,7 @@ test("la persona cambia su clave en «Mi cuenta»: pide la actual y la nueva sir
   await otra.fill("#u-pass", "Clave-de-Ana-123");
   await otra.getByRole("button", { name: "Entrar", exact: true }).click();
   await expect(otra.getByRole("alert")).toBeVisible();
+  await otra.fill("#u-email", "ana@prueba.co"); // la página se recarga tras el fallo y vacía los campos
   await otra.fill("#u-pass", "Clave-nueva-de-Ana-9");
   await otra.getByRole("button", { name: "Entrar", exact: true }).click();
   await otra.waitForURL((u) => u.pathname !== "/ingreso");
