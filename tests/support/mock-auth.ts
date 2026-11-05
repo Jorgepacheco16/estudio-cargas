@@ -14,6 +14,7 @@ const sql = postgres(process.env.DATABASE_URL_ADMIN ?? "postgres://postgres:pg_a
 interface User { id: string; email: string; password: string }
 const users = new Map<string, User>();           // por correo
 const byId = new Map<string, User>();
+let userChecks = 0;                              // cuántas veces se validó una sesión (GET /auth/v1/user): las pruebas comprueban que una navegación no la valida de más
 interface Sess { id: string; sid: string }
 const access = new Map<string, Sess>();          // access_token → persona y sesión (la sesión vive en auth.sessions: si la base la borra, deja de valer)
 const refresh = new Map<string, Sess>();         // refresh_token → persona y sesión
@@ -50,7 +51,9 @@ const server = createServer(async (req, res) => {
   const body = await new Promise<Record<string, unknown>>((ok) => { let d = ""; req.on("data", (c) => (d += c)); req.on("end", () => { try { ok(d ? JSON.parse(d) : {}); } catch { ok({}); } }); });
   const send = (code: number, obj?: unknown) => { res.writeHead(code, { "content-type": "application/json" }); res.end(obj === undefined ? "" : JSON.stringify(obj)); };
   const path = url.pathname;
+  if (path === "/__stats" && req.method === "GET") return send(200, { userChecks });
   if (path === "/auth/v1/user" && req.method === "GET") {
+    userChecks++;
     const id = await alive(access.get(String(req.headers.authorization ?? "").replace(/^Bearer /i, "")));
     return id ? send(200, userJson(byId.get(id)!)) : send(401, { code: 401, msg: "invalid JWT" });
   }

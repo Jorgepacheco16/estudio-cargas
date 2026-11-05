@@ -1,11 +1,9 @@
 import { Purpose } from "@/components/Purpose";
 import { redirect } from "next/navigation";
-import { getDb } from "@/db/server";
 import { getUser } from "@/lib/supabase/server";
-import { activeStudyId } from "@/data/source";
+import { activeStudyId, listMyStudies } from "@/data/source";
 
 
-import { listStudies } from "@/server/studies";
 import { createStudyAction, selectStudyAction } from "./actions";
 const ROLE: Record<string, string> = { owner: "Propietario", editor: "Editor", analyst: "Analista", viewer: "Solo lectura" };
 
@@ -14,9 +12,7 @@ export default async function Estudio({ searchParams }: { searchParams: Promise<
   const user = await getUser();
   if (!user) redirect("/login");
   const sp = await searchParams;
-  const db = getDb();
-  const studies = await listStudies(db, user!.id);
-  const active = await activeStudyId(user!.id);
+  const [studies, active] = await Promise.all([listMyStudies(user!.id), activeStudyId(user!.id)]);
 
 
   return (
