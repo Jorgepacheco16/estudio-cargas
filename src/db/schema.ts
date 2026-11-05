@@ -510,6 +510,12 @@ export const auditLog = pgTable("audit_log", {
   entityId: uuid("entity_id"),
   diff: jsonb("diff").$type<Record<string, { from: unknown; to: unknown }>>(), // JSONB: estructura variable por entidad
   at: timestamp("at", { withTimezone: true }).notNull().defaultNow(),
+  // D-96 · Registro de cambios: quién y sobre qué, tal como eran en el momento del cambio (los llena un disparador; siguen ahí aunque la persona pierda el acceso o el registro se elimine).
+  actorName: text("actor_name"),
+  actorEmail: text("actor_email"),
+  areaName: text("area_name"),
+  positionName: text("position_name"),
+  subject: text("subject"),
 }, (t) => [index("audit_study_at_idx").on(t.studyId, t.at), index("audit_entity_idx").on(t.entity, t.entityId)]);
 
 export const sheetConnections = pgTable("sheet_connections", {

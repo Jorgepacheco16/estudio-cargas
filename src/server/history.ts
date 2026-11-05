@@ -51,8 +51,8 @@ export async function addMeasurement(db: Db, sub: string, studyId: string, m: Me
 }
 export async function deleteMeasurement(db: Db, sub: string, studyId: string, id: string) {
   return withRls(db, { sub }, async (tx) => {
-    const gone = await tx.delete(measurements).where(and(eq(measurements.studyId, studyId), eq(measurements.id, id))).returning({ id: measurements.id });
-    if (gone.length) await tx.insert(auditLog).values({ studyId, actorId: sub, origin: "app", action: "delete", entity: "measurement", entityId: id, diff: null });
+    const gone = await tx.delete(measurements).where(and(eq(measurements.studyId, studyId), eq(measurements.id, id))).returning({ id: measurements.id, activityId: measurements.activityId, personHours: measurements.personHours });
+    if (gone.length) await tx.insert(auditLog).values({ studyId, actorId: sub, origin: "app", action: "delete", entity: "measurement", entityId: id, diff: { activityId: { from: gone[0].activityId, to: null }, personHours: { from: gone[0].personHours, to: null } } });
     return gone.length === 1;
   });
 }

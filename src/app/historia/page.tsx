@@ -10,9 +10,10 @@ import { activeStudyId } from "@/data/source";
 import { diffSnapshots, productivity, type SnapMetrics } from "@/domain/history";
 import { optionsOf } from "@/server/capture";
 import { getSnapshots, listDeviations, listMeasurements, listSnapshots, productivityInputs, timelineEvents } from "@/server/history";
+import { CambiosView } from "./CambiosView";
 import { addMeasurementAction, deleteMeasurementAction, detectAction, deviationStatusAction, explainAction, snapshotAction } from "./actions";
 
-const VISTAS = [["linea", "Línea de tiempo"], ["productividad", "Productividad real"], ["desviaciones", "Desviaciones"]] as const;
+const VISTAS = [["linea", "Línea de tiempo"], ["cambios", "Registro de cambios"], ["productividad", "Productividad real"], ["desviaciones", "Desviaciones"]] as const;
 const LANES: [string, string][] = [["app", "Aplicación"], ["sheet", "Hoja de Google"], ["import", "Importación"], ["autocorrect", "Autocorrector"], ["agent", "Agente de IA"]];
 const RULES: Record<string, string> = { R1: "Estimado vs medido", R2: "Cruce de umbral", R3: "Salto sin respaldo", R4: "Pérdida de calidad", R5: "Dispersión entre centros de operaciones", R6: "Plan vencido reincidente", R7: "Más actividades incompletas", R8: "Conflictos recurrentes" };
 const ST: Record<string, string> = { open: "Abierta", acknowledged: "Reconocida", dismissed: "Descartada" };
@@ -37,6 +38,9 @@ export default async function Historia({ searchParams }: { searchParams: Promise
     {sp.ok && <div className="banner" style={{ background: "var(--blue-soft)", color: "var(--blue)" }}>{sp.ok}</div>}
     {sp.error && <div className="banner" style={{ background: "var(--red-soft)", color: "var(--red-dark)" }}>{sp.error}</div>}
   </>;
+
+  /* ───────── Registro de cambios (D-96) ───────── */
+  if (vista === "cambios") return <main>{head}{tabs}{banners}<CambiosView userId={user!.id} studyId={study.id} sp={sp} /></main>;
 
   /* ───────── Línea de tiempo ───────── */
   if (vista === "linea") {

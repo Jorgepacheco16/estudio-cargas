@@ -93,7 +93,7 @@ export async function deleteShift(db: Db, sub: string, studyId: string, shiftId:
     const [{ n }] = await tx.select({ n: sql<number>`count(*)::int` }).from(activityShifts).where(and(eq(activityShifts.studyId, studyId), eq(activityShifts.shiftId, shiftId)));
     if (n > 0 && !confirmed) return { ok: false as const, needsConfirm: n };
     await tx.delete(positionShifts).where(and(eq(positionShifts.id, shiftId), eq(positionShifts.studyId, studyId))); // activity_shifts se limpia por cascada
-    await audit(tx, studyId, sub, "delete", "position_shift", shiftId, { name: { from: s.name, to: null } });
+    await audit(tx, studyId, sub, "delete", "position_shift", shiftId, { name: { from: s.name, to: null }, positionId: { from: s.positionId, to: null } });
     return { ok: true as const, removedFrom: n };
   });
 }

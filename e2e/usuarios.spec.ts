@@ -256,6 +256,37 @@ test("rendimiento: una navegación valida la sesión una sola vez (más la del p
   }
 });
 
+test("Registro de cambios (Historia): lista lo hecho y quién lo hizo, filtra por tipo y palabra, se descarga a Excel y no lo ve quien no tiene Historia", async () => {
+  const filas = 'section[aria-label="Registro de cambios"] tbody tr';
+  await admin.goto("/historia?vista=cambios");
+  await listo(admin, "Historia y desviaciones");
+  await expect(admin.getByRole("tab", { name: "Registro de cambios" })).toBeVisible();
+  await expect(admin.locator(filas).first()).toBeVisible();
+  await expect(admin.getByText(/nadie puede modificar ni borrar este registro/)).toBeVisible();
+  // lo de administración se aísla con el filtro de tipo
+  await admin.goto("/historia?vista=cambios&tipo=admin");
+  await listo(admin, "Historia y desviaciones");
+  const secciones = await admin.locator(filas).locator("td:nth-child(3)").allInnerTexts();
+  expect(secciones.length).toBeGreaterThan(0);
+  expect([...new Set(secciones)]).toEqual(["Usuarios y roles"]);
+  // la palabra clave encuentra el rol que se creó (sin distinguir mayúsculas) y una palabra inexistente no encuentra nada
+  await admin.goto("/historia?vista=cambios&q=CAPTURISTA");
+  await listo(admin, "Historia y desviaciones");
+  await expect(admin.locator(filas).first()).toContainText("Capturista de actividades");
+  await admin.goto("/historia?vista=cambios&q=zzzninguno");
+  await listo(admin, "Historia y desviaciones");
+  await expect(admin.getByText("Ningún cambio cumple los filtros.")).toBeVisible();
+  // la descarga a Excel respeta los filtros
+  const xlsx = await admin.request.get("/api/cambios/export?tipo=admin");
+  expect(xlsx.status()).toBe(200);
+  expect(xlsx.headers()["content-type"]).toContain("spreadsheetml");
+  expect((await xlsx.body()).length).toBeGreaterThan(1000);
+  // quien no tiene Historia no ve la pestaña ni descarga
+  await ana.goto("/historia?vista=cambios");
+  await ana.waitForURL(/sin-acceso/);
+  expect((await ana.request.get("/api/cambios/export")).status()).toBe(403);
+});
+
 test("cambiar de cuenta en el mismo navegador nunca muestra a la persona anterior", async ({ browser }) => {
   const nav = await abrir(browser);
   const entrar = async (correo: string, clave: string) => {
