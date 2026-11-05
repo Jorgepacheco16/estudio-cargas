@@ -96,6 +96,38 @@ test("la persona ve y edita lo que su rol permite, y nada más", async () => {
   await expect(ana.getByRole("link", { name: "+ Agregar registro" })).toHaveCount(0); // Lectura: sin botón de agregar
 });
 
+test("«Estudio»: un rol sin acceso no lo ve ni lo abre; con Lectura lo ve y cambia de estudio pero no puede crear estudios nuevos", async () => {
+  const enlaceEstudio = () => ana.locator("nav.nav").getByRole("link", { name: "Estudio", exact: true });
+  // el rol «Capturista de actividades» se creó sin tocar «Estudio»: Sin acceso
+  await ana.goto("/actividades");
+  await listo(ana, "Actividades");
+  await expect(enlaceEstudio()).toHaveCount(0);
+  await ana.goto("/estudio");
+  await ana.waitForURL((u) => u.pathname === "/");
+  // el Super usuario le da Lectura en «Estudio»
+  await admin.goto("/usuarios?vista=roles");
+  await listo(admin, "Usuarios y roles");
+  await admin.locator("tr", { hasText: "Capturista de actividades" }).getByRole("link", { name: "Editar" }).click();
+  await admin.getByRole("radio", { name: "Estudio: Lectura" }).check();
+  await admin.getByRole("button", { name: "Guardar rol" }).click();
+  await admin.waitForURL(/vista=roles/);
+  await expect(admin.locator(".banner").first()).toContainText("Rol guardado");
+  // ahora ve la ventana y puede cambiar de estudio, pero no hay forma de crear uno nuevo
+  await ana.goto("/actividades");
+  await listo(ana, "Actividades");
+  await expect(enlaceEstudio()).toBeVisible();
+  await ana.goto("/estudio");
+  await listo(ana, "Estudio");
+  await expect(ana.locator("#estudio-id")).toBeVisible();
+  await expect(ana.getByRole("button", { name: "Usar este estudio" })).toBeVisible();
+  await expect(ana.locator("#estudio-nombre")).toHaveCount(0);
+  await expect(ana.getByRole("button", { name: "Crear estudio" })).toHaveCount(0);
+  await expect(ana.getByText(/no crear estudios nuevos/)).toBeVisible();
+  await ana.goto("/cuenta"); // y «Mi cuenta» muestra su nivel
+  await listo(ana, "Mi cuenta");
+  await expect(ana.locator("tr", { hasText: "Estudio" }).filter({ hasText: "Lectura" }).first()).toBeVisible();
+});
+
 test("la persona escribe su nombre en «Mi cuenta» y se le ve con él (encabezado y lista de usuarios)", async () => {
   await ana.goto("/cuenta");
   await listo(ana, "Mi cuenta");

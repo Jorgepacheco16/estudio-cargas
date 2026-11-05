@@ -3,7 +3,7 @@
  * Niveles: Sin acceso · Lectura · Edición (Edición incluye Lectura).
  */
 export const MODULES = [
-  "parametros", "cargos", "actividades", "medibilidad", "pertinencia", "riesgos", "oportunidades", "rediseno", "plan", "historia", "integraciones", "agente", "usuarios",
+  "estudio", "parametros", "cargos", "actividades", "medibilidad", "pertinencia", "riesgos", "oportunidades", "rediseno", "plan", "historia", "integraciones", "agente", "usuarios",
 ] as const;
 export type AppModule = (typeof MODULES)[number];
 export const LEVELS = ["none", "read", "edit"] as const;
@@ -11,7 +11,7 @@ export type Level = (typeof LEVELS)[number];
 
 export const LEVEL_LABEL: Record<Level, string> = { none: "Sin acceso", read: "Lectura", edit: "Edición" };
 export const MODULE_LABEL: Record<AppModule, string> = {
-  parametros: "Parámetros", cargos: "Cargos y dotación", actividades: "Actividades", medibilidad: "Medibilidad", pertinencia: "Pertinencia", riesgos: "Riesgos",
+  estudio: "Estudio", parametros: "Parámetros", cargos: "Cargos y dotación", actividades: "Actividades", medibilidad: "Medibilidad", pertinencia: "Pertinencia", riesgos: "Riesgos",
   oportunidades: "Oportunidades", rediseno: "Rediseño", plan: "Plan de acción", historia: "Historia y mediciones", integraciones: "Integraciones con Google", agente: "Agente de IA", usuarios: "Usuarios y roles",
 };
 
@@ -59,6 +59,7 @@ export function normalizePermissions(input: Partial<Record<AppModule, Level>>): 
 export function moduleOfPath(pathname: string): AppModule | AppModule[] | null {
   const p = pathname.replace(/\/+$/, "") || "/";
   const hit = (base: string) => p === base || p.startsWith(base + "/");
+  if (hit("/estudio")) return "estudio";
   if (hit("/parametros")) return "parametros";
   if (hit("/cargos")) return "cargos";
   if (hit("/actividades")) return "actividades";
@@ -80,7 +81,8 @@ export function moduleOfPath(pathname: string): AppModule | AppModule[] | null {
 export const SUPER_ROLE = "Super usuario";
 export const DEFAULT_ROLES: { name: string; system: boolean; perms: Permissions }[] = [
   { name: SUPER_ROLE, system: true, perms: allPermissions("edit") },
-  { name: "Editor", system: false, perms: { ...allPermissions("edit"), usuarios: "none" } },
+  // «Estudio»: solo el Super usuario crea estudios nuevos (Edición); Editor y Lector pueden ver la ventana y cambiar de estudio (Lectura).
+  { name: "Editor", system: false, perms: { ...allPermissions("edit"), usuarios: "none", estudio: "read" } },
   { name: "Lector", system: false, perms: { ...allPermissions("read"), usuarios: "none" } },
 ];
 

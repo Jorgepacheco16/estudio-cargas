@@ -2,8 +2,7 @@ import { Purpose } from "@/components/Purpose";
 import { redirect } from "next/navigation";
 import { getUser } from "@/lib/supabase/server";
 import { activeStudyId, listMyStudies } from "@/data/source";
-
-
+import { canEdit, canRead } from "@/lib/access";
 import { createStudyAction, selectStudyAction } from "./actions";
 const ROLE: Record<string, string> = { owner: "Propietario", editor: "Editor", analyst: "Analista", viewer: "Solo lectura" };
 
@@ -13,6 +12,9 @@ export default async function Estudio({ searchParams }: { searchParams: Promise<
   if (!user) redirect("/login");
   const sp = await searchParams;
   const [studies, active] = await Promise.all([listMyStudies(user!.id), activeStudyId(user!.id)]);
+  // D-95: la ventana exige Lectura en «Estudio»; crear estudios nuevos, Edición (la base de datos lo hace cumplir). Sin estudio aún (primer ingreso) se puede crear el primero.
+  if (active?.access && !canRead(active, "estudio")) redirect("/");
+  const canCreate = !active?.access || canEdit(active, "estudio");
 
 
   return (
@@ -39,6 +41,7 @@ export default async function Estudio({ searchParams }: { searchParams: Promise<
           ) : <div className="empty">Aún no tiene estudios. Cree el primero en el bloque de la derecha.</div>}
         </section>
 
+        {canCreate ? (
         <section className="card" aria-label="Crear un estudio">
           <h2>Crear un estudio</h2>
           <p className="note">Al crear un estudio se cargan las 14 áreas operativas del Excel y los parámetros por defecto.</p>
@@ -56,6 +59,12 @@ export default async function Estudio({ searchParams }: { searchParams: Promise<
             <div><button className="btn solid" type="submit">Crear estudio</button></div>
           </form>
         </section>
+        ) : (
+        <section className="card" aria-label="Crear un estudio">
+          <h2>Crear un estudio</h2>
+          <p className="note">Su rol ({active?.access?.roleName}) puede ver los estudios y cambiar entre ellos, pero no crear estudios nuevos. Si necesita uno, pídaselo a un Super usuario.</p>
+        </section>
+        )}
 
         {active && (
           <section className="card" aria-label="Respaldo">

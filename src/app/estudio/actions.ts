@@ -1,9 +1,10 @@
-﻿"use server";
+"use server";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { getDb } from "@/db/server";
 import { createClient, getUser } from "@/lib/supabase/server";
+import { canEdit, canRead } from "@/lib/access";
 import { activeStudyId } from "@/data/source";
 import { createStudy, listStudies } from "@/server/studies";
 
@@ -42,18 +43,25 @@ export async function signOutAction() {
   redirect("/ingreso");
 }
 
+const NO_CREATE = "Su rol no permite crear estudios nuevos. Pídaselo a un Super usuario.";
+
 export async function createStudyAction(fd: FormData) {
   const user = await session();
+  // D-95: hace falta Edición en «Estudio» (la base de datos lo exige de todos modos; esto da el mensaje claro). Sin estudio aún se puede crear el primero.
+  const active = await activeStudyId(user.id);
+  if (active?.access && !canEdit(active, "estudio")) back("error", NO_CREATE);
   let id = "";
   try {
     id = await createStudy(getDb(), user.id, String(fd.get("name") ?? ""), String(fd.get("description") ?? ""));
     (await cookies()).set("estudio_id", id, { httpOnly: true, sameSite: "lax", secure: true, path: "/" });
-  } catch (e) { back("error", safeMessage(e)); }
+  } catch (e) { back("error", (e as { code?: string; cause?: { code?: string } })?.code === "42501" || (e as { cause?: { code?: string } })?.cause?.code === "42501" ? NO_CREATE : safeMessage(e)); }
   back("ok", "Estudio creado con sus 14 áreas.");
 }
 
 export async function selectStudyAction(fd: FormData) {
   const user = await session();
+  const active = await activeStudyId(user.id);
+  if (active?.access && !canRead(active, "estudio")) redirect("/"); // D-95: cambiar de estudio exige Lectura en «Estudio»
   const id = z.string().uuid().safeParse(fd.get("id"));
   const list = await listStudies(getDb(), user.id);
   if (id.success && list.some((s) => s.id === id.data)) (await cookies()).set("estudio_id", id.data, { httpOnly: true, sameSite: "lax", secure: true, path: "/" });
