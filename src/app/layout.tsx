@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import { headers } from "next/headers";
+import localFont from "next/font/local";
 import "./globals.css";
 import { Nav } from "@/components/Nav";
 import { UserBadge } from "@/components/UserBadge";
@@ -13,6 +14,9 @@ import { menuHrefs } from "@/lib/nav";
 import { getDb } from "@/db/server";
 import { listAreas } from "@/server/studies";
 import { exitViewAsAction } from "@/app/usuarios/actions";
+
+/** Letra del nombre del logotipo (Outfit, licencia SIL OFL; ver src/app/fonts/Outfit-LICENSE.txt). Se sirve desde el propio sitio, sin pedirle nada a Google. */
+const outfit = localFont({ src: "./fonts/Outfit-Variable-latin.woff2", weight: "500 700", display: "swap", variable: "--font-logo" });
 
 export const metadata: Metadata = {
   title: { default: `${APP.name} · ${APP.tagline}`, template: `%s · ${APP.name}` },
@@ -30,7 +34,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   // D-92: quien trabaja con algunas áreas lo ve siempre a la vista, porque todas las cifras son solo de esas áreas.
   const myAreas = study?.access && !study.access.allAreas && user ? (await listAreas(getDb(), user.id, study.id).catch(() => [])).map((a) => a.name) : null;
   return (
-    <html lang="es">
+    <html lang="es" className={outfit.variable}>
       <body>
         {bare ? children : (
           <>
