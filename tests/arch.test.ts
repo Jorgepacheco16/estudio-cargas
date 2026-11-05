@@ -66,5 +66,12 @@ async function main() {
     const bad = files.map((f) => ({ f, r: revisar({ tool_input: { file_path: f.path, content: f.text } }) })).filter((x) => x.r).map((x) => `${x.f.path}: ${x.r}`);
     if (bad.length) throw new Error(bad.join("; "));
   });
+
+  await check("Ningún archivo de src/ tiene la codificación dañada (tildes convertidas en «Ã³», «Â«»…): un editor o comando con la codificación equivocada las rompe en silencio", () => {
+    // Texto UTF-8 leído como Windows-1252 y vuelto a guardar: cada letra con tilde se vuelve dos caracteres que empiezan por Ã o Â. Se arma con códigos para que este archivo no se delate a sí mismo.
+    const roto = new RegExp("[" + String.fromCharCode(0xc3, 0xc2) + "][" + String.fromCharCode(0x80) + "-" + String.fromCharCode(0xbf) + "]");
+    const bad = files.filter((f) => roto.test(f.text)).map((f) => f.path);
+    if (bad.length) throw new Error("codificación dañada en: " + bad.join(", "));
+  });
 }
 main().then(summary);

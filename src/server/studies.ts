@@ -1,6 +1,6 @@
 /**
  * Acceso a datos de estudios (Fase 3). TODA consulta pasa por withRls(): la base aplica los permisos por usuario.
- * Las funciones reciben `db` (conexiÃ³n app_user) y `sub` (id del usuario autenticado); no usan la clave de servicio.
+ * Las funciones reciben `db` (conexión app_user) y `sub` (id del usuario autenticado); no usan la clave de servicio.
  */
 import { bumpRequestEpoch } from "../lib/request-cache";
 import { and, eq, inArray } from "drizzle-orm";
@@ -11,11 +11,11 @@ import type { Thresholds } from "../domain/summary";
 import { SUPER_ROLE } from "../domain/access";
 import { seedRoles } from "./access";
 
-/** Ãreas operativas del Excel (hoja Parametros, columna E). Se cargan al crear cada estudio. */
+/** Áreas operativas del Excel (hoja Parametros, columna E). Se cargan al crear cada estudio. */
 export const AREAS_14 = [
-  "AdministraciÃ³n punto de venta", "Cajas", "Carnes - Operaciones", "Domicilios", "Fruver - Operaciones", "Inventarios", "OPL - Operaciones",
-  "PanaderÃ­a - Operaciones", "PLS", "Recibo y almacenamiento - Operaciones", "Riesgos y prevenciÃ³n de pÃ©rdidas - Operaciones", "SAC - Operaciones",
-  "Servicio al cliente PDV", "SupervisiÃ³n de cajas y tesorerÃ­a",
+  "Administración punto de venta", "Cajas", "Carnes - Operaciones", "Domicilios", "Fruver - Operaciones", "Inventarios", "OPL - Operaciones",
+  "Panadería - Operaciones", "PLS", "Recibo y almacenamiento - Operaciones", "Riesgos y prevención de pérdidas - Operaciones", "SAC - Operaciones",
+  "Servicio al cliente PDV", "Supervisión de cajas y tesorería",
 ] as const;
 
 type Kind = "real" | "demo";
@@ -57,13 +57,13 @@ export async function listPositions(db: Db, sub: string, studyId: string) {
 
 export interface PositionInput { area: string; site: string; position: string; dataKind: Kind; headcount: number | null; weeklyHours: number | null }
 
-/** Crea (o reutiliza) sede y cargo por su clave del Excel y agrega una fila de dotaciÃ³n. */
+/** Crea (o reutiliza) sede y cargo por su clave del Excel y agrega una fila de dotación. */
 export async function addPosition(db: Db, sub: string, studyId: string, i: PositionInput) {
   const siteName = i.site.trim(), posName = i.position.trim();
   if (!siteName || !posName) throw new Error("Sede y cargo son obligatorios");
   return withRls(db, { sub }, async (tx) => {
     const [area] = await tx.select({ id: areas.id }).from(areas).where(and(eq(areas.studyId, studyId), eq(areas.name, i.area)));
-    if (!area) throw new Error("Ãrea no registrada en el estudio");
+    if (!area) throw new Error("Área no registrada en el estudio");
     await tx.insert(sites).values({ studyId, name: siteName }).onConflictDoNothing();
     const [site] = await tx.select({ id: sites.id }).from(sites).where(and(eq(sites.studyId, studyId), eq(sites.name, siteName)));
     await tx.insert(positions).values({ studyId, areaId: area.id, siteId: site.id, name: posName, dataKind: i.dataKind }).onConflictDoNothing();
@@ -82,7 +82,7 @@ export interface ActivityFormInput {
 
 export async function addActivity(db: Db, sub: string, studyId: string, i: ActivityFormInput) {
   const code = i.code.trim(), name = i.name.trim();
-  if (!code || !name) throw new Error("CÃ³digo y nombre de la actividad son obligatorios");
+  if (!code || !name) throw new Error("Código y nombre de la actividad son obligatorios");
   return withRls(db, { sub }, async (tx) => {
     const [a] = await tx.insert(activities).values({
       studyId, dataKind: i.dataKind, code, name, positionId: i.positionId, calcMode: i.calcMode, scope: i.scope, executionsPerPeriod: str(i.executions), period: i.period,
@@ -92,7 +92,7 @@ export async function addActivity(db: Db, sub: string, studyId: string, i: Activ
   });
 }
 
-/** Actualiza con control de versiÃ³n. Devuelve false si otra persona cambiÃ³ la fila antes (equivale a HTTP 409). */
+/** Actualiza con control de versión. Devuelve false si otra persona cambió la fila antes (equivale a HTTP 409). */
 export async function updateActivityTime(db: Db, sub: string, id: string, expectedVersion: number, timeAvgMin: number | null): Promise<boolean> {
   return withRls(db, { sub }, async (tx) => {
     const rows = await tx.update(activities).set({ timeAvgMin: str(timeAvgMin) }).where(and(eq(activities.id, id), eq(activities.version, expectedVersion))).returning({ id: activities.id });
@@ -104,24 +104,24 @@ export async function listActivityVersions(db: Db, sub: string, studyId: string)
   return withRls(db, { sub }, (tx) => tx.select({ id: activities.id, code: activities.code, version: activities.version }).from(activities).where(eq(activities.studyId, studyId)));
 }
 
-/** Nombre de cada actividad por cÃ³digo (para mostrarlo junto al cÃ³digo en las vistas de resultados). */
+/** Nombre de cada actividad por código (para mostrarlo junto al código en las vistas de resultados). */
 export async function listActivityNames(db: Db, sub: string, studyId: string): Promise<Map<string, string>> {
   const rows = await withRls(db, { sub }, (tx) => tx.select({ code: activities.code, name: activities.name }).from(activities).where(eq(activities.studyId, studyId)));
   return new Map(rows.map((r) => [r.code.toLowerCase(), r.name]));
 }
 
-/** Carga el estudio completo en la forma que espera el motor de cÃ¡lculo. */
+/** Carga el estudio completo en la forma que espera el motor de cálculo. */
 export type StudyData = { params: Params; thresholds: Thresholds; staff: StaffingInput[]; acts: ActivityInput[] };
 
 export async function loadStudyData(db: Db, sub: string, studyId: string): Promise<StudyData> {
   return withRls(db, { sub }, (tx) => loadStudyDataTx(tx, studyId));
 }
 
-/** Igual que loadStudyData, dentro de una transacciÃ³n ya abierta con RLS (lo usa la importaciÃ³n para verificar antes de confirmar). */
+/** Igual que loadStudyData, dentro de una transacción ya abierta con RLS (lo usa la importación para verificar antes de confirmar). */
 export async function loadStudyDataTx(tx: Tx, studyId: string): Promise<StudyData> {
   {
     const [p] = await tx.select().from(studyParameters).where(eq(studyParameters.studyId, studyId));
-    if (!p) throw new Error("Estudio sin parÃ¡metros o sin acceso");
+    if (!p) throw new Error("Estudio sin parámetros o sin acceso");
     const pos = await tx.select({ id: positions.id, name: positions.name, area: areas.name, site: sites.name, kind: positions.dataKind }).from(positions)
       .innerJoin(areas, eq(areas.id, positions.areaId)).innerJoin(sites, eq(sites.id, positions.siteId)).where(eq(positions.studyId, studyId));
     const byId = new Map(pos.map((x) => [x.id, x]));
@@ -144,7 +144,7 @@ export async function loadStudyDataTx(tx: Tx, studyId: string): Promise<StudyDat
   }
 }
 
-/** Actividades Â«NoÂ» o Â«ParcialmenteÂ» documentadas formalmente, por (tipo, Ã¡rea, sede, cargo): columna K del comparador de sedes (hoja 2b). */
+/** Actividades «No» o «Parcialmente» documentadas formalmente, por (tipo, área, sede, cargo): columna K del comparador de sedes (hoja 2b). */
 export async function loadUndocumented(db: Db, sub: string, studyId: string): Promise<Map<string, number>> {
   return withRls(db, { sub }, async (tx) => {
     const rows = await tx.select({ kind: positions.dataKind, area: areas.name, site: sites.name, position: positions.name }).from(activities)
