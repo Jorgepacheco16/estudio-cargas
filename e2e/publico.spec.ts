@@ -158,6 +158,82 @@ test("sin desbordamiento horizontal y con tema oscuro legible", async ({ page })
   expect(bg).not.toBe("rgb(244, 246, 251)");
 });
 
+/* ───── Modo de color (D-98): interruptor del encabezado, que se recuerda, y el texto del encabezado legible con el equipo en oscuro ───── */
+const rgb = (c: string) => { const m = /rgba?\((\d+),\s*(\d+),\s*(\d+)/.exec(c); return m ? [Number(m[1]), Number(m[2]), Number(m[3])] : [0, 0, 0]; };
+const luz = (c: string) => { const f = (v: number) => { const s = v / 255; return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4); }; const [r, g, b] = rgb(c); return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b); };
+const contraste = (a: string, b: string) => { const [x, y] = [luz(a), luz(b)]; return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); };
+const pintura = (page: Page) => page.evaluate(() => { const c = (s: string, p: string) => getComputedStyle(document.querySelector(s)!).getPropertyValue(p); return { texto: c(".brand-name", "color"), barra: c(".topbar", "background-color"), cuerpo: c("body", "background-color") }; });
+const interruptor = (page: Page) => page.getByRole("switch", { name: "Modo oscuro" });
+const atributo = (page: Page) => page.evaluate(() => document.documentElement.getAttribute("data-theme"));
+
+test("el interruptor del encabezado cambia entre modo claro y oscuro, se recuerda en las demás páginas y la página llega ya pintada", async ({ page }) => {
+  await page.goto("/?modo=demo");
+  await expect(interruptor(page)).toHaveAttribute("aria-checked", "false");
+  expect(await atributo(page)).toBeNull(); // sin elección, la página sigue al equipo (aquí, claro)
+  expect(luz((await pintura(page)).cuerpo)).toBeGreaterThan(0.8);
+  await interruptor(page).click();
+  await expect(interruptor(page)).toHaveAttribute("aria-checked", "true");
+  expect(await atributo(page)).toBe("dark");
+  const oscuro = await pintura(page);
+  expect(luz(oscuro.cuerpo), "fondo oscuro").toBeLessThan(0.1);
+  expect(contraste(oscuro.texto, oscuro.barra), "el texto del encabezado se lee").toBeGreaterThanOrEqual(4.5);
+  expect((await page.context().cookies()).find((c) => c.name === "ba_theme")?.value).toBe("dark");
+  // se recuerda: al recargar, en otra página y en el HTML que entrega el servidor (sin parpadeo)
+  await page.reload();
+  expect(await atributo(page)).toBe("dark");
+  await expect(interruptor(page)).toHaveAttribute("aria-checked", "true");
+  await page.goto("/cargos?modo=demo");
+  expect(await atributo(page)).toBe("dark");
+  const html = await (await page.request.get("/?modo=demo")).text();
+  expect(/<html[^>]*data-theme="dark"/.test(html), "el servidor ya entrega el modo oscuro").toBe(true);
+  // y vuelve a claro con otro clic
+  await interruptor(page).click();
+  await expect(interruptor(page)).toHaveAttribute("aria-checked", "false");
+  expect(await atributo(page)).toBe("light");
+  expect(luz((await pintura(page)).cuerpo)).toBeGreaterThan(0.8);
+  expect((await page.context().cookies()).find((c) => c.name === "ba_theme")?.value).toBe("light");
+});
+
+test("con el equipo en modo oscuro y sin elección, el encabezado se lee (era el defecto) y el botón lo muestra; al pulsarlo pasa a claro aunque el equipo siga en oscuro", async ({ page }) => {
+  await page.emulateMedia({ colorScheme: "dark" });
+  await page.goto("/?modo=demo");
+  await expect(interruptor(page)).toHaveAttribute("aria-checked", "true");
+  expect(await atributo(page)).toBeNull();
+  const p = await pintura(page);
+  expect(luz(p.cuerpo)).toBeLessThan(0.1);
+  expect(contraste(p.texto, p.barra), "el texto «Estudio de actividades y cargas laborales» debe leerse sobre el fondo oscuro").toBeGreaterThanOrEqual(4.5);
+  await interruptor(page).click();
+  await expect(interruptor(page)).toHaveAttribute("aria-checked", "false");
+  expect(await atributo(page)).toBe("light");
+  const c = await pintura(page);
+  expect(luz(c.cuerpo), "la elección manda sobre el equipo").toBeGreaterThan(0.8);
+  expect(contraste(c.texto, c.barra)).toBeGreaterThanOrEqual(4.5);
+  await page.reload();
+  expect(await atributo(page)).toBe("light");
+});
+
+test("una cookie de modo manipulada se ignora: sin atributo, sin error y sin reflejar su contenido", async ({ page, baseURL }) => {
+  for (const valor of ["negro", "dark%3Bx", "%3Cscript%3Ealert(1)%3C%2Fscript%3E", "DARK"]) {
+    await page.context().addCookies([{ name: "ba_theme", value: valor, url: baseURL! }]);
+    const r = await page.request.get("/?modo=demo");
+    expect(r.status(), valor).toBe(200);
+    const html = await r.text();
+    expect(/<html[^>]*data-theme=/.test(html), `«${valor}» no debe fijar el modo`).toBe(false);
+    expect(html.includes("<script>alert(1)"), "no debe reflejar la cookie").toBe(false);
+  }
+});
+
+for (const ruta of ["/?modo=demo", "/cargos?modo=demo", "/actividades?modo=demo"]) {
+  test(`accesibilidad (axe, sin fallas serias ni críticas) en MODO OSCURO elegido con el botón: ${ruta}`, async ({ page }) => {
+    await page.goto(ruta);
+    await interruptor(page).click();
+    expect(await atributo(page)).toBe("dark");
+    const r = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa"]).analyze();
+    const graves = r.violations.filter((v) => v.impact === "serious" || v.impact === "critical");
+    expect(graves.map((v) => `${v.id}: ${v.nodes.length} elemento(s) · ${v.help}`)).toEqual([]);
+  });
+}
+
 for (const ruta of ["/?modo=demo", "/cargos?modo=demo", "/actividades?modo=demo", "/sedes?modo=demo", "/calculo?modo=demo", "/drill?modo=demo&level=area&area=Cajas"]) {
   test(`accesibilidad (axe, sin fallas serias ni críticas): ${ruta}`, async ({ page }) => {
     await page.goto(ruta);
