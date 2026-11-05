@@ -9,7 +9,10 @@ import { expect, test, type Browser, type Page } from "@playwright/test";
 test.describe.configure({ mode: "serial" });
 
 const listo = async (p: Page, name: string) => { await p.getByRole("heading", { name }).first().waitFor(); await p.waitForLoadState("networkidle"); };
-let admin: Page, ana: Page, link = "";
+let admin: Page, ana: Page, link = "", anaClave = "Clave-nueva-de-Ana-9";
+const MOCK = process.env.MOCK_AUTH_URL ?? "http://127.0.0.1:54321";
+/** Cuántas veces la autenticación simulada validó una sesión (ver tests/support/mock-auth.ts). */
+const validaciones = async () => ((await (await fetch(`${MOCK}/__stats`)).json()) as { userChecks: number }).userChecks;
 
 async function abrir(browser: Browser): Promise<Page> {
   const ctx = await browser.newContext({ viewport: { width: 1366, height: 900 }, locale: "es-CO", baseURL: process.env.E2E_BASE_URL ?? "http://localhost:3100" });
@@ -200,12 +203,54 @@ test("el Super usuario cambia la clave de Ana: la clave temporal se ve una vez, 
   await otra.goto("/usuarios");
   await otra.waitForURL(/sin-acceso/);
   await otra.context().close();
+  anaClave = temp;
   ana = await abrir(browser); // la siguiente prueba vuelve a usar a Ana
   await ana.goto("/ingreso");
   await ana.fill("#u-email", "ana@prueba.co");
   await ana.fill("#u-pass", temp);
   await ana.getByRole("button", { name: "Entrar", exact: true }).click();
   await ana.waitForURL((u) => u.pathname !== "/ingreso");
+});
+
+test("rendimiento: una navegación valida la sesión una sola vez (más la del proxy) y entrega Server-Timing", async () => {
+  for (const ruta of ["/cuenta", "/estudio", "/actividades"]) {
+    const antes = await validaciones();
+    const r = await ana.request.get(ruta); // una sola petición, sin JavaScript ni precargas del navegador
+    expect(r.ok(), ruta).toBeTruthy();
+    await r.text();
+    const usadas = (await validaciones()) - antes;
+    expect(usadas, `${ruta}: validaciones de sesión`).toBeLessThanOrEqual(2); // proxy + una compartida por el diseño y la página (antes eran 3 o 4)
+    expect(r.headers()["server-timing"], ruta).toMatch(/auth;dur=[0-9]+, proxy;dur=[0-9]+/);
+  }
+});
+
+test("cambiar de cuenta en el mismo navegador nunca muestra a la persona anterior", async ({ browser }) => {
+  const nav = await abrir(browser);
+  const entrar = async (correo: string, clave: string) => {
+    await nav.goto("/ingreso");
+    await nav.fill("#u-email", correo);
+    await nav.fill("#u-pass", clave);
+    await nav.getByRole("button", { name: "Entrar", exact: true }).click();
+    await nav.waitForURL((u) => u.pathname !== "/ingreso");
+  };
+  await entrar("admin@prueba.co", "Clave-de-admin-1");
+  await nav.goto("/cuenta");
+  await listo(nav, "Mi cuenta");
+  await expect(nav.locator(".topbar-user")).toContainText("admin@prueba.co");
+  await nav.goto("/usuarios");
+  await listo(nav, "Usuarios y roles");
+  await nav.getByRole("button", { name: "Salir" }).click();
+  await nav.waitForURL(/[/]ingreso/);
+  await nav.goto("/cuenta"); // sin sesión no se ve nada
+  await nav.waitForURL(/[/](ingreso|login)/);
+  await entrar("ana@prueba.co", anaClave);
+  await nav.goto("/cuenta");
+  await listo(nav, "Mi cuenta");
+  await expect(nav.locator(".topbar-user")).toContainText("ana@prueba.co");
+  await expect(nav.locator(".topbar-user")).not.toContainText("admin@prueba.co");
+  await nav.goto("/usuarios"); // y tiene los permisos de Ana, no los del Super usuario
+  await nav.waitForURL(/sin-acceso/);
+  await nav.context().close();
 });
 
 test("quitar el acceso es inmediato: la persona deja de entrar", async () => {
@@ -218,4 +263,14 @@ test("quitar el acceso es inmediato: la persona deja de entrar", async () => {
   await expect(admin.locator('section[aria-label="Personas con acceso"] tr', { hasText: "ana@prueba.co" })).toHaveCount(0);
   await ana.goto("/actividades");
   await expect(ana.getByText("E-1")).toHaveCount(0);
+});
+
+test("crear un estudio: aparece y queda activo de inmediato (la lista no queda con datos viejos)", async () => {
+  await admin.goto("/estudio");
+  await listo(admin, "Estudio");
+  await admin.fill("#estudio-nombre", "Estudio nuevo de prueba");
+  await admin.getByRole("button", { name: "Crear estudio" }).click();
+  await expect(admin.getByText("Estudio creado con sus 14 áreas.")).toBeVisible();
+  await expect(admin.locator("#estudio-id option:checked")).toContainText("Estudio nuevo de prueba");
+  await expect(admin.locator(".sub").first()).toContainText("Estudio nuevo de prueba");
 });

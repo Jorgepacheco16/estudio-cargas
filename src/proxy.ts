@@ -29,6 +29,8 @@ function csp(nonce: string): string {
 }
 
 export async function proxy(request: NextRequest) {
+  const started = performance.now();
+  let authMs = 0;
   const nonce = Buffer.from(crypto.randomUUID()).toString("base64");
   const policy = csp(nonce);
   const headers = new Headers(request.headers);
@@ -42,7 +44,8 @@ export async function proxy(request: NextRequest) {
     if (path.startsWith("/api/")) return NextResponse.json({ error: { code: "FORBIDDEN", message: "Inicie sesión para continuar." } }, { status: 401 });
     return NextResponse.redirect(new URL("/ingreso", request.url));
   };
-  const finish = (r: NextResponse) => { r.headers.set("content-security-policy", policy); return r; };
+  // Server-Timing: cuánto tardó la validación de la sesión contra Supabase y el proxy completo. Se lee en el navegador (herramientas del desarrollador → Red → Tiempos) para saber dónde se va el tiempo.
+  const finish = (r: NextResponse) => { r.headers.set("content-security-policy", policy); r.headers.set("server-timing", `auth;dur=${authMs.toFixed(0)}, proxy;dur=${(performance.now() - started).toFixed(0)}`); return r; };
 
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL, key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   if (!url || !key) { const g = gate(false); return finish(g ?? NextResponse.next({ request: { headers } })); }
@@ -57,7 +60,9 @@ export async function proxy(request: NextRequest) {
       },
     },
   });
+  const authStart = performance.now();
   const { data } = await supabase.auth.getUser();
+  authMs = performance.now() - authStart;
   const blocked = gate(!!data.user);
   return finish(blocked ?? response);
 }

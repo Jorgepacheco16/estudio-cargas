@@ -3,7 +3,6 @@
  *  · Sin sesión: datos de demostración (ficticios, los mismos de la prueba dorada).
  *  · Con sesión: el estudio activo del usuario, leído de PostgreSQL con withRls().
  */
-import { cache } from "react";
 import { getMyAccess, type MyAccess } from "@/server/access";
 import { cookies } from "next/headers";
 import demo from "./demo.json";
@@ -14,6 +13,7 @@ import { getDb } from "@/db/server";
 import { getUser } from "@/lib/supabase/server";
 import { AREAS_14, listStudies } from "@/server/studies";
 import { loadDashboard } from "@/server/dashboard-data";
+import { memo, requestEpoch } from "@/lib/request-cache";
 
 export const DEMO_THRESHOLDS: Thresholds = { high: 1, low: 0.5 }; // hoja Parametros: C9 = 100 %, C10 = 50 %
 
@@ -31,15 +31,23 @@ function bare(analysis: Analysis, params: Params, thresholds: Thresholds, mode: 
   return buildDashboard({ mode, analysis, params, thresholds, areaNames, assumptionsValidated: false, hourlyCost: null, meta: [], meas: [], suit: [], risks: [], opps: [], plans: [] });
 }
 
-/** Permisos de la persona en un estudio (se consulta una sola vez por petición). */
-const accessFor = cache((userId: string, studyId: string) => getMyAccess(getDb(), userId, studyId));
+/**
+ * Estudios y permisos de la persona: una consulta por petición. La clave lleva, al final, el contador de cambios de la petición (request-cache.ts):
+ * si algo se modificó antes de volver a leer, la clave es otra y se consulta de nuevo.
+ */
+const studiesFor = memo((key: string) => listStudies(getDb(), key.split("|")[0]));
+const accessFor = memo((key: string) => { const [userId, studyId] = key.split("|"); return getMyAccess(getDb(), userId, studyId); });
+
+/** Estudios de la persona (los mismos que usa activeStudyId; una consulta por petición). */
+export const listMyStudies = (userId: string) => studiesFor(`${userId}|${requestEpoch()}`);
 
 export async function activeStudyId(userId: string): Promise<{ id: string; name: string; role: string; access: MyAccess | null } | null> {
-  const list = await listStudies(getDb(), userId);
+  const epoch = requestEpoch();
+  const list = await studiesFor(`${userId}|${epoch}`);
   if (list.length === 0) return null;
   const wanted = (await cookies()).get("estudio_id")?.value;
   const s = list.find((x) => x.id === wanted) ?? list[0];
-  return { ...s, access: await accessFor(userId, s.id) };
+  return { ...s, access: await accessFor(`${userId}|${s.id}|${epoch}`) };
 }
 
 export async function loadAnalysis(requested: Mode | undefined): Promise<Loaded> {
