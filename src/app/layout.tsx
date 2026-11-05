@@ -1,10 +1,12 @@
 import type { Metadata } from "next";
 import Image from "next/image";
-import { headers } from "next/headers";
+import { cookies, headers } from "next/headers";
 import localFont from "next/font/local";
 import "./globals.css";
 import { Nav } from "@/components/Nav";
 import { UserBadge } from "@/components/UserBadge";
+import { ThemeToggle } from "@/components/ThemeToggle";
+import { THEME_COOKIE, parseTheme, themeAttribute } from "@/lib/theme";
 import { BalanceLogo } from "@/components/brand/BalanceLogo";
 import { APP, CLIENT } from "@/lib/client-theme";
 import { getUser } from "@/lib/supabase/server";
@@ -33,8 +35,10 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const allowed = allowedHrefs(menuHrefs(), study);
   // D-92: quien trabaja con algunas áreas lo ve siempre a la vista, porque todas las cifras son solo de esas áreas.
   const myAreas = study?.access && !study.access.allAreas && user ? (await listAreas(getDb(), user.id, study.id).catch(() => [])).map((a) => a.name) : null;
+  // D-98: el modo de color que la persona eligió (cookie); sin elección, sin atributo: los estilos siguen la configuración del equipo.
+  const theme = parseTheme((await cookies()).get(THEME_COOKIE)?.value);
   return (
-    <html lang="es" className={outfit.variable}>
+    <html lang="es" className={outfit.variable} data-theme={themeAttribute(theme)}>
       <body>
         {bare ? children : (
           <>
@@ -48,6 +52,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
                   <div className="client" aria-label={`Cliente: ${CLIENT.name}`}>
                     <Image className="client-logo" src={CLIENT.logo} alt={CLIENT.name} width={CLIENT.logoWidth} height={CLIENT.logoHeight} priority />
                   </div>
+                  <ThemeToggle initial={theme} />
                   <UserBadge />
                 </div>
               </div>

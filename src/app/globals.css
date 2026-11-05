@@ -1,6 +1,7 @@
 :root {
   /* Identidad MEGATIENDAS: rojo y azul del logotipo sobre blanco y gris claro */
   /* Ancho de la página: se adapta a la pantalla (portátil o monitor grande); el tope solo evita líneas excesivas en pantallas ultra anchas. */
+  color-scheme: light;
   --page-max: 2400px;
   --page-gutter: clamp(16px, 2.2vw, 40px);
   --red: #ed001b;
@@ -25,6 +26,7 @@
 }
 
 :root[data-theme="dark"] {
+  color-scheme: dark;
   --red: #ff5a6b;
   --red-dark: #ff8f9a;
   --red-soft: #4a1a21;
@@ -47,6 +49,7 @@
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
+    color-scheme: dark;
     --red: #ff5a6b;
     --red-dark: #ff8f9a;
     --red-soft: #4a1a21;
@@ -386,7 +389,7 @@ tfoot td { background: var(--blue-soft); border-top: 2px solid var(--blue); bord
 
 /* Paginación de las tablas de registros (10 filas por página). */
 .pager { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 16px; margin-top: 8px; font-size: .8125rem; color: var(--muted, #555); }
-.pager select { font: inherit; margin-left: 4px; padding: 2px 4px; border: 1px solid var(--line); border-radius: 4px; background: #fff; }
+.pager select { font: inherit; margin-left: 4px; padding: 2px 4px; border: 1px solid var(--line); border-radius: 4px; background: var(--card); color: var(--ink); }
 .pager-btn { font-size: 1.25rem; line-height: 1; padding: 2px 10px; border: 0; border-radius: 4px; background: transparent; color: inherit; cursor: pointer; }
 .pager-btn:hover:not(:disabled) { background: var(--line); }
 .pager-btn:disabled { opacity: .35; cursor: default; }
@@ -433,3 +436,34 @@ html[data-theme="dark"] .btn.danger-solid { color: #0f141b; }
 a.account { text-decoration: none; color: inherit; border-radius: var(--radius); }
 a.account:hover { background: var(--bg); }
 a.account:focus-visible { outline: 3px solid var(--blue); outline-offset: -3px; }
+
+/* ───── Modo oscuro según la configuración del equipo (D-98) ─────
+   Las reglas de arriba que solo decían :root[data-theme="dark"] no valían cuando el modo oscuro venía de la configuración del equipo (sin atributo en <html>): por eso,
+   por ejemplo, el texto del encabezado se perdía sobre el fondo oscuro. Aquí van esas mismas reglas para ese caso, así el modo se ve igual venga de donde venga. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .brand-name { color: var(--ink); }
+  :root:not([data-theme="light"]) .nav a[aria-current="page"] { background: var(--card); color: var(--blue); }
+  :root:not([data-theme="light"]) .btn.solid { color: #1b0a0d; }
+  :root:not([data-theme="light"]) th { background: var(--blue-dark); color: var(--ink); }
+  :root:not([data-theme="light"]) .balance-word { color: var(--ink); }
+  :root:not([data-theme="light"]) .btn.danger-solid { color: #0f141b; }
+}
+
+/* ───── Interruptor del modo de color del encabezado (D-98): un sol y una luna ─────
+   La perilla y el icono resaltado salen de los mismos selectores que pintan la página (data-theme o, sin él, la configuración del equipo), por eso nunca se contradicen. */
+.theme-switch { position: relative; flex: none; display: inline-flex; align-items: center; width: 62px; height: 32px; margin-right: 12px; padding: 0; border: 1px solid var(--line); border-radius: 999px; background: var(--bg); color: var(--muted); cursor: pointer; }
+.theme-switch::before { content: ""; position: absolute; top: 3px; left: 3px; width: 24px; height: 24px; border-radius: 50%; background: var(--ink); transition: transform .18s ease; }
+.theme-switch svg { position: relative; z-index: 1; flex: none; width: 24px; height: 24px; padding: 3px; margin: 0 3px; }
+.theme-switch .ts-sun { color: var(--card); }
+.theme-switch .ts-moon { color: var(--muted); }
+.theme-switch:hover { border-color: var(--blue); }
+.theme-switch:focus-visible { outline: 3px solid var(--blue); outline-offset: 2px; }
+:root[data-theme="dark"] .theme-switch::before { transform: translateX(30px); }
+:root[data-theme="dark"] .theme-switch .ts-sun { color: var(--muted); }
+:root[data-theme="dark"] .theme-switch .ts-moon { color: var(--card); }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .theme-switch::before { transform: translateX(30px); }
+  :root:not([data-theme="light"]) .theme-switch .ts-sun { color: var(--muted); }
+  :root:not([data-theme="light"]) .theme-switch .ts-moon { color: var(--card); }
+}
+@media (prefers-reduced-motion: reduce) { .theme-switch::before { transition: none; } }

@@ -5,6 +5,8 @@ Entre a la dirección de la aplicación y pulse **Ingresar con Google**. Solo se
 
 Roles: **Propietario**, **Editor**, **Analista** (pueden modificar) y **Solo lectura** (solo consulta; los botones de guardar aparecen deshabilitados).
 
+**Modo claro u oscuro.** En el encabezado, junto a su nombre, hay un botón con un sol y una luna: púlselo para pasar de un modo al otro. La aplicación lo recuerda en ese navegador. Mientras no lo pulse, la aplicación usa el modo que tenga configurado su equipo.
+
 ## 2. Estudio
 En **Estudio**: cree un estudio (se cargan las 14 áreas operativas y los parámetros por defecto) y elija el estudio activo. **La aplicación es la única fuente de los datos de entrada** (D-63): cada dato se captura en su propia sección (Parámetros, Cargos y dotación, Actividades y las seis subsecciones de **Diagnóstico y rediseño**), con un formulario que tiene TODAS las casillas amarillas del libro con TODAS sus casillas amarillas, con los mismos encabezados y listas desplegables; cada guardado se escribe solo en la hoja de Google. Si otra persona modificó el registro antes, verá un aviso de conflicto (409): recargue y repita.
 
