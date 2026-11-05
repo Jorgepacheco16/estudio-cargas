@@ -25,6 +25,13 @@ export async function getRealUser(): Promise<SessionUser | null> {
   return data.user ? { id: data.user.id, email: data.user.email ?? null } : null;
 }
 
+/** ¿La sesión real tiene una clave propia (identidad de correo)? Quien entra solo con Google no la tiene. */
+export async function hasPasswordLogin(): Promise<boolean> {
+  if (!authConfigured()) return false;
+  const { data } = await (await createClient()).auth.getUser();
+  return !!data.user?.identities?.some((i) => i.provider === "email");
+}
+
 /** Usuario autenticado o null. Si el Super usuario activó «ver como», devuelve a esa persona (todo lo demás la trata como tal; la base de datos solo deja leer). */
 export async function getUser(): Promise<SessionUser | null> {
   const real = await getRealUser();

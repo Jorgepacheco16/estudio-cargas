@@ -103,6 +103,34 @@ test("la persona escribe su nombre en «Mi cuenta» y se le ve con él (encabeza
   await expect(ana.locator(".account-label")).toContainText("ana@prueba.co");
 });
 
+test("la persona cambia su clave en «Mi cuenta»: pide la actual y la nueva sirve para volver a entrar", async ({ browser }) => {
+  const enviar = async (actual: string, nueva: string, repetir: string) => {
+    await ana.goto("/cuenta");
+    await listo(ana, "Mi cuenta");
+    await ana.fill("#c-actual", actual);
+    await ana.fill("#c-nueva", nueva);
+    await ana.fill("#c-repetir", repetir);
+    await ana.getByRole("button", { name: "Cambiar clave" }).click();
+  };
+  await enviar("Clave-equivocada-1", "Clave-nueva-de-Ana-9", "Clave-nueva-de-Ana-9");
+  await expect(ana.getByText("La clave actual no es correcta.")).toBeVisible();
+  await enviar("Clave-de-Ana-123", "Clave-nueva-de-Ana-9", "Clave-nueva-de-Ana-8");
+  await expect(ana.getByText("Las dos claves nuevas no coinciden.")).toBeVisible();
+  await enviar("Clave-de-Ana-123", "Clave-nueva-de-Ana-9", "Clave-nueva-de-Ana-9");
+  await expect(ana.getByText("Clave cambiada.")).toBeVisible();
+  // la clave vieja ya no entra y la nueva sí
+  const otra = await abrir(browser);
+  await otra.goto("/ingreso");
+  await otra.fill("#u-email", "ana@prueba.co");
+  await otra.fill("#u-pass", "Clave-de-Ana-123");
+  await otra.getByRole("button", { name: "Entrar", exact: true }).click();
+  await expect(otra.getByRole("alert")).toBeVisible();
+  await otra.fill("#u-pass", "Clave-nueva-de-Ana-9");
+  await otra.getByRole("button", { name: "Entrar", exact: true }).click();
+  await otra.waitForURL((u) => u.pathname !== "/ingreso");
+  await otra.context().close();
+});
+
 test("el Super usuario ve el cuadro de permisos y usa «Ver como» (solo lectura)", async () => {
   // El Super usuario (todas las áreas) sí ve la actividad de Domicilios y no tiene la franja de áreas.
   await admin.goto("/actividades");

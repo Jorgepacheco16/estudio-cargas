@@ -41,6 +41,16 @@ const server = createServer(async (req, res) => {
     const id = access.get(String(req.headers.authorization ?? "").replace(/^Bearer /i, ""));
     return id ? send(200, userJson(byId.get(id)!)) : send(401, { code: 401, msg: "invalid JWT" });
   }
+  if (path === "/auth/v1/user" && req.method === "PUT") {
+    const id = access.get(String(req.headers.authorization ?? "").replace(/^Bearer /i, ""));
+    if (!id) return send(401, { code: 401, msg: "invalid JWT" });
+    const u = byId.get(id)!;
+    if (typeof body.password === "string") {
+      if (body.password === u.password) return send(422, { code: 422, msg: "New password should be different from the old password." });
+      u.password = body.password;
+    }
+    return send(200, userJson(u));
+  }
   if (path === "/auth/v1/signup" && req.method === "POST") {
     const email = String(body.email ?? "").toLowerCase();
     if (users.has(email)) return send(200, { ...userJson(users.get(email)!), identities: [] }); // como Supabase: una cuenta existente vuelve sin identidades
