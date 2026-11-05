@@ -160,6 +160,49 @@ test("el Super usuario ve el cuadro de permisos y usa «Ver como» (solo lectura
   await expect(admin.getByText(/Está viendo la aplicación como/)).toHaveCount(0);
 });
 
+test("el Super usuario cambia la clave de Ana: la clave temporal se ve una vez, su sesión se cierra, la anterior ya no entra y la temporal sí", async ({ browser }) => {
+  await admin.goto("/usuarios?vista=personas");
+  await listo(admin, "Personas con acceso");
+  // en su propia fila no hay botón (su clave se cambia en «Mi cuenta»)
+  await expect(admin.locator('section[aria-label="Personas con acceso"] tr', { hasText: "admin@prueba.co" }).getByRole("button", { name: "Cambiar clave" })).toHaveCount(0);
+  const fila = admin.locator('section[aria-label="Personas con acceso"] tr', { hasText: "ana@prueba.co" });
+  await fila.getByRole("button", { name: "Cambiar clave" }).click();
+  const dlg = admin.getByRole("dialog");
+  await dlg.getByRole("button", { name: "Generar clave temporal" }).click();
+  const temp = await dlg.getByLabel("Clave temporal").inputValue();
+  expect(temp).toMatch(/^[A-HJ-NP-Za-km-z2-9]{14}$/);
+  await expect(dlg.getByText("Se muestra una sola vez")).toBeVisible();
+  await dlg.getByRole("button", { name: "Listo, ya la copié" }).click();
+  // al reabrir, la clave ya no está: se muestra de nuevo el paso de confirmación y generaría OTRA
+  await fila.getByRole("button", { name: "Cambiar clave" }).click();
+  await expect(admin.getByRole("dialog").getByLabel("Clave temporal")).toHaveCount(0);
+  await admin.getByRole("dialog").getByRole("button", { name: "Cancelar" }).click();
+  // la sesión abierta de Ana se cerró
+  await ana.goto("/cuenta");
+  await ana.waitForURL(/\/(ingreso|login)/);
+  // la clave anterior ya no entra y la temporal sí
+  const otra = await abrir(browser);
+  await otra.goto("/ingreso");
+  await otra.fill("#u-email", "ana@prueba.co");
+  await otra.fill("#u-pass", "Clave-nueva-de-Ana-9");
+  await otra.getByRole("button", { name: "Entrar", exact: true }).click();
+  await expect(otra.getByRole("alert")).toBeVisible();
+  await otra.fill("#u-email", "ana@prueba.co");
+  await otra.fill("#u-pass", temp);
+  await otra.getByRole("button", { name: "Entrar", exact: true }).click();
+  await otra.waitForURL((u) => u.pathname !== "/ingreso");
+  // una persona sin permiso de administrar no llega a la pantalla
+  await otra.goto("/usuarios");
+  await otra.waitForURL(/sin-acceso/);
+  await otra.context().close();
+  ana = await abrir(browser); // la siguiente prueba vuelve a usar a Ana
+  await ana.goto("/ingreso");
+  await ana.fill("#u-email", "ana@prueba.co");
+  await ana.fill("#u-pass", temp);
+  await ana.getByRole("button", { name: "Entrar", exact: true }).click();
+  await ana.waitForURL((u) => u.pathname !== "/ingreso");
+});
+
 test("quitar el acceso es inmediato: la persona deja de entrar", async () => {
   await admin.goto("/usuarios?vista=personas");
   await listo(admin, "Personas con acceso");

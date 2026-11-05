@@ -150,16 +150,17 @@ export async function setMyDisplayName(db: Db, sub: string, studyId: string, nam
 }
 
 /* ───────── Personas ───────── */
-export interface MemberView { userId: string; name: string | null; email: string | null; roleId: string | null; roleName: string; allAreas: boolean; areas: string[]; isSelf: boolean; since: Date }
+export interface MemberView { userId: string; name: string | null; email: string | null; roleId: string | null; roleName: string; allAreas: boolean; areas: string[]; isSelf: boolean; since: Date; /** false si entra solo con Google (no tiene clave en la aplicación) */ hasPassword: boolean }
 export async function listMembers(db: Db, sub: string, studyId: string): Promise<MemberView[]> {
   return withRls(db, { sub }, async (tx) => {
     const ms = await tx.select().from(memberships).where(eq(memberships.studyId, studyId)).orderBy(asc(memberships.createdAt));
     const rs = new Map((await tx.select({ id: roles.id, name: roles.name }).from(roles).where(eq(roles.studyId, studyId))).map((r) => [r.id, r.name]));
     const as = new Map((await tx.select({ id: areas.id, name: areas.name }).from(areas).where(eq(areas.studyId, studyId))).map((a) => [a.id, a.name]));
     const ma = await tx.select().from(memberAreas).where(eq(memberAreas.studyId, studyId));
+    const withPw = new Set(((await tx.execute(sql`select private.members_with_password(${studyId}::uuid) as user_id`)) as unknown as { user_id: string }[]).map((r) => r.user_id));
     return ms.map((m) => ({
       userId: m.userId, name: m.displayName, email: m.email, roleId: m.roleId, roleName: m.roleId ? rs.get(m.roleId) ?? "" : m.role === "owner" ? SUPER_ROLE : m.role === "viewer" ? "Lector" : "Editor",
-      allAreas: m.allAreas, areas: ma.filter((x) => x.userId === m.userId).map((x) => as.get(x.areaId) ?? "").filter(Boolean).sort((a, b) => a.localeCompare(b, "es")), isSelf: m.userId === sub, since: m.createdAt,
+      allAreas: m.allAreas, areas: ma.filter((x) => x.userId === m.userId).map((x) => as.get(x.areaId) ?? "").filter(Boolean).sort((a, b) => a.localeCompare(b, "es")), isSelf: m.userId === sub, since: m.createdAt, hasPassword: withPw.has(m.userId),
     }));
   });
 }
@@ -276,5 +277,24 @@ export async function redeemInvitation(db: Db, sub: string, email: string, token
     const m = pgMessage(e);
     if (m.code === "P0001" || m.code === "28000") return { ok: false, error: m.message };
     throw e;
+  }
+}
+
+/* ───────── Clave de otra persona (D-94) ───────── */
+/** Quiénes del estudio tienen clave propia (los que entran solo con Google no): solo para mostrar el botón «Cambiar clave» donde corresponde. */
+export async function membersWithPassword(db: Db, sub: string, studyId: string): Promise<Set<string>> {
+  const rows = await withRls(db, { sub }, (tx) => tx.execute(sql`select private.members_with_password(${studyId}::uuid) as user_id`)) as unknown as { user_id: string }[];
+  return new Set(rows.map((r) => r.user_id));
+}
+
+/** El Super usuario fija la clave (ya cifrada) de otra persona. La base comprueba el permiso, que sea miembro del estudio y que tenga clave propia, y cierra sus sesiones. */
+export async function adminSetPassword(db: Db, sub: string, studyId: string, userId: string, hash: string): Promise<Res> {
+  try {
+    await withRls(db, { sub }, (tx) => tx.execute(sql`select private.admin_set_password(${studyId}::uuid, ${userId}::uuid, ${hash})`));
+    return { ok: true };
+  } catch (e) {
+    const m = pgMessage(e);
+    if (m.code === "P0001" || m.code === "28000") return { ok: false, error: m.message };
+    return friendly(e, "No se pudo cambiar la clave");
   }
 }

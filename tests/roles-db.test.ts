@@ -4,11 +4,12 @@ import { createDb, withRls } from "../src/db/client";
 import { createStudy } from "../src/server/studies";
 import { entryDef, type EntryId } from "../src/server/entry/defs";
 import { listEntries, saveEntry } from "../src/server/entry/service";
-import { createInvitation, deleteRole, getMyAccess, setMyDisplayName, listInvitations, listMembers, listRoles, lookupInvitation, redeemInvitation, removeMember, revokeInvitation, saveRole, updateMember } from "../src/server/access";
+import { adminSetPassword, membersWithPassword, createInvitation, deleteRole, getMyAccess, setMyDisplayName, listInvitations, listMembers, listRoles, lookupInvitation, redeemInvitation, removeMember, revokeInvitation, saveRole, updateMember } from "../src/server/access";
 import { connectSheet, listConnections } from "../src/server/sheets/sync";
 import { roles, rolePermissions, memberships } from "../src/db/schema";
 import { eq } from "drizzle-orm";
 import { readFileSync } from "node:fs";
+import { hashPassword } from "../src/lib/temp-password";
 import { check, summary, URL_ADMIN, URL_APP } from "./helpers";
 
 /**
@@ -29,9 +30,9 @@ async function rejects(p: Promise<unknown>, code: string, what: string) {
 
 async function main() {
   const admin = createDb(URL_ADMIN, 2), app = createDb(URL_APP, 4);
-  const owner = randomUUID(), capt = randomUUID(), lector = randomUUID(), segundo = randomUUID(), intruso = randomUUID();
+  const owner = randomUUID(), capt = randomUUID(), lector = randomUUID(), segundo = randomUUID(), intruso = randomUUID(), objetivo = randomUUID(), goog = randomUUID(), otro = randomUUID();
   const mail = (u: string) => `${u.slice(0, 8)}@prueba.co`;
-  for (const id of [owner, capt, lector, segundo, intruso]) await admin.db.execute(sql`insert into auth.users (id) values (${id})`);
+  for (const id of [owner, capt, lector, segundo, intruso, objetivo, goog, otro]) await admin.db.execute(sql`insert into auth.users (id) values (${id})`);
   let studyId = "";
   try {
     studyId = await createStudy(app.db, owner, "Estudio de prueba roles");
@@ -258,6 +259,48 @@ async function main() {
       if ((other as unknown as unknown[]).length !== 0) throw new Error("nadie debe poder cambiar el nombre de otra persona por la vía directa");
     });
 
+    await check("Clave de otra persona (D-94): solo un Super usuario del MISMO estudio, a un miembro con clave propia y distinto de sí mismo; la base solo acepta el cifrado, cierra sesiones y audita sin la clave", async () => {
+      const lectorRole = await roleId("Lector");
+      for (const [u, prov] of [[objetivo, "email"], [goog, "google"]] as const) {
+        await admin.db.execute(sql`insert into public.memberships (study_id, user_id, role, role_id, all_areas, email) values (${studyId}, ${u}, 'viewer', ${lectorRole}, true, ${mail(u)})`);
+        await admin.db.execute(sql`insert into auth.identities (user_id, provider) values (${u}, ${prov})`);
+      }
+      const antes = async () => ((await admin.db.execute(sql`select encrypted_password p from auth.users where id = ${objetivo}`)) as unknown as { p: string | null }[])[0].p;
+      const hash = await hashPassword("Temporal-Abc-123X");
+      // quién puede
+      const noSuper = await adminSetPassword(app.db, capt, studyId, objetivo, hash);
+      if (noSuper.ok || (await antes()) !== null) throw new Error("quien no es Super usuario no debe poder: " + JSON.stringify(noSuper));
+      const ajeno = await createStudy(app.db, otro, "Estudio ajeno de prueba");
+      try {
+        const cruzado = await adminSetPassword(app.db, otro, studyId, objetivo, hash);
+        const cruzado2 = await adminSetPassword(app.db, otro, ajeno, objetivo, hash);
+        if (cruzado.ok || cruzado2.ok || (await antes()) !== null) throw new Error("un Super usuario de OTRO estudio no debe poder: " + JSON.stringify([cruzado, cruzado2]));
+      } finally { await admin.db.execute(sql`delete from public.studies where id = ${ajeno}`); }
+      // a quién
+      for (const [quien, que] of [[owner, "a sí mismo"], [goog, "a quien entra solo con Google"], [intruso, "a quien no es miembro"]] as const) {
+        const r = await adminSetPassword(app.db, owner, studyId, quien, hash);
+        if (r.ok) throw new Error("no debía poder cambiar la clave " + que);
+      }
+      // qué recibe: nunca texto plano
+      for (const malo of ["Temporal-Abc-123X", "", "$2a$10$corto", "$1$sal$abc"]) {
+        if ((await adminSetPassword(app.db, owner, studyId, objetivo, malo)).ok || (await antes()) !== null) throw new Error("aceptó algo que no es un cifrado bcrypt: " + malo);
+      }
+      // el caso bueno: guarda el cifrado, cierra sesiones y audita sin la clave
+      await admin.db.execute(sql`insert into auth.sessions (user_id) values (${objetivo}), (${objetivo}), (${goog})`);
+      const ok = await adminSetPassword(app.db, owner, studyId, objetivo, hash);
+      if (!ok.ok || (await antes()) !== hash) throw new Error("no guardó el cifrado: " + JSON.stringify(ok));
+      const ses = (await admin.db.execute(sql`select (select count(*)::int from auth.sessions where user_id = ${objetivo}) a, (select count(*)::int from auth.sessions where user_id = ${goog}) b`)) as unknown as { a: number; b: number }[];
+      if (ses[0].a !== 0 || ses[0].b !== 1) throw new Error("debía cerrar solo las sesiones de la persona: " + JSON.stringify(ses[0]));
+      const au = (await admin.db.execute(sql`select diff::text d from public.audit_log where study_id = ${studyId} and entity = 'member_password_reset'`)) as unknown as { d: string }[];
+      if (au.length !== 1 || au[0].d.includes(hash) || au[0].d.includes("Temporal") || au[0].d.includes("$2")) throw new Error("la auditoría debía quedar una vez y sin la clave: " + JSON.stringify(au));
+      // quién ve el botón
+      const con = await membersWithPassword(app.db, owner, studyId);
+      if (!con.has(objetivo) || con.has(goog)) throw new Error("hasPassword debía distinguir a quien entra con Google");
+      const lista = await listMembers(app.db, owner, studyId);
+      if (!lista.find((m) => m.userId === objetivo)!.hasPassword || lista.find((m) => m.userId === goog)!.hasPassword) throw new Error("listMembers.hasPassword incorrecto");
+      if ((await membersWithPassword(app.db, capt, studyId)).size !== 0) throw new Error("quien no administra usuarios no debe ver quién tiene clave");
+    });
+
     await check("Borrar el estudio borra sus roles, permisos, invitaciones y membresías sin chocar con las protecciones", async () => {
       await admin.db.execute(sql`delete from public.studies where id = ${studyId}`);
       const left = (await admin.db.execute(sql`select (select count(*)::int from public.roles where study_id = ${studyId}) r, (select count(*)::int from public.memberships where study_id = ${studyId}) m`)) as unknown as { r: number; m: number }[];
@@ -267,7 +310,7 @@ async function main() {
     void memberships;
   } finally {
     if (studyId) await admin.db.execute(sql`delete from public.studies where id = ${studyId}`);
-    await admin.db.execute(sql`delete from auth.users where id in (${owner}, ${capt}, ${lector}, ${segundo}, ${intruso})`);
+    await admin.db.execute(sql`delete from auth.users where id in (${owner}, ${capt}, ${lector}, ${segundo}, ${intruso}, ${objetivo}, ${goog}, ${otro})`);
     await admin.client.end(); await app.client.end();
   }
 }
