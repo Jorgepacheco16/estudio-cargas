@@ -125,8 +125,10 @@ test("la persona cambia su clave en «Mi cuenta»: pide la actual y la nueva sir
   await otra.fill("#u-pass", "Clave-de-Ana-123");
   await otra.getByRole("button", { name: "Entrar", exact: true }).click();
   await expect(otra.getByRole("alert")).toBeVisible();
+  await otra.waitForLoadState("networkidle"); // tras el fallo la página termina de repintarse y vacía los campos: se escribe hasta que se asiente
   await otra.fill("#u-email", "ana@prueba.co"); // la página se recarga tras el fallo y vacía los campos
   await otra.fill("#u-pass", "Clave-nueva-de-Ana-9");
+  await expect(otra.locator("#u-email")).toHaveValue("ana@prueba.co");
   await otra.getByRole("button", { name: "Entrar", exact: true }).click();
   await otra.waitForURL((u) => u.pathname !== "/ingreso");
   await otra.context().close();
@@ -185,10 +187,13 @@ test("el Super usuario cambia la clave de Ana: la clave temporal se ve una vez, 
   await otra.goto("/ingreso");
   await otra.fill("#u-email", "ana@prueba.co");
   await otra.fill("#u-pass", "Clave-nueva-de-Ana-9");
+  await expect(otra.locator("#u-email")).toHaveValue("ana@prueba.co");
   await otra.getByRole("button", { name: "Entrar", exact: true }).click();
   await expect(otra.getByRole("alert")).toBeVisible();
+  await otra.waitForLoadState("networkidle"); // tras el fallo la página termina de repintarse y vacía los campos: se escribe hasta que se asiente
   await otra.fill("#u-email", "ana@prueba.co");
   await otra.fill("#u-pass", temp);
+  await expect(otra.locator("#u-email")).toHaveValue("ana@prueba.co");
   await otra.getByRole("button", { name: "Entrar", exact: true }).click();
   await otra.waitForURL((u) => u.pathname !== "/ingreso");
   // una persona sin permiso de administrar no llega a la pantalla

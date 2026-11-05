@@ -7,6 +7,12 @@ import { resetPasswordAction, type PasswordState } from "@/app/usuarios/actions"
  * Al cerrar la ventana la clave desaparece de la pantalla y no se puede volver a ver.
  */
 export function ResetPasswordButton({ userId, label }: { userId: string; label: string }) {
+  // Al cerrar la ventana se vuelve a montar el formulario: así la clave temporal (que vive en su estado) desaparece de la memoria de la página y no se puede volver a ver.
+  const [round, setRound] = useState(0);
+  return <ResetPasswordDialog key={round} userId={userId} label={label} onClosed={() => setRound((n) => n + 1)} />;
+}
+
+function ResetPasswordDialog({ userId, label, onClosed }: { userId: string; label: string; onClosed: () => void }) {
   const id = useId();
   const dlg = useRef<HTMLDialogElement>(null);
   const [state, action, pending] = useActionState<PasswordState, FormData>(resetPasswordAction, {});
@@ -15,7 +21,7 @@ export function ResetPasswordButton({ userId, label }: { userId: string; label: 
   return (
     <>
       <button type="button" className="btn" aria-haspopup="dialog" onClick={() => dlg.current?.showModal()}>Cambiar clave</button>
-      <dialog ref={dlg} className="confirm" aria-labelledby={id} onClose={() => setCopied(false)} onClick={(e) => { if (e.target === dlg.current && !pending) dlg.current?.close(); }}>
+      <dialog ref={dlg} className="confirm" aria-labelledby={id} onClose={onClosed} onClick={(e) => { if (e.target === dlg.current && !pending) dlg.current?.close(); }}>
         <h2 id={id}>Cambiar la clave de {label}</h2>
         {state.ok && state.temp ? (
           <>
