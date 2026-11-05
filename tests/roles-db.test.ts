@@ -301,6 +301,66 @@ async function main() {
       if ((await membersWithPassword(app.db, capt, studyId)).size !== 0) throw new Error("quien no administra usuarios no debe ver quién tiene clave");
     });
 
+    await check("Crear estudios (D-95): la base exige Edición en «Estudio»; Editor y Lector solo ven la ventana; el Super usuario y un rol con Edición crean; las membresías heredadas siguen su regla; el primer ingreso crea el primero", async () => {
+      const u = { ed: randomUUID(), lec: randomUUID(), coord: randomUUID(), legEd: randomUUID(), legOwner: randomUUID(), primero: randomUUID() };
+      const made: string[] = [];
+      const crear = async (sub: string, nombre: string) => { const id = await createStudy(app.db, sub, nombre); made.push(id); return id; };
+      try {
+        for (const x of Object.values(u)) await admin.db.execute(sql`insert into auth.users (id) values (${x})`);
+        const unirse = (x: string, rol: string | null, legado: "owner" | "editor" | "viewer") =>
+          admin.db.execute(sql`insert into public.memberships (study_id, user_id, role, role_id, all_areas, email) values (${studyId}, ${x}, ${legado}::public.app_role, ${rol}, true, ${mail(x)})`);
+        const coord = await saveRole(app.db, owner, studyId, { name: "Coordinador de estudios", perms: { estudio: "edit", actividades: "read" } });
+        if (!coord.ok) throw new Error("no se pudo crear el rol: " + JSON.stringify(coord));
+        await unirse(u.ed, await roleId("Editor"), "editor"); await unirse(u.lec, await roleId("Lector"), "viewer"); await unirse(u.coord, coord.id, "viewer");
+        await unirse(u.legEd, null, "editor"); await unirse(u.legOwner, null, "owner");
+        // lo que dice cada rol
+        const nivel = async (x: string) => (await getMyAccess(app.db, x, studyId))!.perms.estudio;
+        const esperado: [string, string][] = [[owner, "edit"], [u.ed, "read"], [u.lec, "read"], [u.coord, "edit"], [u.legEd, "read"], [u.legOwner, "edit"]];
+        for (const [x, n] of esperado) if ((await nivel(x)) !== n) throw new Error(`nivel de «Estudio» de ${mail(x)}: ${await nivel(x)} ≠ ${n}`);
+        // quién crea
+        for (const [x, quien] of [[u.ed, "Editor"], [u.lec, "Lector"], [u.legEd, "editor heredado"]] as const) await rejects(createStudy(app.db, x, "No debería crearse " + quien), "42501", "crear como " + quien);
+        for (const [x, quien] of [[owner, "Super usuario"], [u.coord, "rol con Edición en Estudio"], [u.legOwner, "owner heredado"]] as const) {
+          const id = await crear(x, "Estudio creado por " + quien);
+          if (!(await listRoles(app.db, x, id)).some((r) => r.name === "Super usuario")) throw new Error("el estudio nuevo debía traer sus roles");
+        }
+        const ningunoColado = (await admin.db.execute(sql`select count(*)::int n from public.studies where name like 'No debería crearse%'`)) as unknown as { n: number }[];
+        if (ningunoColado[0].n !== 0) throw new Error("se coló un estudio de quien no podía crear");
+        // el primer ingreso (sin ningún estudio) crea el primero, y luego es Super usuario de ese
+        const primero = await crear(u.primero, "Primer estudio de una persona nueva");
+        if ((await getMyAccess(app.db, u.primero, primero))!.perms.estudio !== "edit") throw new Error("quien crea su primer estudio debe ser Super usuario de él");
+        await crear(u.primero, "Segundo estudio de la misma persona");
+      } finally {
+        for (const id of made) await admin.db.execute(sql`delete from public.studies where id = ${id}`);
+        await admin.db.execute(sql`delete from public.memberships where user_id in (${u.ed}, ${u.lec}, ${u.coord}, ${u.legEd}, ${u.legOwner})`);
+        await admin.db.execute(sql`delete from auth.users where id in (${u.ed}, ${u.lec}, ${u.coord}, ${u.legEd}, ${u.legOwner}, ${u.primero})`);
+      }
+    });
+
+    await check("Migración de «Estudio» (D-95): sobre estudios que ya existían completa los roles (sistema en Edición, el resto en Lectura) y se puede repetir sin cambiar nada", async () => {
+      const nivelesDe = async () => (await admin.db.execute(sql`select r.name, r.is_system, rp.level from public.roles r join public.role_permissions rp on rp.role_id = r.id and rp.module = 'estudio' where r.study_id = ${studyId} order by r.name`)) as unknown as { name: string; is_system: boolean; level: string }[];
+      const antes = await nivelesDe();
+      if (antes.length < 3) throw new Error("los roles del estudio debían tener su fila de «Estudio»: " + JSON.stringify(antes));
+      // se simula un estudio anterior a la migración: sin filas de «Estudio» (se saltan los disparadores solo para este borrado de prueba)
+      await admin.client.begin(async (tx) => {
+        await tx`set local session_replication_role = replica`;
+        await tx`delete from public.role_permissions where study_id = ${studyId} and module = 'estudio'`;
+      });
+      if ((await nivelesDe()).length !== 0) throw new Error("la simulación debía dejar los roles sin «Estudio»");
+      const archivo = readFileSync("sql/0010_modulo_estudio.sql", "utf8");
+      await admin.client.unsafe(archivo);
+      const despues = await nivelesDe();
+      if (despues.length !== antes.length) throw new Error("debía completar todos los roles: " + JSON.stringify(despues));
+      for (const r of despues) if (r.level !== (r.is_system ? "edit" : "read")) throw new Error(`${r.name}: ${r.level}`); // el del sistema en Edición, todos los demás en Lectura
+      // repetirla no pisa lo que ya se eligió: un rol puesto en «Sin acceso» o en Edición después de la migración se queda así
+      await admin.db.execute(sql`update public.role_permissions set level = 'none' where study_id = ${studyId} and module = 'estudio' and role_id = (select id from public.roles where study_id = ${studyId} and name = 'Capturista de actividades')`);
+      await admin.db.execute(sql`update public.role_permissions set level = 'edit' where study_id = ${studyId} and module = 'estudio' and role_id = (select id from public.roles where study_id = ${studyId} and name = 'Coordinador de estudios')`);
+      const elegido = JSON.stringify(await nivelesDe());
+      await admin.client.unsafe(archivo);
+      if (JSON.stringify(await nivelesDe()) !== elegido) throw new Error("repetir la migración pisó permisos ya elegidos");
+      const porRol = Object.fromEntries((await nivelesDe()).map((r) => [r.name, r.level]));
+      if (porRol["Capturista de actividades"] !== "none" || porRol["Coordinador de estudios"] !== "edit" || porRol["Super usuario"] !== "edit") throw new Error(JSON.stringify(porRol));
+    });
+
     await check("Borrar el estudio borra sus roles, permisos, invitaciones y membresías sin chocar con las protecciones", async () => {
       await admin.db.execute(sql`delete from public.studies where id = ${studyId}`);
       const left = (await admin.db.execute(sql`select (select count(*)::int from public.roles where study_id = ${studyId}) r, (select count(*)::int from public.memberships where study_id = ${studyId}) m`)) as unknown as { r: number; m: number }[];

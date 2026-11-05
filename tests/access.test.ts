@@ -1,4 +1,4 @@
-import { DEFAULT_ROLES, LEVEL_LABEL, MODULES, REQUIRES, SUPER_ROLE, allPermissions, atLeast, moduleOfPath, normalizePermissions, summarizePermissions } from "../src/domain/access";
+import { DEFAULT_ROLES, LEVEL_LABEL, MODULES, MODULE_LABEL, REQUIRES, SUPER_ROLE, allPermissions, atLeast, moduleOfPath, normalizePermissions, summarizePermissions } from "../src/domain/access";
 import { check, summary } from "./helpers";
 
 /** D-91 — módulos, niveles y dependencias de los roles. Funciones puras. */
@@ -30,7 +30,7 @@ async function main() {
   await check("Cada ruta de la aplicación se asocia a su módulo (los cálculos exigen cargos y actividades; el inicio, cualquier acceso)", () => {
     const want: [string, unknown][] = [["/parametros", "parametros"], ["/cargos/nuevo", "cargos"], ["/cargos/abc", "cargos"], ["/actividades", "actividades"], ["/diagnostico/medibilidad", "medibilidad"],
       ["/diagnostico/pertinencia/x", "pertinencia"], ["/diagnostico/riesgos", "riesgos"], ["/diagnostico/oportunidades", "oportunidades"], ["/diagnostico/rediseno", "rediseno"], ["/diagnostico/plan-de-accion", "plan"],
-      ["/historia", "historia"], ["/integraciones", "integraciones"], ["/agente", "agente"], ["/usuarios", "usuarios"], ["/usuarios/roles", "usuarios"], ["/", null], ["/estudio", null]];
+      ["/historia", "historia"], ["/integraciones", "integraciones"], ["/agente", "agente"], ["/usuarios", "usuarios"], ["/usuarios/roles", "usuarios"], ["/", null], ["/estudio", "estudio"], ["/estudio/otro", "estudio"], ["/estudiosextra", null]];
     for (const [p, m] of want) if (moduleOfPath(p) !== m) throw new Error(`${p}: ${JSON.stringify(moduleOfPath(p))} ≠ ${m}`);
     if (JSON.stringify(moduleOfPath("/calculo")) !== '["cargos","actividades"]' || JSON.stringify(moduleOfPath("/drill")) !== '["cargos","actividades"]') throw new Error("cálculos");
     if (moduleOfPath("/cargosextra") !== null) throw new Error("una ruta que solo empieza igual no debía coincidir");
@@ -44,11 +44,20 @@ async function main() {
     for (const r of DEFAULT_ROLES) { const n = normalizePermissions(r.perms); if (n.raised.length) throw new Error(`${r.name} incumple dependencias: ${JSON.stringify(n.raised)}`); }
   });
 
+  await check("«Estudio» (D-95): solo el Super usuario crea estudios nuevos (Edición); Editor y Lector ven la ventana y cambian de estudio (Lectura); un rol puede quedar sin acceso", () => {
+    const by = Object.fromEntries(DEFAULT_ROLES.map((r) => [r.name, r]));
+    if (by[SUPER_ROLE].perms.estudio !== "edit" || by.Editor.perms.estudio !== "read" || by.Lector.perms.estudio !== "read") throw new Error(JSON.stringify([by[SUPER_ROLE].perms.estudio, by.Editor.perms.estudio, by.Lector.perms.estudio]));
+    if (!(MODULES as readonly string[]).includes("estudio") || MODULE_LABEL.estudio !== "Estudio") throw new Error("el módulo debe existir y llamarse Estudio");
+    const n = normalizePermissions({ actividades: "edit" });
+    if (n.perms.estudio !== "none") throw new Error("un rol nuevo no concede «Estudio» por dependencia");
+    if (REQUIRES.estudio !== undefined || Object.values(REQUIRES).some((d) => d && "estudio" in d)) throw new Error("«Estudio» no debe ser dependencia de nada ni depender de nada");
+  });
+
   await check("El resumen de un rol es legible", () => {
     if (summarizePermissions(allPermissions("edit")) !== "Todo, incluida la administración de usuarios") throw new Error(summarizePermissions(allPermissions("edit")));
     if (summarizePermissions({ ...allPermissions("read"), usuarios: "none" }) !== "Lectura en todos los módulos") throw new Error("lectura");
     const mixed = summarizePermissions({ ...allPermissions("none"), actividades: "edit", cargos: "read", parametros: "read" });
-    if (mixed !== "Edición en 1 · Lectura en 2 · Sin acceso a 9") throw new Error(mixed);
+    if (mixed !== "Edición en 1 · Lectura en 2 · Sin acceso a 10") throw new Error(mixed);
   });
 }
 main().then(summary);

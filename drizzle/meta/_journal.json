@@ -92,6 +92,13 @@
       "when": 1793400709089,
       "tag": "0012_nombre_cuenta",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1793898582481,
+      "tag": "0013_modulo_estudio",
+      "breakpoints": true
     }
   ]
 }
