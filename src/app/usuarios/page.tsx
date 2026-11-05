@@ -9,6 +9,7 @@ import { LEVEL_LABEL, MODULES, MODULE_LABEL, allPermissions, summarizePermission
 import { ConfirmButton } from "@/components/ConfirmButton";
 import { PagedTable } from "@/components/PagedTable";
 import { InviteForm } from "@/components/usuarios/InviteForm";
+import { ResetPasswordButton } from "@/components/usuarios/ResetPasswordButton";
 import { deleteRoleAction, removeMemberAction, revokeInvitationAction, viewAsAction } from "./actions";
 
 export const metadata = { title: "Usuarios y roles" };
@@ -59,6 +60,7 @@ export default async function Usuarios({ searchParams }: { searchParams: Promise
                   <td style={{ whiteSpace: "nowrap" }}>
                     <Link className="btn" href={`/usuarios/persona/${m.userId}`}>Editar</Link>{" "}
                     {!m.isSelf && <form action={viewAsAction} style={{ display: "inline" }}><input type="hidden" name="persona" value={m.userId} /><button className="btn" type="submit" title="Ver la aplicación como la vería esta persona (solo lectura)">Ver como</button></form>}{" "}
+                    {!m.isSelf && m.hasPassword && <ResetPasswordButton userId={m.userId} label={m.name ?? m.email ?? "esta persona"} />}{" "}
                     {!m.isSelf && <form action={removeMemberAction} style={{ display: "inline" }}><input type="hidden" name="persona" value={m.userId} /><ConfirmButton title="¿Quitar el acceso de esta persona?" message={<>Dejará de poder entrar a este estudio: <b>{m.email ?? "esta persona"}</b>. Lo que editó se conserva.</>} confirmLabel="Quitar acceso">Quitar acceso</ConfirmButton></form>}
                   </td>
                 </tr>

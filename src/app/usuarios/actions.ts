@@ -6,10 +6,14 @@ import { getUser } from "@/lib/supabase/server";
 import { activeStudyId } from "@/data/source";
 import { VIEWAS_COOKIE, signViewAs, viewAsConfigured } from "@/lib/viewas";
 import { LEVELS, MODULES, MODULE_LABEL, isLevel, type AppModule, type Level } from "@/domain/access";
-import { createInvitation, deleteRole, listMembers, removeMember, revokeInvitation, saveRole, updateMember } from "@/server/access";
+import { adminSetPassword, createInvitation, deleteRole, listMembers, removeMember, revokeInvitation, saveRole, updateMember } from "@/server/access";
+import { generateTempPassword, hashPassword } from "@/lib/temp-password";
+import { isBlocked, recordFailure } from "@/lib/ratelimit";
 
 /** Acciones de «Usuarios y roles» (D-91). Solo el Super usuario las ejecuta; además la base de datos las hace cumplir. */
 export interface InviteState { ok?: boolean; error?: string; link?: string; email?: string; expires?: string }
+
+export interface PasswordState { ok?: boolean; error?: string; temp?: string; email?: string }
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const str = (fd: FormData, k: string, max = 200) => String(fd.get(k) ?? "").trim().slice(0, max);
@@ -95,3 +99,22 @@ export async function exitViewAsAction() {
   redirect("/usuarios?vista=personas");
 }
 void LEVELS;
+
+/**
+ * El Super usuario cambia la clave de otra persona (D-94). La aplicación genera una clave temporal, la cifra y solo el cifrado llega a la base (función segura, sin la
+ * llave de servicio). La clave en texto se devuelve UNA vez a quien la pidió para que se la pase a la persona; no se guarda ni se audita. Cuenta cada cambio contra un
+ * límite (20 por minuto) para frenar abusos de una sesión robada.
+ */
+export async function resetPasswordAction(_prev: PasswordState, fd: FormData): Promise<PasswordState> {
+  const { user, study } = await admin();
+  const target = str(fd, "persona");
+  if (!UUID.test(target)) return { error: "Falta la persona." };
+  const key = `resetpw:${user.id}`;
+  if (isBlocked(key, 20)) return { error: "Demasiados cambios seguidos. Espere un minuto." };
+  recordFailure(key, 60_000);
+  const temp = generateTempPassword();
+  const r = await adminSetPassword(getDb(), user.id, study.id, target, await hashPassword(temp));
+  if (!r.ok) return { error: r.error };
+  const email = (await listMembers(getDb(), user.id, study.id)).find((m) => m.userId === target)?.email ?? undefined;
+  return { ok: true, temp, email };
+}
