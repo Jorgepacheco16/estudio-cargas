@@ -3,6 +3,7 @@
  * validación que la importación (un solo camino de datos), con control de versión, auditoría con origen «app» y espejo hacia Google Sheets.
  * Los valores de las columnas con fórmula del libro se calculan aquí con las reglas del libro y se devuelven como SOLO LECTURA.
  */
+import { deletedDiff } from "../audit-diff";
 import { and, eq, getTableColumns, sql } from "drizzle-orm";
 import type { PgTable } from "drizzle-orm/pg-core";
 import { after } from "next/server";
@@ -262,9 +263,9 @@ export async function deleteEntry(db: Db, sub: string, studyId: string, id: Entr
   const table = def.adapter.table as PgTable, k = getTableColumns(table) as Record<string, Parameters<typeof eq>[0]>;
   try {
     return await withRls(db, { sub }, async (tx) => {
-      const gone = (await tx.delete(table).where(and(eq(k.studyId, studyId), eq(k.id, recId))).returning({ id: k.id } as never)) as unknown[];
+      const gone = (await tx.delete(table).where(and(eq(k.studyId, studyId), eq(k.id, recId))).returning()) as Record<string, unknown>[];
       if (!gone.length) return { ok: false as const, error: "No se pudo eliminar (permiso o el registro ya no existe)." };
-      await tx.insert(auditLog).values({ studyId, actorId: sub, origin: "app", action: "delete", entity: def.adapter.entity, entityId: recId, diff: null });
+      await tx.insert(auditLog).values({ studyId, actorId: sub, origin: "app", action: "delete", entity: def.adapter.entity, entityId: recId, diff: deletedDiff(gone[0]) });
       return { ok: true as const };
     });
   } catch (e) {

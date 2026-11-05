@@ -16,8 +16,8 @@ export interface BarRange { fromKey: string; toKey: string; label: string; from:
 const Funnel = () => <svg className="fb-ico" viewBox="0 0 20 20" width="16" height="16" aria-hidden="true"><path d="M3 4h14l-5.2 6.2V16l-3.6-1.8v-4L3 4z" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" /></svg>;
 const Chevron = () => <svg className="fb-chev" viewBox="0 0 20 20" width="14" height="14" aria-hidden="true"><path d="M5 7.5l5 5 5-5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg>;
 
-export function FilterBar({ fields, triples, current, search, range, shown, total, hidden = {}, clearHref }: {
-  fields: BarField[]; triples?: Triple[]; current: Filters; search?: boolean; range?: BarRange | null; shown: number; total: number; hidden?: Record<string, string>; clearHref: string;
+export function FilterBar({ fields, triples, current, search, searchPlaceholder = "Código, nombre o cargo", range, shown, total, hidden = {}, clearHref }: {
+  fields: BarField[]; triples?: Triple[]; current: Filters; search?: boolean; /** Texto de ayuda del buscador (por defecto, el de las listas de registros). */ searchPlaceholder?: string; range?: BarRange | null; shown: number; total: number; hidden?: Record<string, string>; clearHref: string;
 }) {
   const [dates, setDates] = useState({ from: range?.from ?? "", to: range?.to ?? "" });
   const [sel, setSel] = useState<Filters>(current);
@@ -71,7 +71,7 @@ export function FilterBar({ fields, triples, current, search, range, shown, tota
           {search && (
             <label className="fb-field fb-search">
               <span className="fb-label">Buscar</span>
-              <input name="q" type="search" value={q} onChange={(e) => setQ(e.target.value)} maxLength={80} placeholder="Código, nombre o cargo" />
+              <input name="q" type="search" value={q} onChange={(e) => setQ(e.target.value)} maxLength={80} placeholder={searchPlaceholder} />
             </label>
           )}
           {fields.map((f) => {

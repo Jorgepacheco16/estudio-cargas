@@ -3,6 +3,7 @@
  * server/entry (D-62). Una definición declarativa alimenta el formulario, la validación y el guardado. Todo pasa por withRls(); los campos vacíos se
  * guardan vacíos (no se inventan valores). «Semanas por mes» NO es editable: en el libro es una fórmula (52/12).
  */
+import { deletedDiff } from "./audit-diff";
 import { and, eq, getTableColumns } from "drizzle-orm";
 import type { PgTable } from "drizzle-orm/pg-core";
 import { withRls, type Db } from "../db/client";
@@ -137,8 +138,8 @@ export async function deleteRow(db: Db, sub: string, studyId: string, def: Sheet
   if (def.idCol !== "id") return false;
   const c = cols(def.table);
   return withRls(db, { sub }, async (tx) => {
-    const gone = (await tx.delete(def.table).where(and(eq(c.studyId, studyId), eq(c.id, id))).returning({ id: c.id } as never)) as unknown[];
-    if (gone.length === 1) await tx.insert(auditLog).values({ studyId, actorId: sub, origin: "app", action: "delete", entity: def.entity, entityId: id, diff: null });
+    const gone = (await tx.delete(def.table).where(and(eq(c.studyId, studyId), eq(c.id, id))).returning()) as Record<string, unknown>[];
+    if (gone.length === 1) await tx.insert(auditLog).values({ studyId, actorId: sub, origin: "app", action: "delete", entity: def.entity, entityId: id, diff: deletedDiff(gone[0]) });
     return gone.length === 1;
   });
 }
