@@ -10,6 +10,9 @@ import { toPdf } from "@/lib/pdf";
 import { rateLimit } from "@/lib/ratelimit";
 import { activityFilters, paramsToRecord, positionFilters } from "@/lib/page-filters";
 import { listActivityNames } from "@/server/studies";
+import { canRead } from "@/lib/access";
+import { loadSchedules } from "@/server/schedule";
+import { positionKey, type PositionSchedule } from "@/domain/schedule";
 
 export async function GET(req: NextRequest, ctx: { params: Promise<{ view: string }> }) {
   const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "local";
@@ -18,6 +21,11 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ view: strin
   const { view } = await ctx.params;
   if (!isView(view)) return NextResponse.json({ error: { code: "UNKNOWN_VIEW", message: "Vista desconocida" } }, { status: 404 });
   const sp = req.nextUrl.searchParams;
+  if (view === "dotacion" || view === "reparto") { // «Resultados» (D-100): con sesión y con el permiso; la demostración no lo ve
+    const gu = await getUser(), gs = gu ? await activeStudyId(gu.id) : null;
+    if (!gu || !gs) return NextResponse.json({ error: { code: "UNAUTHENTICATED", message: "Inicie sesión para descargar los resultados." } }, { status: 401 });
+    if (!canRead(gs, "resultados") || !canRead(gs, "cargos") || !canRead(gs, "actividades")) return NextResponse.json({ error: { code: "FORBIDDEN", message: "Su rol no permite ver Resultados." } }, { status: 403 });
+  }
   const fmtParam = sp.get("format");
   const format = fmtParam === "csv" ? "csv" : fmtParam === "pdf" ? "pdf" : "xlsx";
   const loaded = await loadAnalysis(parseMode(sp.get("modo") ?? undefined));
@@ -33,13 +41,22 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ view: strin
     actNames = names;
     analysis = { ...analysis, activities: activityFilters(analysis.activities, fp, view === "calculo" ? "calculo" : "captura", names).rows };
   }
+  let schedules: PositionSchedule[] = [];
+  if (view === "reparto") {
+    const user = await getUser(), study = user ? await activeStudyId(user.id) : null;
+    if (user && study) {
+      const l = await loadSchedules(getDb(), user.id, study.id, loaded.mode);
+      const keep = new Set(positionFilters(l.positions, fp).rows.map((p) => positionKey(p.dataKind, p.area, p.site, p.position)));
+      schedules = l.schedules.filter((s) => keep.has(s.key));
+    }
+  }
   const q = Object.fromEntries(["area", "position", "config", "level", "site", "code", "alert"].map((k) => [k, sp.get(k) ?? undefined]));
   let proposals: ProposalRow[] = [];
   if (view === "agente") {
     const user = await getUser(); const study = user ? await activeStudyId(user.id) : null;
     if (user && study) proposals = (await listProposals(getDb(), user.id, study.id)).map((p) => ({ id: p.id, kind: p.kind, summary: p.summary, status: p.status, reviewedBy: p.reviewedBy ? "persona autorizada" : null, at: p.createdAt.toISOString().slice(0, 10) }));
   }
-  const { title, tables } = tablesFor(view, analysis, dashboard, proposals, q, loaded.mode, loaded.params.reservePct, actNames);
+  const { title, tables } = tablesFor(view, analysis, dashboard, proposals, q, loaded.mode, loaded.params.reservePct, actNames, schedules);
   const stamp = new Date().toISOString().slice(0, 10);
   const base = `estudio-cargas_${view}_${stamp}`;
 

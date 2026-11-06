@@ -134,7 +134,7 @@ test("«Resultados» (D-100): solo el Super usuario lo ve; al habilitarlo en un 
   await admin.goto("/resultados/dotacion");
   await listo(admin, "Dotación requerida");
   await expect(admin.getByRole("button", { name: "Resultados" })).toHaveAttribute("aria-expanded", "true");
-  await expect(admin.getByRole("group", { name: "Resultados" }).getByRole("link")).toHaveText(["Dotación requerida", "Agente de IA"]);
+  await expect(admin.getByRole("group", { name: "Resultados" }).getByRole("link")).toHaveText(["Dotación requerida", "Reparto semanal", "Agente de IA"]);
   for (const t of ["Personas que hay", "Personas necesarias", "Brecha", "Cargos sin cifra"]) await expect(admin.getByText(t, { exact: true }).first()).toBeVisible();
   await expect(admin.getByRole("heading", { name: "Por área" })).toBeVisible();
   await expect(admin.getByRole("heading", { name: "Por cargo" })).toBeVisible();
@@ -144,6 +144,19 @@ test("«Resultados» (D-100): solo el Super usuario lo ve; al habilitarlo en un 
   expect(axe.violations.filter((v) => v.impact === "serious" || v.impact === "critical").map((v) => `${v.id}: ${v.nodes.length}`)).toEqual([]);
   const [d] = await Promise.all([admin.waitForEvent("download"), admin.getByRole("link", { name: "Exportar Excel" }).click()]);
   expect(d.suggestedFilename()).toMatch(/dotacion.*\.xlsx$/);
+  // Reparto semanal: una semana común y otra con periódicas, por persona y día, con el tiempo de cada actividad; se descarga a Excel
+  await admin.goto("/resultados/reparto");
+  await listo(admin, "Reparto semanal");
+  await expect(admin.getByRole("heading", { name: "Cajero" })).toBeVisible();
+  await expect(admin.getByRole("heading", { name: "Semana común" }).first()).toBeVisible();
+  await expect(admin.getByRole("heading", { name: "Semana con actividades periódicas" }).first()).toBeVisible();
+  await expect(admin.locator("td", { hasText: /^Persona 1$/ }).first()).toBeVisible();
+  await expect(admin.getByRole("columnheader", { name: "Lunes" }).first()).toBeVisible();
+  await expect(admin.locator(".banner", { hasText: /sin tipo registrado se reparte/ }).first()).toBeVisible();
+  const axeReparto = await new AxeBuilder({ page: admin }).withTags(["wcag2a", "wcag2aa"]).analyze();
+  expect(axeReparto.violations.filter((v) => v.impact === "serious" || v.impact === "critical").map((v) => `${v.id}: ${v.nodes.length}`)).toEqual([]);
+  const [dr] = await Promise.all([admin.waitForEvent("download"), admin.getByRole("link", { name: "Exportar Excel" }).click()]);
+  expect(dr.suggestedFilename()).toMatch(/reparto.*\.xlsx$/);
   await admin.goto("/agente"); // la dirección anterior del Agente de IA lleva a su nueva sección
   await admin.waitForURL(/\/resultados\/agente/);
   await expect(admin.getByRole("heading", { name: "Ejecutar análisis" })).toBeVisible();
@@ -151,7 +164,8 @@ test("«Resultados» (D-100): solo el Super usuario lo ve; al habilitarlo en un 
   await ana.goto("/actividades");
   await listo(ana, "Actividades");
   await expect(ana.getByRole("button", { name: "Resultados" })).toHaveCount(0);
-  for (const ruta of ["/resultados/dotacion", "/resultados/agente", "/agente"]) { await ana.goto(ruta); await ana.waitForURL(/sin-acceso/); }
+  for (const ruta of ["/resultados/dotacion", "/resultados/reparto", "/resultados/agente", "/agente"]) { await ana.goto(ruta); await ana.waitForURL(/sin-acceso/); }
+  for (const vista of ["dotacion", "reparto"]) expect((await ana.request.get(`/api/export/${vista}?format=csv&modo=real`)).status(), `descarga de ${vista} sin el permiso`).toBe(403);
   // El Super usuario habilita «Resultados» (Lectura) en el rol de Ana desde «Usuarios y roles»
   await admin.goto("/usuarios?vista=roles");
   await listo(admin, "Usuarios y roles");
@@ -169,6 +183,11 @@ test("«Resultados» (D-100): solo el Super usuario lo ve; al habilitarlo en un 
   await expect(ana.locator("tr", { hasText: "Cajero" }).first()).toBeVisible();
   await expect(ana.locator("tr", { hasText: "Auxiliar" })).toHaveCount(0); // otra área
   await expect(ana.getByRole("group", { name: "Resultados" }).getByRole("link", { name: "Agente de IA" })).toHaveCount(0);
+  await ana.goto("/resultados/reparto");
+  await listo(ana, "Reparto semanal");
+  await expect(ana.getByRole("heading", { name: "Cajero" })).toBeVisible();
+  await expect(ana.getByRole("heading", { name: "Auxiliar" })).toHaveCount(0); // otra área
+  for (const vista of ["dotacion", "reparto"]) expect((await ana.request.get(`/api/export/${vista}?format=csv&modo=real`)).status(), `descarga de ${vista} con el permiso`).toBe(200);
   await ana.goto("/resultados/agente");
   await ana.waitForURL(/sin-acceso/);
   // y vuelve a quedar como estaba para no afectar a las demás pruebas

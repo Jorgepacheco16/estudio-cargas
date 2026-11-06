@@ -31,6 +31,7 @@ export const MENU: NavEntry[] = [
     group: GRUPO_RESULTADOS,
     items: [
       { href: "/resultados/dotacion", label: "Dotación requerida" },
+      { href: "/resultados/reparto", label: "Reparto semanal" },
       { href: "/resultados/agente", label: "Agente de IA" },
     ],
   },

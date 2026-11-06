@@ -49,7 +49,7 @@ test("[anónimo] la página de ingreso muestra la marca, el ingreso con usuario 
 });
 
 test("[anónimo] sin ingresar no se ve ninguna pantalla interna ni se descarga nada; las tareas programadas y el webhook siguen respondiendo por su propia firma", async ({ request }) => {
-  for (const ruta of ["/", "/cargos", "/actividades?modo=demo", "/calculo", "/resultados/dotacion", "/resultados/agente", "/drill", "/diagnostico/riesgos", "/sedes"]) {
+  for (const ruta of ["/", "/cargos", "/actividades?modo=demo", "/calculo", "/resultados/dotacion", "/resultados/reparto", "/resultados/agente", "/drill", "/diagnostico/riesgos", "/sedes"]) {
     const r = await request.get(ruta, { maxRedirects: 0 });
     expect(r.status(), ruta).toBe(307);
     expect(r.headers()["location"], ruta).toContain("/ingreso");
@@ -294,7 +294,7 @@ test("«Resultados» (D-100) no se ofrece en la demostración: ni en el menú ni
   await expect(menu.getByRole("button", { name: "Resultados" })).toHaveCount(0);
   await expect(menu.getByRole("link", { name: "Agente de IA" })).toHaveCount(0);
   await expect(menu.getByRole("link", { name: "Dotación requerida" })).toHaveCount(0);
-  for (const ruta of ["/resultados/dotacion", "/resultados/agente", "/agente"]) {
+  for (const ruta of ["/resultados/dotacion", "/resultados/reparto", "/resultados/agente", "/agente"]) {
     await page.goto(ruta);
     await expect(page, ruta).toHaveURL(/\/ingreso\?requiere=1/);
   }
