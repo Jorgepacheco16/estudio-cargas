@@ -9,7 +9,7 @@ import { analyze, type Mode, type PositionRow } from "../domain/summary";
 import { listOrdersTx } from "./schedule-order";
 import { loadStudyDataTx } from "./studies";
 
-export interface LoadedSchedules { schedules: PositionSchedule[]; positions: PositionRow[]; params: Params; overload: number }
+export interface LoadedSchedules { schedules: PositionSchedule[]; positions: PositionRow[]; params: Params; overload: number; kpis: { activities: number; complete: number } }
 
 export async function loadSchedules(db: Db, sub: string, studyId: string, mode: Mode): Promise<LoadedSchedules> {
   return withRls(db, { sub }, async (tx) => {
@@ -28,6 +28,6 @@ export async function loadSchedules(db: Db, sub: string, studyId: string, mode: 
     }
     const shiftDays = new Map([...union].map(([k, s]) => [k, [...s].sort((a, b) => a - b)]));
     const orders = await listOrdersTx(tx, studyId); // órdenes guardados de las tareas (D-104)
-    return { schedules: attachSavedOrders(buildSchedules({ staff: d.staff, acts: d.acts, params: d.params, positions: analysis.positions, extras, shiftDays, overload: d.thresholds.high }), orders), positions: analysis.positions, params: d.params, overload: d.thresholds.high };
+    return { schedules: attachSavedOrders(buildSchedules({ staff: d.staff, acts: d.acts, params: d.params, positions: analysis.positions, extras, shiftDays, overload: d.thresholds.high }), orders), positions: analysis.positions, params: d.params, overload: d.thresholds.high, kpis: { activities: analysis.kpis.activities, complete: analysis.kpis.complete } };
   });
 }

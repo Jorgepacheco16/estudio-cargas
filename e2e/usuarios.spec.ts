@@ -134,7 +134,7 @@ test("«Resultados» (D-100): solo el Super usuario lo ve; al habilitarlo en un 
   await admin.goto("/resultados/dotacion");
   await listo(admin, "Dotación requerida");
   await expect(admin.getByRole("button", { name: "Resultados" })).toHaveAttribute("aria-expanded", "true");
-  await expect(admin.getByRole("group", { name: "Resultados" }).getByRole("link")).toHaveText(["Dotación requerida", "Reparto semanal", "Agente de IA"]);
+  await expect(admin.getByRole("group", { name: "Resultados" }).getByRole("link")).toHaveText(["Dotación requerida", "Reparto semanal", "Informe", "Agente de IA"]);
   for (const t of ["Personas que hay", "Personas necesarias", "Brecha", "Cargos sin cifra"]) await expect(admin.getByText(t, { exact: true }).first()).toBeVisible();
   await expect(admin.getByRole("heading", { name: "Por área" })).toBeVisible();
   await expect(admin.getByRole("heading", { name: "Por cargo" })).toBeVisible();
@@ -258,6 +258,28 @@ test("«Resultados» (D-100): solo el Super usuario lo ve; al habilitarlo en un 
   await admin.waitForURL(/vista=roles/);
   await ana.goto("/resultados/dotacion");
   await ana.waitForURL(/sin-acceso/);
+});
+
+test("Informe de resultados (D-105): el tablero muestra las cifras, las tres gráficas con su descripción, la calidad de los datos y el detalle; se descarga; quien no tiene Resultados no lo ve ni lo descarga", async () => {
+  await admin.goto("/resultados/informe");
+  await listo(admin, "Informe de resultados");
+  for (const t of ["Personas que hay", "Personas necesarias", "Brecha", "Uso con periódicas", "Datos completos"]) await expect(admin.getByText(t, { exact: true }).first()).toBeVisible();
+  await expect(admin.getByRole("img", { name: /Personas que hay y necesarias por área\./ })).toBeVisible();
+  await expect(admin.getByRole("img", { name: /Uso de la capacidad actual por cargo\./ })).toBeVisible();
+  await expect(admin.getByRole("img", { name: /Trabajo de la semana común y con periódicas\./ })).toBeVisible();
+  await expect(admin.getByRole("heading", { name: "Calidad de los datos" })).toBeVisible();
+  await expect(admin.getByRole("heading", { name: "Detalle por cargo" })).toBeVisible();
+  await expect(admin.locator("tr", { hasText: "Cajero" }).first()).toBeVisible();
+  await admin.getByText("Ver los datos en una tabla").click(); // los mismos datos de la gráfica, en tabla
+  await expect(admin.getByRole("region", { name: "Personas por área" })).toBeVisible();
+  const axeInforme = await new AxeBuilder({ page: admin }).withTags(["wcag2a", "wcag2aa"]).analyze();
+  expect(axeInforme.violations.filter((v) => v.impact === "serious" || v.impact === "critical").map((v) => `${v.id}: ${v.nodes.length}`)).toEqual([]);
+  const [di] = await Promise.all([admin.waitForEvent("download"), admin.getByRole("link", { name: "Exportar Excel" }).click()]);
+  expect(di.suggestedFilename()).toMatch(/informe.*\.xlsx$/);
+  // Ana, con un rol sin «Resultados»: no lo ve y la descarga se rechaza
+  await ana.goto("/resultados/informe");
+  await ana.waitForURL(/sin-acceso/);
+  expect((await ana.request.get("/api/export/informe?format=csv&modo=real")).status()).toBe(403);
 });
 
 test("la persona escribe su nombre en «Mi cuenta» y se le ve con él (encabezado y lista de usuarios)", async () => {

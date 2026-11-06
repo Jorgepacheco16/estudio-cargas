@@ -8,8 +8,9 @@ import type { Mode } from "@/domain/summary";
 import { needsOf, STATE_ES } from "@/domain/staffing";
 import { DAY_NAMES } from "@/domain/shifts";
 import { RULE_ES, TYPE_ES, WEEK_ES, applyOrder, type PositionSchedule } from "@/domain/schedule";
+import { LEVEL_ES as ALERT_ES, SCENARIO_ES, type ReportFacts } from "@/domain/report";
 
-export const VIEWS = ["tablero", "cargos", "actividades", "calculo", "areas", "sedes", "drill", "agente", "dotacion", "reparto"] as const;
+export const VIEWS = ["tablero", "cargos", "actividades", "calculo", "areas", "sedes", "drill", "agente", "dotacion", "reparto", "informe"] as const;
 export type View = (typeof VIEWS)[number];
 export const isView = (v: string): v is View => (VIEWS as readonly string[]).includes(v);
 
@@ -63,6 +64,28 @@ export function repartoTables(schedules: PositionSchedule[]): Table[] {
     { name: "Reparto", columns: [...common, { key: "person", header: "Persona", width: 12 }, { key: "day", header: "Día", width: 12 }, { key: "order", header: "Orden", fmt: "0" }, { key: "code", header: "Actividad", width: 14 }, { key: "name", header: "Nombre de la actividad", width: 44 }, { key: "minutes", header: "Minutos", fmt: "#,##0.0" }], rows: cells },
     { name: "Actividades", columns: [...common, { key: "code", header: "Código", width: 14 }, { key: "name", header: "Nombre de la actividad", width: 44 }, { key: "type", header: "Tipo", width: 16 }, { key: "rule", header: "Cómo se reparte", width: 28 }, { key: "who", header: "Quién", width: 24 }, { key: "executions", header: "Ejecuciones", fmt: "#,##0.##" }, { key: "perExec", header: "Minutos de cada ejecución", fmt: "#,##0.0" }, { key: "total", header: "Minutos de la semana", fmt: "#,##0.0" }], rows: acts },
     ...(pending.length ? [{ name: "Sin reparto", columns: [{ key: "kind", header: "Tipo de dato", width: 12 }, { key: "area", header: "Área", width: 26 }, { key: "site", header: "Centro de operaciones", width: 18 }, { key: "position", header: "Cargo", width: 28 }, { key: "reason", header: "Motivo", width: 80 }], rows: pending }] : []),
+  ];
+}
+
+/** Informe de resultados (D-105): las cifras del tablero en tablas, para Excel, CSV y PDF. Son las mismas de la pantalla: no se calcula nada aquí. */
+export function informeTables(f: ReportFacts): Table[] {
+  const w = (name: string, x: ReportFacts["weeks"]["common"]) => (x ? [{ week: name, positions: x.positions, people: x.people, work: r2(x.workHours), capacity: r2(x.capacityHours), use: pctOf(x.utilization), free: r2(x.freeHours), extra: x.extraPeople }] : []);
+  return [
+    { name: "Resumen", columns: [{ key: "metric", header: "Cifra", width: 44 }, { key: "value", header: "Valor", width: 22 }], rows: [
+      { metric: "Personas que hay", value: f.totals.occupants }, { metric: "Personas necesarias", value: f.totals.required }, { metric: "Brecha (+ faltan, − sobran)", value: f.totals.gap },
+      { metric: "Personas necesarias (exactas)", value: r2(f.totals.exact) }, { metric: "Cargos con cifra", value: f.data.positionsWithFigure }, { metric: "Cargos sin cifra", value: f.data.positionsWithoutFigure },
+      { metric: "Umbral de sobrecarga", value: pctOf(f.overload) }, { metric: "Reserva de capacidad", value: pctOf(f.reservePct) }, { metric: "Escenario", value: SCENARIO_ES[f.scenario] ?? f.scenario },
+    ] },
+    { name: "Por área", columns: [{ key: "area", header: "Área", width: 32 }, { key: "hay", header: "Personas que hay", fmt: "0" }, { key: "nec", header: "Personas necesarias", fmt: "0" }, { key: "gap", header: "Brecha", fmt: "+0;-0;0" }, { key: "sin", header: "Cargos sin cifra", fmt: "0" }],
+      rows: f.areas.map((a) => ({ area: a.area, hay: a.occupants, nec: a.required, gap: a.gap, sin: a.withoutData })) },
+    { name: "Por cargo", columns: [{ key: "kind", header: "Tipo de dato", width: 12 }, { key: "area", header: "Área", width: 26 }, { key: "site", header: "Centro de operaciones", width: 18 }, { key: "position", header: "Cargo", width: 30 }, { key: "hay", header: "Personas que hay", fmt: "0" }, { key: "exact", header: "Necesarias (exactas)", fmt: "#,##0.00" }, { key: "nec", header: "Personas necesarias", fmt: "0" }, { key: "gap", header: "Brecha", fmt: "+0;-0;0" }, { key: "use", header: "Uso de la capacidad actual", fmt: "0.0%" }, { key: "level", header: "Estado de la carga", width: 18 }, { key: "min", header: "Cifra mínima", width: 14 }],
+      rows: f.positions.map((p) => ({ kind: KIND(p.dataKind), area: p.area, site: p.site, position: p.position, hay: p.occupants, exact: r2(p.exact), nec: p.required, gap: p.gap, use: pctOf(p.usePct), level: ALERT_ES[p.level], min: p.partial ? "Sí" : "No" })) },
+    { name: "Semanas", columns: [{ key: "week", header: "Semana", width: 34 }, { key: "positions", header: "Cargos", fmt: "0" }, { key: "people", header: "Personas", fmt: "0" }, { key: "work", header: "Trabajo (h)", fmt: "#,##0.00" }, { key: "capacity", header: "Capacidad (h)", fmt: "#,##0.00" }, { key: "use", header: "Uso de la capacidad", fmt: "0.0%" }, { key: "free", header: "Disponibilidad sin tareas (h)", fmt: "#,##0.00" }, { key: "extra", header: "Refuerzo (personas)", fmt: "0" }],
+      rows: [...w("Semana común", f.weeks.common), ...w("Semana con actividades periódicas", f.weeks.periodic)] },
+    { name: "Calidad de datos", columns: [{ key: "metric", header: "Dato", width: 52 }, { key: "value", header: "Cantidad", fmt: "0" }], rows: [
+      { metric: "Actividades registradas", value: f.data.activities }, { metric: "Actividades con datos completos", value: f.data.complete }, { metric: "Actividades con datos incompletos", value: f.data.incomplete },
+      { metric: "Cargos sin cifra", value: f.data.positionsWithoutFigure }, { metric: "Cargos con cifra mínima", value: f.data.positionsPartial }, { metric: "Cargos sin turnos", value: f.data.positionsWithoutShifts },
+    ] },
   ];
 }
 
@@ -176,7 +199,7 @@ export function drillTable(a: Analysis, config: string, level: LevelKey, filters
 }
 
 export interface ViewQuery { area?: string; position?: string; config?: string; level?: string; site?: string; code?: string; alert?: string }
-export function tablesFor(view: View, a: Analysis, d: Dashboard, proposals: ProposalRow[] = [], q: ViewQuery = {}, mode: Mode = "all", reservePct = 0.1, names?: Map<string, string>, schedules: PositionSchedule[] = [], overload = 1): { title: string; tables: Table[] } {
+export function tablesFor(view: View, a: Analysis, d: Dashboard, proposals: ProposalRow[] = [], q: ViewQuery = {}, mode: Mode = "all", reservePct = 0.1, names?: Map<string, string>, schedules: PositionSchedule[] = [], overload = 1, facts?: ReportFacts): { title: string; tables: Table[] } {
   switch (view) {
     case "tablero": return { title: "Inicio", tables: [...dashboardTables(d).slice(0, 1), cargosTable(a), ...dashboardTables(d).slice(1)] };
     case "cargos": return { title: "Cargos y dotación", tables: [cargosTable(a)] };
@@ -188,5 +211,6 @@ export function tablesFor(view: View, a: Analysis, d: Dashboard, proposals: Prop
     case "agente": return { title: "Agente de IA", tables: [agenteTable(proposals)] };
     case "dotacion": return { title: "Dotación requerida", tables: [dotacionTable(a, overload)] };
     case "reparto": return { title: "Reparto semanal", tables: repartoTables(schedules) };
+    case "informe": return { title: "Informe de resultados", tables: facts ? informeTables(facts) : [] };
   }
 }

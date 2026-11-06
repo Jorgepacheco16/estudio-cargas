@@ -14,6 +14,7 @@ const TEXT: Record<string, ReactNode> = {
   actividades: "Inventario de actividades de cada cargo, con su frecuencia y tiempo. Las incompletas se conservan, pero no suman carga hasta completarse.",
   calculo: "Cuánto tiempo consume cada actividad por semana y por mes, calculado con lo capturado en Actividades. Es la base de la carga de cada cargo.",
   dotacion: "Cuántas personas necesita cada cargo para la carga calculada y cuál es la diferencia con las que hay hoy. Se actualiza solo cuando cambian actividades, cargos o parámetros.",
+  informe: "Las cifras y gráficas del informe de resultados del estudio: cuánta gente hace falta, cómo se reparte el trabajo y qué tan completos están los datos.",
   reparto: "Cómo repartir las tareas de cada cargo entre las personas necesarias, día a día, con el tiempo de cada actividad: una semana común y otra con las actividades periódicas (mensuales, trimestrales…).",
   drill: <>Recorra la carga <Help text="Drill-down: ir bajando de nivel, del estudio completo al área, el cargo y la actividad, haciendo clic en cada fila.">por niveles</Help>: estudio, área, cargo y actividad.</>,
   sedes: "Compara un mismo cargo entre centros de operaciones para ver dónde hay más o menos carga por persona.",
