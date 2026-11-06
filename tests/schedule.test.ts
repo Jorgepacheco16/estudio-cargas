@@ -1,6 +1,6 @@
 import { analyze } from "../src/domain/summary";
 import { needOf } from "../src/domain/staffing";
-import { buildSchedules, formatMinutes, moveTask, orderedTasks, positionKey, ruleOf, RULE_BY_TYPE, ACTIVITY_TYPES, type ActivityExtra, type ActivityTypeKey, type PositionSchedule, type WeekPlan } from "../src/domain/schedule";
+import { applyOrder, attachSavedOrders, buildSchedules, formatMinutes, moveTask, orderKey, orderedTasks, positionKey, ruleOf, RULE_BY_TYPE, ACTIVITY_TYPES, type ActivityExtra, type ActivityTypeKey, type PositionSchedule, type SavedOrder, type WeekPlan } from "../src/domain/schedule";
 import { computeActivity, occupantsOf, personDaysOf, type ActivityInput, type Params, type StaffingInput } from "../src/domain/engine";
 import { tablesFor, VIEWS } from "../src/lib/tables";
 import { MENU, menuHrefs } from "../src/lib/nav";
@@ -233,6 +233,46 @@ async function main() {
     if (j(base) !== "ABCD") throw new Error("la lista original no debe cambiar");
     let xs: readonly string[] = base; for (const [i, d] of [[0, 1], [1, 1], [2, 1], [3, -1]] as const) xs = moveTask(xs, i, d);
     if ([...xs].sort().join("") !== "ABCD") throw new Error("mover nunca pierde ni duplica tareas");
+  });
+
+  await check("Orden guardado (D-104): se aplica por código, lo nuevo queda al final en su orden sugerido, lo que ya no existe se ignora, vacío = sugerido y la lista original no se modifica", () => {
+    const tareas = [{ code: "A1" }, { code: "A2" }, { code: "B1" }, { code: "Imprevistos" }];
+    const j = (xs: readonly { code: string }[]) => xs.map((t) => t.code).join();
+    if (j(applyOrder(tareas, ["B1", "A1"])) !== "B1,A1,A2,Imprevistos") throw new Error("lo guardado primero y lo nuevo al final: " + j(applyOrder(tareas, ["B1", "A1"])));
+    if (j(applyOrder(tareas, ["Z9", "A2", "ya-no-existe", "A1", "B1", "Imprevistos"])) !== "A2,A1,B1,Imprevistos") throw new Error("lo que ya no existe se ignora");
+    if (j(applyOrder(tareas, [])) !== "A1,A2,B1,Imprevistos" || j(applyOrder(tareas, null)) !== "A1,A2,B1,Imprevistos" || j(applyOrder(tareas, undefined)) !== "A1,A2,B1,Imprevistos") throw new Error("vacío = sugerido");
+    if (j(applyOrder(tareas, ["Imprevistos"])) !== "Imprevistos,A1,A2,B1") throw new Error("un solo código guardado");
+    if (j(tareas) !== "A1,A2,B1,Imprevistos") throw new Error("no debe modificar la lista original");
+    if (applyOrder(tareas, ["B1"]).some((t, i) => t !== (applyOrder(tareas, ["B1"])[i]))) throw new Error("estable");
+    const guardado = applyOrder(tareas, ["B1", "A2"]); if ([...guardado].map((t) => t.code).sort().join() !== "A1,A2,B1,Imprevistos") throw new Error("nunca pierde ni duplica tareas");
+  });
+
+  await check("Los órdenes guardados se ponen en la celda exacta (cargo, semana, persona y día de la semana) y no alteran tiempos, totales ni el reparto", () => {
+    const r = run([staff("Cajero", 2, 40)], [act("A1", "Cajero", { hours: 1, executions: 6, period: "day" }), act("A2", "Cajero", { hours: 0.5, executions: 6, period: "day" })], { A1: "administrative", A2: "operational" });
+    const sch = one(r); const antes = JSON.stringify(ok(sch).common.grid.map((row) => row.map((c) => [c.totalMin, c.items])));
+    const key = sch.key, miercoles = sch.days.indexOf(2);
+    const guardados = new Map<string, SavedOrder>([[orderKey(key, "common", 1, 2), { codes: ["A2", "A1"], at: "2026-11-06T18:00:00.000Z" }], [orderKey(key, "periodic", 1, 2), { codes: ["A1"], at: "2026-11-06T18:00:00.000Z" }]]);
+    attachSavedOrders([sch], guardados);
+    const w = ok(sch);
+    if (w.common.grid[0][miercoles].saved?.codes.join() !== "A2,A1" || w.periodic.grid[0][miercoles].saved?.codes.join() !== "A1") throw new Error("debía quedar en la celda de la persona 1 del miércoles");
+    const otras = w.common.grid.flatMap((row, p) => row.map((c, d) => [p, d, c.saved] as const)).filter(([p, d]) => !(p === 0 && d === miercoles));
+    if (otras.some(([, , sv]) => sv !== null)) throw new Error("solo esa celda debía tener orden guardado");
+    if (JSON.stringify(w.common.grid.map((row) => row.map((c) => [c.totalMin, c.items]))) !== antes) throw new Error("guardar el orden no debe cambiar tiempos ni totales");
+    if (JSON.stringify(w.common.grid[0][miercoles].tasks.map((t) => t.code)) !== JSON.stringify(["A1", "A2"])) throw new Error("las tareas siguen en el orden sugerido; el guardado va aparte");
+    if (attachSavedOrders([sch], new Map()) .length !== 1) throw new Error("sin órdenes no hace nada");
+  });
+
+  await check("La exportación sigue el orden guardado y, sin él, el sugerido", () => {
+    const st = [staff("Cajero", 2, 40)], ac = [act("A1", "Cajero", { hours: 1, executions: 6, period: "day" }), act("A2", "Cajero", { hours: 0.5, executions: 6, period: "day" })];
+    const p = prm(), a = analyze(st, ac, p, TH, "all");
+    const extras = new Map<string, ActivityExtra>(ac.map((x) => [x.code.toLowerCase(), { name: `Actividad ${x.code}`, type: "operational" }]));
+    const shiftDays = new Map([[positionKey("real", "Cajas", "CO1", "Cajero"), MON_SAT]]);
+    const sch = buildSchedules({ staff: st, acts: ac, params: p, positions: a.positions, extras, shiftDays });
+    const lunes = (rows: { person: string; day: string; code: string; order: number; week: string }[]) => rows.filter((r) => r.person === "Persona 1" && r.day === "Lunes" && r.week === "Semana común").sort((x, y) => x.order - y.order).map((r) => r.code).join();
+    const filas = () => tablesFor("reparto", a, null as never, [], {}, "all", 0.1, undefined, sch).tables[0].rows as { person: string; day: string; code: string; order: number; week: string }[];
+    if (lunes(filas()) !== "A1,A2") throw new Error("sin guardado: " + lunes(filas()));
+    attachSavedOrders(sch, new Map([[orderKey(sch[0].key, "common", 1, 0), { codes: ["A2", "A1"], at: "2026-11-06T18:00:00.000Z" }]]));
+    if (lunes(filas()) !== "A2,A1") throw new Error("con guardado: " + lunes(filas()));
   });
 
   await check("Cada celda trae sus tareas en orden, con el mismo total del día, y el reparto no trae horas del día", () => {

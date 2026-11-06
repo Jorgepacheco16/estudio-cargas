@@ -2,10 +2,11 @@
 import { eq } from "drizzle-orm";
 import { withRls, type Db } from "../db/client";
 import { activities, areas, positionShifts, positions, sites } from "../db/schema";
-import { buildSchedules, isActivityType, positionKey, type ActivityExtra, type PositionSchedule } from "../domain/schedule";
+import { attachSavedOrders, buildSchedules, isActivityType, positionKey, type ActivityExtra, type PositionSchedule } from "../domain/schedule";
 import type { Params } from "../domain/engine";
 import { daysOf } from "../domain/shifts";
 import { analyze, type Mode, type PositionRow } from "../domain/summary";
+import { listOrdersTx } from "./schedule-order";
 import { loadStudyDataTx } from "./studies";
 
 export interface LoadedSchedules { schedules: PositionSchedule[]; positions: PositionRow[]; params: Params; overload: number }
@@ -26,6 +27,7 @@ export async function loadSchedules(db: Db, sub: string, studyId: string, mode: 
       for (const day of daysOf(r.days)) set.add(day); // sin días marcados (null) = los siete
     }
     const shiftDays = new Map([...union].map(([k, s]) => [k, [...s].sort((a, b) => a - b)]));
-    return { schedules: buildSchedules({ staff: d.staff, acts: d.acts, params: d.params, positions: analysis.positions, extras, shiftDays, overload: d.thresholds.high }), positions: analysis.positions, params: d.params, overload: d.thresholds.high };
+    const orders = await listOrdersTx(tx, studyId); // órdenes guardados de las tareas (D-104)
+    return { schedules: attachSavedOrders(buildSchedules({ staff: d.staff, acts: d.acts, params: d.params, positions: analysis.positions, extras, shiftDays, overload: d.thresholds.high }), orders), positions: analysis.positions, params: d.params, overload: d.thresholds.high };
   });
 }
