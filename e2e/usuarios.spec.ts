@@ -429,7 +429,7 @@ test("Parámetros (D-103): el umbral de sobrecarga acepta más de 100 % (hasta 2
   await expect(admin.locator('.banner[role="alert"]')).toContainText("entre 0 y 200");
   await admin.fill("#p_overloadThreshold", "105");
   await guardar();
-  await admin.waitForLoadState("networkidle");
+  await expect(admin.getByText(/Parámetros guardados/)).toBeVisible(); // esperar la confirmación: si se navega antes, el guardado se corta
   await admin.goto("/parametros");
   await listo(admin, "Parámetros");
   await expect(admin.locator("#p_overloadThreshold")).toHaveValue("105");
@@ -441,7 +441,7 @@ test("Parámetros (D-103): el umbral de sobrecarga acepta más de 100 % (hasta 2
   await listo(admin, "Parámetros");
   await admin.fill("#p_overloadThreshold", "100");
   await guardar();
-  await admin.waitForLoadState("networkidle");
+  await expect(admin.getByText(/Parámetros guardados/)).toBeVisible(); // esperar la confirmación: si se navega antes, el guardado se corta
   await admin.goto("/parametros");
   await expect(admin.locator("#p_overloadThreshold")).toHaveValue("100");
 });
