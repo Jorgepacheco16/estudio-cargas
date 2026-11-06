@@ -153,6 +153,21 @@ test("«Resultados» (D-100): solo el Super usuario lo ve; al habilitarlo en un 
   await expect(admin.locator("td", { hasText: /^Persona 1$/ }).first()).toBeVisible();
   await expect(admin.getByRole("columnheader", { name: "Lunes" }).first()).toBeVisible();
   await expect(admin.locator(".banner", { hasText: /sin tipo registrado se reparte/ }).first()).toBeVisible();
+  // Detalle del día (D-102): pulsar la celda de una persona abre su horario ordenado, con horas sugeridas desde el inicio del turno (07:00 en la siembra); se cierra con Esc
+  const tarjeta = admin.locator('section[aria-label="Reparto de Cajero"]');
+  await tarjeta.getByRole("button", { name: /Ver el horario de la persona 1 el lunes/i }).first().click();
+  const dia = admin.getByRole("dialog", { name: /Persona 1 · Lunes/ });
+  await expect(dia).toBeVisible();
+  await expect(dia.getByRole("columnheader", { name: "Hora" })).toBeVisible();
+  await expect(dia.getByRole("columnheader", { name: "Tarea" })).toBeVisible();
+  await expect(dia.getByRole("columnheader", { name: "Tiempo" })).toBeVisible();
+  await expect(dia.getByText(/^07:00 – /)).toBeVisible();
+  await expect(dia.getByText("Arqueo de caja").first()).toBeVisible();
+  await expect(dia.getByText(/Trabajo del día/)).toBeVisible();
+  const axeDia = await new AxeBuilder({ page: admin }).withTags(["wcag2a", "wcag2aa"]).analyze();
+  expect(axeDia.violations.filter((v) => v.impact === "serious" || v.impact === "critical").map((v) => `${v.id}: ${v.nodes.length}`)).toEqual([]);
+  await admin.keyboard.press("Escape");
+  await expect(dia).toBeHidden();
   const axeReparto = await new AxeBuilder({ page: admin }).withTags(["wcag2a", "wcag2aa"]).analyze();
   expect(axeReparto.violations.filter((v) => v.impact === "serious" || v.impact === "critical").map((v) => `${v.id}: ${v.nodes.length}`)).toEqual([]);
   const [dr] = await Promise.all([admin.waitForEvent("download"), admin.getByRole("link", { name: "Exportar Excel" }).click()]);
