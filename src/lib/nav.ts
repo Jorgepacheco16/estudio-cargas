@@ -1,5 +1,6 @@
 /** Menú principal: orden, nombres visibles y rutas. Las etiquetas son lo único que ve la persona; las rutas y claves internas no cambian de significado. */
 export const GRUPO_DIAGNOSTICO = "Diagnóstico y rediseño";
+export const GRUPO_RESULTADOS = "Resultados";
 
 export interface NavLink { href: string; label: string }
 export type NavEntry = NavLink | { group: string; items: NavLink[] };
@@ -27,6 +28,12 @@ export const MENU: NavEntry[] = [
   { href: "/historia", label: "Historia y desviaciones" },
   { href: "/integraciones", label: "Integraciones" },
   { href: "/agente", label: "Agente de IA" },
+  {
+    group: GRUPO_RESULTADOS,
+    items: [
+      { href: "/resultados/dotacion", label: "Dotación requerida" },
+    ],
+  },
   { href: "/usuarios", label: "Usuarios y roles" },
 ];
 

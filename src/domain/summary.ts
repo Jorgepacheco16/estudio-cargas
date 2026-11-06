@@ -13,6 +13,8 @@ export interface ActivityRisk { criticality: string; concentration: string; back
 export interface PositionRow {
   dataKind: string; area: string; site: string; position: string; occupants: number; capacity: number; hours: number; pct: number | null;
   activities: number; complete: number; reading: string; level: AlertLevel;
+  /** Horas semanales útiles de UNA persona del cargo (jornada × (1 − reserva)), promedio ponderado de las filas de dotación con cantidad y jornada; null si no hay ninguna. */
+  hoursPerPerson: number | null;
 }
 export interface AreaRow { area: string; activities: number; complete: number; hours: number; capacity: number; pct: number | null }
 export interface Analysis { activities: ActivityRow[]; positions: PositionRow[]; areas: AreaRow[]; kpis: { activities: number; complete: number; hours: number; capacity: number; pct: number | null; alerts: number; overload: number; low: number } }
@@ -57,6 +59,7 @@ export function analyze(staffAll: StaffingInput[], actsAll: ActivityInput[], prm
     const entries = staff.filter((s) => key(s.dataKind, s.area, s.site, s.position) === k);
     const occupants = entries.reduce((x, e) => x + (e.headcount ?? 0), 0);
     const capacity = capacityOf(entries, prm.reservePct);
+    const heads = entries.reduce((x, e) => x + (e.headcount !== null && e.weeklyHours !== null ? e.headcount : 0), 0);
     let hours = 0, count = 0, complete = 0;
     acts.forEach((a, i) => {
       const r = results[i];
@@ -65,7 +68,7 @@ export function analyze(staffAll: StaffingInput[], actsAll: ActivityInput[], prm
     });
     const pct = capacity > 0 && hours > 0 ? hours / capacity : null;
     const { reading, level } = readPosition({ activities: count, complete, hours, capacity, pct }, th);
-    return { dataKind: p.dataKind, area: p.area, site: p.site, position: p.position, occupants, capacity, hours, pct, activities: count, complete, reading, level };
+    return { dataKind: p.dataKind, area: p.area, site: p.site, position: p.position, occupants, capacity, hours, pct, activities: count, complete, reading, level, hoursPerPerson: heads > 0 && capacity > 0 ? capacity / heads : null };
   }).sort((a, b) => a.area.localeCompare(b.area, "es") || a.site.localeCompare(b.site, "es") || a.position.localeCompare(b.position, "es"));
 
   /* Área (hoja 4b, tabla 1): horas = Σ horas TOTALES de sus actividades completas; capacidad = Σ capacidad de su dotación. */

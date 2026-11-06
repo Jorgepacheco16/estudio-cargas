@@ -26,7 +26,7 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ view: strin
   let analysis = loaded.analysis;
   let actNames: Map<string, string> | undefined;
   const fp = paramsToRecord(sp);
-  if (view === "cargos") analysis = { ...analysis, positions: positionFilters(analysis.positions, fp).rows };
+  if (view === "cargos" || view === "dotacion") analysis = { ...analysis, positions: positionFilters(analysis.positions, fp).rows };
   if (view === "actividades" || view === "calculo") {
     let names: Map<string, string> | undefined;
     if ((view === "calculo" || view === "actividades") && loaded.source === "estudio") { const u = await getUser(); const s = u ? await activeStudyId(u.id) : null; if (u && s) names = await listActivityNames(getDb(), u.id, s.id); }
