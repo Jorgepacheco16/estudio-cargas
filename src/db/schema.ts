@@ -10,7 +10,7 @@ import {
 /* ───────── Enumeraciones: reproducen las listas desplegables del Excel (hoja Parametros) ───────── */
 export const appRole = pgEnum("app_role", ["owner", "editor", "analyst", "viewer"]);
 /** D-91: módulos a los que se da acceso por rol y niveles de acceso (Sin acceso, Lectura, Edición). */
-export const appModule = pgEnum("app_module", ["parametros", "cargos", "actividades", "medibilidad", "pertinencia", "riesgos", "oportunidades", "rediseno", "plan", "historia", "integraciones", "agente", "usuarios", "estudio"]);
+export const appModule = pgEnum("app_module", ["parametros", "cargos", "actividades", "medibilidad", "pertinencia", "riesgos", "oportunidades", "rediseno", "plan", "historia", "integraciones", "agente", "usuarios", "estudio", "resultados"]);
 export const moduleLevel = pgEnum("module_level", ["none", "read", "edit"]);
 export const dataKind = pgEnum("data_kind", ["real", "demo"]);                       // L_TipoDato
 export const frequency = pgEnum("frequency", ["daily", "weekly", "biweekly", "monthly", "quarterly", "annual", "occasional", "on_demand"]); // L_Frecuencia

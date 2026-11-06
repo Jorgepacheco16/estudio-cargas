@@ -28,7 +28,7 @@ export interface MyAccess { displayName: string | null; roleId: string | null; r
 /** Nivel de acceso de las membresías heredadas (sin role_id): mismas reglas que private.module_level. */
 export function legacyPerms(role: string): Permissions {
   const p = role === "owner" ? allPermissions("edit") : role === "viewer" ? allPermissions("read") : allPermissions("edit");
-  if (role !== "owner") { p.usuarios = "none"; p.estudio = "read"; } // D-95: solo el owner crea estudios
+  if (role !== "owner") { p.usuarios = "none"; p.estudio = "read"; p.resultados = "none"; } // D-95: solo el owner crea estudios; D-100: Resultados es del Super usuario hasta que se habilite a otros roles
   return p;
 }
 

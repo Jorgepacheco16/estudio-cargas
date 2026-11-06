@@ -361,6 +361,46 @@ async function main() {
       if (porRol["Capturista de actividades"] !== "none" || porRol["Coordinador de estudios"] !== "edit" || porRol["Super usuario"] !== "edit") throw new Error(JSON.stringify(porRol));
     });
 
+    await check("«Resultados» (D-100): un estudio lo deja solo al Super usuario; la migración completa estudios anteriores (sistema en Edición, el resto sin acceso), se repite sin pisar lo elegido y las membresías heredadas no lo ven salvo el owner (la base y la aplicación coinciden)", async () => {
+      const nivelesDe = async () => (await admin.db.execute(sql`select r.name, r.is_system, rp.level from public.roles r join public.role_permissions rp on rp.role_id = r.id and rp.module = 'resultados' where r.study_id = ${studyId} order by r.name`)) as unknown as { name: string; is_system: boolean; level: string }[];
+      const antes = await nivelesDe();
+      if (antes.length < 3) throw new Error("los roles del estudio debían tener su fila de «Resultados»: " + JSON.stringify(antes));
+      for (const r of antes) if (r.level !== (r.is_system ? "edit" : "none")) throw new Error(`${r.name} debía empezar en ${r.is_system ? "Edición" : "Sin acceso"}: ${r.level}`);
+      // se simula un estudio anterior a la migración: sin filas de «Resultados» (se saltan los disparadores solo para este borrado de prueba)
+      await admin.client.begin(async (tx) => {
+        await tx`set local session_replication_role = replica`;
+        await tx`delete from public.role_permissions where study_id = ${studyId} and module = 'resultados'`;
+      });
+      if ((await nivelesDe()).length !== 0) throw new Error("la simulación debía dejar los roles sin «Resultados»");
+      const archivo = readFileSync("sql/0012_modulo_resultados.sql", "utf8");
+      await admin.client.unsafe(archivo);
+      const despues = await nivelesDe();
+      if (despues.length !== antes.length) throw new Error("debía completar todos los roles: " + JSON.stringify(despues));
+      for (const r of despues) if (r.level !== (r.is_system ? "edit" : "none")) throw new Error(`${r.name}: ${r.level}`);
+      // repetirla no pisa lo que ya se eligió: un rol habilitado después de la migración se queda así
+      await admin.db.execute(sql`update public.role_permissions set level = 'read' where study_id = ${studyId} and module = 'resultados' and role_id = (select id from public.roles where study_id = ${studyId} and name = 'Capturista de actividades')`);
+      const elegido = JSON.stringify(await nivelesDe());
+      await admin.client.unsafe(archivo);
+      if (JSON.stringify(await nivelesDe()) !== elegido) throw new Error("repetir la migración pisó permisos ya elegidos");
+      if ((await nivelesDe()).find((r) => r.name === "Capturista de actividades")?.level !== "read") throw new Error("el rol habilitado debía conservar Lectura");
+      // membresías heredadas: la función de la base (que hace cumplir) y legacyPerms (que muestra) dan lo mismo
+      const ids = { owner: randomUUID(), editor: randomUUID(), analyst: randomUUID(), viewer: randomUUID() };
+      try {
+        for (const [rol, id] of Object.entries(ids)) {
+          await admin.db.execute(sql`insert into auth.users (id) values (${id})`);
+          await admin.db.execute(sql`insert into public.memberships (study_id, user_id, role) values (${studyId}, ${id}, ${rol})`);
+        }
+        for (const [rol, id] of Object.entries(ids)) {
+          const db = await withRls(app.db, { sub: id }, async (tx) => ((await tx.execute(sql`select private.module_level(${studyId}::uuid, 'resultados') as l`)) as unknown as { l: string }[])[0].l);
+          const app_ = (await getMyAccess(app.db, id, studyId))!.perms.resultados;
+          if (db !== app_ || db !== (rol === "owner" ? "edit" : "none")) throw new Error(`${rol}: la base dice ${db} y la aplicación ${app_}`);
+        }
+      } finally {
+        await admin.db.execute(sql`delete from public.memberships where user_id in (${ids.owner}, ${ids.editor}, ${ids.analyst}, ${ids.viewer})`);
+        await admin.db.execute(sql`delete from auth.users where id in (${ids.owner}, ${ids.editor}, ${ids.analyst}, ${ids.viewer})`);
+      }
+    });
+
     await check("Borrar el estudio borra sus roles, permisos, invitaciones y membresías sin chocar con las protecciones", async () => {
       await admin.db.execute(sql`delete from public.studies where id = ${studyId}`);
       const left = (await admin.db.execute(sql`select (select count(*)::int from public.roles where study_id = ${studyId}) r, (select count(*)::int from public.memberships where study_id = ${studyId}) m`)) as unknown as { r: number; m: number }[];

@@ -30,9 +30,12 @@ async function main() {
   await check("Cada ruta de la aplicación se asocia a su módulo (los cálculos exigen cargos y actividades; el inicio, cualquier acceso)", () => {
     const want: [string, unknown][] = [["/parametros", "parametros"], ["/cargos/nuevo", "cargos"], ["/cargos/abc", "cargos"], ["/actividades", "actividades"], ["/diagnostico/medibilidad", "medibilidad"],
       ["/diagnostico/pertinencia/x", "pertinencia"], ["/diagnostico/riesgos", "riesgos"], ["/diagnostico/oportunidades", "oportunidades"], ["/diagnostico/rediseno", "rediseno"], ["/diagnostico/plan-de-accion", "plan"],
-      ["/historia", "historia"], ["/integraciones", "integraciones"], ["/agente", "agente"], ["/usuarios", "usuarios"], ["/usuarios/roles", "usuarios"], ["/", null], ["/estudio", "estudio"], ["/estudio/otro", "estudio"], ["/estudiosextra", null]];
+      ["/historia", "historia"], ["/integraciones", "integraciones"], ["/usuarios", "usuarios"], ["/usuarios/roles", "usuarios"], ["/", null], ["/estudio", "estudio"], ["/estudio/otro", "estudio"], ["/estudiosextra", null]];
     for (const [p, m] of want) if (moduleOfPath(p) !== m) throw new Error(`${p}: ${JSON.stringify(moduleOfPath(p))} ≠ ${m}`);
     if (JSON.stringify(moduleOfPath("/calculo")) !== '["cargos","actividades"]' || JSON.stringify(moduleOfPath("/drill")) !== '["cargos","actividades"]') throw new Error("cálculos");
+    const lista = (p: string) => JSON.stringify(moduleOfPath(p));
+    if (lista("/resultados/dotacion") !== '["resultados","cargos","actividades"]' || lista("/resultados/agente") !== '["resultados","agente"]' || lista("/agente") !== '["resultados","agente"]') throw new Error("resultados: " + [lista("/resultados/dotacion"), lista("/resultados/agente"), lista("/agente")].join(" "));
+    if (moduleOfPath("/resultadosextra") !== null) throw new Error("una ruta que solo empieza igual no debía coincidir");
     if (moduleOfPath("/cargosextra") !== null) throw new Error("una ruta que solo empieza igual no debía coincidir");
   });
 
@@ -53,11 +56,22 @@ async function main() {
     if (REQUIRES.estudio !== undefined || Object.values(REQUIRES).some((d) => d && "estudio" in d)) throw new Error("«Estudio» no debe ser dependencia de nada ni depender de nada");
   });
 
+  await check("«Resultados» (D-100): por ahora solo el Super usuario (Edición); Editor y Lector sin acceso; habilitarlo a un rol sube cargos y actividades a Lectura; nada depende de él", () => {
+    const by = Object.fromEntries(DEFAULT_ROLES.map((r) => [r.name, r]));
+    if (by[SUPER_ROLE].perms.resultados !== "edit" || by.Editor.perms.resultados !== "none" || by.Lector.perms.resultados !== "none") throw new Error(JSON.stringify([by[SUPER_ROLE].perms.resultados, by.Editor.perms.resultados, by.Lector.perms.resultados]));
+    if (!(MODULES as readonly string[]).includes("resultados") || MODULE_LABEL.resultados !== "Resultados") throw new Error("el módulo debe existir y llamarse Resultados");
+    if (MODULES.indexOf("resultados") !== MODULES.indexOf("agente") + 1) throw new Error("en el cuadro de permisos va justo después de «Agente de IA»");
+    const n = normalizePermissions({ resultados: "read" });
+    if (n.perms.cargos !== "read" || n.perms.actividades !== "read" || n.perms.parametros !== "read" || n.perms.agente !== "none") throw new Error(JSON.stringify(n.perms));
+    if (normalizePermissions({ actividades: "edit" }).perms.resultados !== "none") throw new Error("un rol nuevo no concede «Resultados» por dependencia");
+    if (Object.values(REQUIRES).some((d) => d && "resultados" in d)) throw new Error("nada debe depender de «Resultados»");
+  });
+
   await check("El resumen de un rol es legible", () => {
     if (summarizePermissions(allPermissions("edit")) !== "Todo, incluida la administración de usuarios") throw new Error(summarizePermissions(allPermissions("edit")));
     if (summarizePermissions({ ...allPermissions("read"), usuarios: "none" }) !== "Lectura en todos los módulos") throw new Error("lectura");
     const mixed = summarizePermissions({ ...allPermissions("none"), actividades: "edit", cargos: "read", parametros: "read" });
-    if (mixed !== "Edición en 1 · Lectura en 2 · Sin acceso a 10") throw new Error(mixed);
+    if (mixed !== "Edición en 1 · Lectura en 2 · Sin acceso a 11") throw new Error(mixed);
   });
 }
 main().then(summary);

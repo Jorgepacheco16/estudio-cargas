@@ -1,5 +1,7 @@
 import { Purpose } from "@/components/Purpose";
 import { guardModules } from "@/lib/guard";
+import { redirect } from "next/navigation";
+import { getUser } from "@/lib/supabase/server";
 import Link from "next/link";
 import { PagedTable } from "@/components/PagedTable";
 import { FilterBar } from "@/components/FilterBar";
@@ -15,7 +17,8 @@ const PILL: Record<NeedState, string> = { short: "overload", surplus: "low", bal
 const signed = (n: number) => (n > 0 ? `+${n}` : String(n).replace("-", "−"));
 
 export default async function Dotacion({ searchParams }: { searchParams: Promise<RawParams> }) {
-  await guardModules(["cargos", "actividades"]);
+  if (!(await getUser())) redirect("/login"); // «Resultados» no se muestra en la demostración (D-100)
+  await guardModules(["resultados", "cargos", "actividades"]);
   const raw = await searchParams;
   const modo = Array.isArray(raw.modo) ? raw.modo[0] : raw.modo;
   const { analysis: a, mode, label, params } = await loadAnalysis(parseMode(modo));

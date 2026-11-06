@@ -3,14 +3,14 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { getDb } from "@/db/server";
 import { getUser } from "@/lib/supabase/server";
-import { canEdit } from "@/lib/access";
+import { canEdit, canRead } from "@/lib/access";
 import { activeStudyId } from "@/data/source";
 import { decideProposal, runAgent } from "@/server/agent";
 import { rateLimit } from "@/lib/ratelimit";
 import { validateCoverage, type CoverageOutcome } from "@/server/coverage";
 import { coveragePayload, coveragePdf, coverageXlsx } from "@/lib/coverage-export";
 
-const back = (kind: "ok" | "error", msg: string): never => redirect(`/agente?${kind}=${encodeURIComponent(msg)}`);
+const back = (kind: "ok" | "error", msg: string): never => redirect(`/resultados/agente?${kind}=${encodeURIComponent(msg)}`);
 
 async function ctx() {
   const user = await getUser();
@@ -22,7 +22,7 @@ async function ctx() {
 
 export async function runAgentAction() {
   const { user, study } = await ctx();
-  if (!canEdit(study, "agente")) back("error", "Su rol es de solo lectura.");
+  if (!(canRead(study, "resultados") && canEdit(study, "agente"))) back("error", "Su rol no permite ejecutar el agente.");
   if (!rateLimit(`agent:${user.id}`, 3, 60_000).ok) back("error", "Espere un momento antes de volver a ejecutar el agente.");
   let msg = "";
   try {
@@ -68,7 +68,7 @@ export async function decideAction(fd: FormData) {
   const id = z.string().uuid().safeParse(fd.get("id"));
   const approve = fd.get("decision") === "approve";
   if (!id.success) back("error", "Propuesta inválida");
-  if (!canEdit(study, "agente")) back("error", "Su rol es de solo lectura.");
+  if (!(canRead(study, "resultados") && canEdit(study, "agente"))) back("error", "Su rol no permite ejecutar el agente.");
   let msg = "";
   try {
     const r = await decideProposal(getDb(), user.id, study.id, id.data!, approve);

@@ -1,4 +1,5 @@
 import { expect, test, type Browser, type Page } from "@playwright/test";
+import AxeBuilder from "@axe-core/playwright";
 
 /**
  * Usuarios, roles e invitaciones (D-91) en un navegador de verdad, con la autenticación SIMULADA (tests/support/mock-auth.ts) y una base de datos de pruebas:
@@ -126,6 +127,59 @@ test("«Estudio»: un rol sin acceso no lo ve ni lo abre; con Lectura lo ve y ca
   await ana.goto("/cuenta"); // y «Mi cuenta» muestra su nivel
   await listo(ana, "Mi cuenta");
   await expect(ana.locator("tr", { hasText: "Estudio" }).filter({ hasText: "Lectura" }).first()).toBeVisible();
+});
+
+test("«Resultados» (D-100): solo el Super usuario lo ve; al habilitarlo en un rol, esa persona ve Dotación requerida (solo sus áreas) y no el Agente de IA sin su propio permiso", async () => {
+  // El Super usuario: el grupo está en el menú con sus dos subsecciones, la dotación se calcula por cargo y por área y el Agente de IA vive dentro del grupo
+  await admin.goto("/resultados/dotacion");
+  await listo(admin, "Dotación requerida");
+  await expect(admin.getByRole("button", { name: "Resultados" })).toHaveAttribute("aria-expanded", "true");
+  await expect(admin.getByRole("group", { name: "Resultados" }).getByRole("link")).toHaveText(["Dotación requerida", "Agente de IA"]);
+  for (const t of ["Personas que hay", "Personas necesarias", "Brecha", "Cargos sin cifra"]) await expect(admin.getByText(t, { exact: true }).first()).toBeVisible();
+  await expect(admin.getByRole("heading", { name: "Por área" })).toBeVisible();
+  await expect(admin.getByRole("heading", { name: "Por cargo" })).toBeVisible();
+  await expect(admin.locator("tr", { hasText: "Cajero" }).first()).toBeVisible();
+  await expect(admin.locator("tr", { hasText: "Auxiliar" }).first()).toBeVisible();
+  const axe = await new AxeBuilder({ page: admin }).withTags(["wcag2a", "wcag2aa"]).analyze();
+  expect(axe.violations.filter((v) => v.impact === "serious" || v.impact === "critical").map((v) => `${v.id}: ${v.nodes.length}`)).toEqual([]);
+  const [d] = await Promise.all([admin.waitForEvent("download"), admin.getByRole("link", { name: "Exportar Excel" }).click()]);
+  expect(d.suggestedFilename()).toMatch(/dotacion.*\.xlsx$/);
+  await admin.goto("/agente"); // la dirección anterior del Agente de IA lleva a su nueva sección
+  await admin.waitForURL(/\/resultados\/agente/);
+  await expect(admin.getByRole("heading", { name: "Ejecutar análisis" })).toBeVisible();
+  // Ana, con un rol que no tiene «Resultados»: ni el grupo en el menú ni las direcciones
+  await ana.goto("/actividades");
+  await listo(ana, "Actividades");
+  await expect(ana.getByRole("button", { name: "Resultados" })).toHaveCount(0);
+  for (const ruta of ["/resultados/dotacion", "/resultados/agente", "/agente"]) { await ana.goto(ruta); await ana.waitForURL(/sin-acceso/); }
+  // El Super usuario habilita «Resultados» (Lectura) en el rol de Ana desde «Usuarios y roles»
+  await admin.goto("/usuarios?vista=roles");
+  await listo(admin, "Usuarios y roles");
+  await admin.locator("tr", { hasText: "Capturista de actividades" }).getByRole("link", { name: "Editar" }).click();
+  await admin.getByRole("radio", { name: "Resultados: Lectura" }).check();
+  await admin.getByRole("button", { name: "Guardar rol" }).click();
+  await admin.waitForURL(/vista=roles/);
+  await expect(admin.locator(".banner").first()).toContainText("Rol guardado");
+  // Ana ahora ve el grupo y la dotación de SU área; el Agente de IA sigue sin aparecer (necesita su propio permiso y todas las áreas)
+  await ana.goto("/actividades");
+  await listo(ana, "Actividades");
+  await expect(ana.getByRole("button", { name: "Resultados" })).toBeVisible();
+  await ana.goto("/resultados/dotacion");
+  await listo(ana, "Dotación requerida");
+  await expect(ana.locator("tr", { hasText: "Cajero" }).first()).toBeVisible();
+  await expect(ana.locator("tr", { hasText: "Auxiliar" })).toHaveCount(0); // otra área
+  await expect(ana.getByRole("group", { name: "Resultados" }).getByRole("link", { name: "Agente de IA" })).toHaveCount(0);
+  await ana.goto("/resultados/agente");
+  await ana.waitForURL(/sin-acceso/);
+  // y vuelve a quedar como estaba para no afectar a las demás pruebas
+  await admin.goto("/usuarios?vista=roles");
+  await listo(admin, "Usuarios y roles");
+  await admin.locator("tr", { hasText: "Capturista de actividades" }).getByRole("link", { name: "Editar" }).click();
+  await admin.getByRole("radio", { name: "Resultados: Sin acceso" }).check();
+  await admin.getByRole("button", { name: "Guardar rol" }).click();
+  await admin.waitForURL(/vista=roles/);
+  await ana.goto("/resultados/dotacion");
+  await ana.waitForURL(/sin-acceso/);
 });
 
 test("la persona escribe su nombre en «Mi cuenta» y se le ve con él (encabezado y lista de usuarios)", async () => {

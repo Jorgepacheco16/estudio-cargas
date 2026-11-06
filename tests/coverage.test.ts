@@ -167,7 +167,7 @@ async function main() {
       const a = await runAgent(app.db, owner, studyId, "manual", async () => ({ accepted: [], discarded: [], inputTokens: 1, outputTokens: 1, attempts: 1 }));
       if (!a.ok) throw new Error(`el agente normal quedó bloqueado: ${JSON.stringify(a)}`);
     });    await check("Una sola lógica: el botón del cargo y el Agente de IA llaman a la misma acción, que usa la única función validateCoverage", () => {
-      const panel = readFileSync("src/components/CoveragePanel.tsx", "utf8"), actions = readFileSync("src/app/agente/actions.ts", "utf8"), form = readFileSync("src/components/EntryForm.tsx", "utf8"), page = readFileSync("src/app/agente/page.tsx", "utf8");
+      const panel = readFileSync("src/components/CoveragePanel.tsx", "utf8"), actions = readFileSync("src/app/resultados/agente/actions.ts", "utf8"), form = readFileSync("src/components/EntryForm.tsx", "utf8"), page = readFileSync("src/app/agente/page.tsx", "utf8");
       if (!panel.includes("validateCoverageAction") || !form.includes("<CoveragePanel cargoId") || !page.includes("<CoveragePanel options") || (actions.match(/validateCoverage\(/g) ?? []).length !== 1) throw new Error("las dos vías no comparten la misma lógica");
       if (/@anthropic-ai|messages\.create/.test(panel + form + page)) throw new Error("hay una segunda implementación que llama a la IA");
     });

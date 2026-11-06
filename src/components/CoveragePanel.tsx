@@ -1,6 +1,6 @@
 "use client";
 import { useState, useTransition } from "react";
-import { exportCoverageAction, validateCoverageAction } from "@/app/agente/actions";
+import { exportCoverageAction, validateCoverageAction } from "@/app/resultados/agente/actions";
 import type { CoverageOutcome } from "@/server/coverage";
 import { STATUS_ES } from "@/domain/coverage";
 
