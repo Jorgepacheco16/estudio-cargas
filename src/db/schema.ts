@@ -1,7 +1,7 @@
 import { sql } from "drizzle-orm";
 import {
   pgTable, pgEnum, uuid, text, integer, smallint, numeric, boolean, date,
-  timestamp, jsonb, bigint, unique, index, foreignKey, check, time,
+  timestamp, jsonb, bigint, unique, uniqueIndex, index, foreignKey, check, time,
 } from "drizzle-orm/pg-core";
 
 /* Las columnas created_by / user_id apuntan a auth.users (tabla de Supabase). Drizzle intenta CREAR esa tabla si se
@@ -646,4 +646,39 @@ export const scheduleOrders = pgTable("schedule_orders", {
   check("schedule_orders_person_ck", sql`${t.person} between 1 and 200`),
   check("schedule_orders_day_ck", sql`${t.day} between 0 and 6`),
   check("schedule_orders_codes_ck", sql`cardinality(${t.codes}) between 1 and 100`),
+]);
+
+/* ───────── Versiones del informe de resultados (D-106, parte C2) ───────── */
+/**
+ * Cada versión del informe guarda las cifras con las que se redactó (catalog), el texto de cada sección (sections) y quién la creó y aprobó. Un borrador se puede editar; una versión
+ * aprobada nunca se modifica (el disparador de sql/0014 lo impide) y, al aprobar otra, pasa a «superseded». Solo puede haber un borrador por estudio. El texto lo redacta el agente de IA a
+ * partir de cifras que calcula la aplicación y cada cifra del texto se verifica contra ellas; nada se aprueba sin una persona (regla 7).
+ */
+export const reportVersions = pgTable("report_versions", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  studyId: studyFk(),
+  number: integer("number").notNull(),
+  status: text("status").notNull().default("draft"),
+  /** Cifras por sección tal como eran al redactar: [{ id, label, value, display }]. */
+  catalog: jsonb("catalog").notNull(),
+  /** Huella de las cifras y del contexto enviados: si cambia, la versión quedó desactualizada. */
+  inputHash: text("input_hash").notNull(),
+  sections: jsonb("sections").notNull(),
+  model: text("model").notNull(),
+  inputTokens: integer("input_tokens"),
+  outputTokens: integer("output_tokens"),
+  /** Número de la versión sobre la que se construyó (de ahí se reutilizan las secciones sin cambios). */
+  baseNumber: integer("base_number"),
+  createdBy: uuid("created_by").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  editedAt: timestamp("edited_at", { withTimezone: true }),
+  approvedBy: uuid("approved_by"),
+  approvedAt: timestamp("approved_at", { withTimezone: true }),
+}, (t) => [
+  unique("report_versions_number_uq").on(t.studyId, t.number),
+  uniqueIndex("report_versions_one_draft_uq").on(t.studyId).where(sql`${t.status} = 'draft'`),
+  index("report_versions_study_idx").on(t.studyId),
+  check("report_versions_status_ck", sql`${t.status} in ('draft', 'approved', 'superseded')`),
+  check("report_versions_number_ck", sql`${t.number} >= 1`),
+  check("report_versions_approval_ck", sql`${t.status} = 'draft' or (${t.approvedBy} is not null and ${t.approvedAt} is not null)`),
 ]);

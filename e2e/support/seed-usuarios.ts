@@ -9,6 +9,8 @@ import { createStudy } from "../../src/server/studies";
 import { saveEntry } from "../../src/server/entry/service";
 import { entryDef } from "../../src/server/entry/defs";
 import { saveShift } from "../../src/server/shifts";
+import { generateVersion } from "../../src/server/report-version";
+import type { SectionPayload } from "../../src/domain/report-text";
 
 const cells = (id: "2" | "3", by: Record<string, string>) => { const d = entryDef(id)!; const o: Record<string, string> = {}; for (const [f, v] of Object.entries(by)) o[d.fields.find((x) => x.field === f)!.col] = v; return o; };
 const AUTH = process.env.MOCK_AUTH_URL ?? "http://127.0.0.1:54321";
@@ -33,6 +35,10 @@ const AUTH = process.env.MOCK_AUTH_URL ?? "http://127.0.0.1:54321";
     const t = await saveShift(app.db, admin.id, study, pos.id, undefined, { name: "Turno 1", start: "07:00", end: "15:00", breakMin: "30", days: ["0", "1", "2", "3", "4", "5"] });
     if (!t.ok) throw new Error("no se pudo sembrar el turno: " + JSON.stringify(t));
   }
+  // borrador del texto del informe redactado por un agente simulado (nunca se llama al real en e2e): usa los marcadores de las dos primeras cifras de cada sección
+  const agenteSimulado = async (p: SectionPayload) => ({ input: { paragraphs: [`Hay {{${p.cifras[0].id}}} y {{${p.cifras[Math.min(1, p.cifras.length - 1)].id}}} en esta sección.`] }, inputTokens: 1000, outputTokens: 200 });
+  const v = await generateVersion(app.db, admin.id, study, agenteSimulado);
+  if (!v.ok) throw new Error("no se pudo sembrar el borrador del informe: " + v.message);
   console.log("sembrado:", study);
   await app.client.end();
 })().catch((e) => { console.error(e); process.exit(1); });

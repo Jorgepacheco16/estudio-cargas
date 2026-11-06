@@ -239,6 +239,11 @@ test("«Resultados» (D-100): solo el Super usuario lo ve; al habilitarlo en un 
   for (const vista of ["dotacion", "reparto"]) expect((await ana.request.get(`/api/export/${vista}?format=csv&modo=real`)).status(), `descarga de ${vista} con el permiso`).toBe(200);
   await ana.goto("/resultados/agente");
   await ana.waitForURL(/sin-acceso/);
+  // el texto del informe resume todo el estudio: Ana, limitada a algunas áreas, ve el tablero pero no el texto
+  await ana.goto("/resultados/informe");
+  await listo(ana, "Informe de resultados");
+  await expect(ana.getByText("su acceso está limitado a algunas áreas")).toBeVisible();
+  await expect(ana.getByRole("heading", { name: "Texto del informe" })).toHaveCount(0);
   // el Super usuario quita el orden guardado para dejar todo como estaba
   await admin.goto("/resultados/reparto");
   await listo(admin, "Reparto semanal");
@@ -267,8 +272,8 @@ test("Informe de resultados (D-105): el tablero muestra las cifras, las tres gr�
   await expect(admin.getByRole("img", { name: /Personas que hay y necesarias por área\./ })).toBeVisible();
   await expect(admin.getByRole("img", { name: /Uso de la capacidad actual por cargo\./ })).toBeVisible();
   await expect(admin.getByRole("img", { name: /Trabajo de la semana común y con periódicas\./ })).toBeVisible();
-  await expect(admin.getByRole("heading", { name: "Calidad de los datos" })).toBeVisible();
-  await expect(admin.getByRole("heading", { name: "Detalle por cargo" })).toBeVisible();
+  await expect(admin.getByRole("heading", { name: "Calidad de los datos", exact: true })).toBeVisible();
+  await expect(admin.getByRole("heading", { name: "Detalle por cargo", exact: true })).toBeVisible();
   await expect(admin.locator("tr", { hasText: "Cajero" }).first()).toBeVisible();
   await admin.getByText("Ver los datos en una tabla").click(); // los mismos datos de la gráfica, en tabla
   await expect(admin.getByRole("region", { name: "Personas por área" })).toBeVisible();
@@ -280,6 +285,38 @@ test("Informe de resultados (D-105): el tablero muestra las cifras, las tres gr�
   await ana.goto("/resultados/informe");
   await ana.waitForURL(/sin-acceso/);
   expect((await ana.request.get("/api/export/informe?format=csv&modo=real")).status()).toBe(403);
+});
+
+test("Texto del informe (D-106): el borrador sembrado se ve con sus cifras; un número inventado lo deja «requiere revisión» y bloquea aprobar; corregido, se aprueba y queda oficial", async () => {
+  await admin.goto("/resultados/informe");
+  await listo(admin, "Texto del informe");
+  await expect(admin.getByText("Versión 1: borrador.")).toBeVisible();
+  const resumen = admin.getByRole("article", { name: "Resumen ejecutivo" });
+  await expect(resumen).toContainText("Cifras citadas:");
+  await expect(admin.getByRole("button", { name: "Aprobar esta versión" })).toBeEnabled();
+  // un número que no es una cifra de la sección: queda para revisión y no se puede aprobar
+  await resumen.getByRole("button", { name: "Editar el texto" }).click();
+  const original = await admin.locator("#ed-resumen").inputValue();
+  await admin.locator("#ed-resumen").fill("Se necesitan 999 personas más.");
+  await resumen.getByRole("button", { name: "Guardar el texto" }).click();
+  await expect(resumen.getByText("Requiere revisión.")).toBeVisible();
+  await expect(admin.getByRole("button", { name: "Aprobar esta versión" })).toBeDisabled();
+  // se corrige con el texto de antes: vuelve a ser válido (editada a mano) y se puede aprobar
+  await resumen.getByRole("button", { name: "Editar el texto" }).click();
+  await admin.locator("#ed-resumen").fill(original);
+  await resumen.getByRole("button", { name: "Guardar el texto" }).click();
+  await expect(resumen.getByText("Requiere revisión.")).toHaveCount(0);
+  await expect(admin.getByRole("button", { name: "Aprobar esta versión" })).toBeEnabled();
+  const axeTexto = await new AxeBuilder({ page: admin }).withTags(["wcag2a", "wcag2aa"]).analyze();
+  expect(axeTexto.violations.filter((v) => v.impact === "serious" || v.impact === "critical").map((v) => `${v.id}: ${v.nodes.length}`)).toEqual([]);
+  await admin.getByRole("button", { name: "Aprobar esta versión" }).click();
+  await admin.getByRole("dialog").getByRole("button", { name: "Aprobar", exact: true }).click();
+  await expect(admin.getByText("Versión 1 aprobada", { exact: true })).toBeVisible();
+  await expect(admin.getByRole("button", { name: "Aprobar esta versión" })).toHaveCount(0);
+  await expect(admin.getByRole("button", { name: "Editar el texto" })).toHaveCount(0);
+  // Ana, sin «Resultados», no lo ve
+  await ana.goto("/resultados/informe");
+  await ana.waitForURL(/sin-acceso/);
 });
 
 test("la persona escribe su nombre en «Mi cuenta» y se le ve con él (encabezado y lista de usuarios)", async () => {
