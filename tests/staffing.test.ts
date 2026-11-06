@@ -1,7 +1,7 @@
 import { analyze } from "../src/domain/summary";
 import { areasOf, needOf, needsOf, roundUpPeople, STATE_ES, summaryOf } from "../src/domain/staffing";
 import { moduleOfPath } from "../src/domain/access";
-import { MENU, menuHrefs } from "../src/lib/nav";
+import { GRUPO_RESULTADOS, MENU, menuHrefs } from "../src/lib/nav";
 import { tablesFor, VIEWS } from "../src/lib/tables";
 import type { ActivityInput, Params, StaffingInput } from "../src/domain/engine";
 import { check, summary } from "./helpers";
@@ -96,11 +96,20 @@ async function main() {
     if (title !== "Dotación requerida" || tables[0].rows.length !== 1 || row.required !== 3 || row.gap !== 1 || row.occupants !== 2 || row.state !== STATE_ES.short) throw new Error(JSON.stringify(row));
   });
 
-  await check("La sección está en el menú, gobernada por Cargos y Actividades (igual que Cálculo de tiempos)", () => {
-    if (!menuHrefs().includes("/dotacion")) throw new Error("falta en el menú");
-    const i = MENU.findIndex((e) => "href" in e && e.href === "/dotacion"), j = MENU.findIndex((e) => "href" in e && e.href === "/calculo");
-    if (i !== j + 1) throw new Error("debe ir justo después de Cálculo de tiempos");
-    if (JSON.stringify(moduleOfPath("/dotacion")) !== '["cargos","actividades"]') throw new Error(JSON.stringify(moduleOfPath("/dotacion")));
+  await check("«Resultados» es UN solo grupo del menú, entre «Agente de IA» y «Usuarios y roles», y su primera subsección es «Dotación requerida»", () => {
+    const idx = (f: (e: (typeof MENU)[number]) => boolean) => MENU.findIndex(f);
+    const agente = idx((e) => "href" in e && e.href === "/agente"), usuarios = idx((e) => "href" in e && e.href === "/usuarios");
+    const grupos = MENU.filter((e) => "group" in e && e.group === GRUPO_RESULTADOS);
+    if (grupos.length !== 1) throw new Error("debe haber un solo grupo «Resultados»");
+    const g = idx((e) => "group" in e && e.group === GRUPO_RESULTADOS);
+    if (!(agente >= 0 && g === agente + 1 && usuarios === g + 1)) throw new Error(`orden del menú: agente ${agente}, resultados ${g}, usuarios ${usuarios}`);
+    const items = (grupos[0] as { items: { href: string; label: string }[] }).items;
+    if (items[0].href !== "/resultados/dotacion" || items[0].label !== "Dotación requerida") throw new Error(JSON.stringify(items[0]));
+    if (menuHrefs().includes("/dotacion")) throw new Error("no debe quedar «Dotación requerida» suelta en el menú");
+  });
+
+  await check("«Dotación requerida» la gobiernan Cargos y Actividades (igual que Cálculo de tiempos): quien tiene ambos la ve y quien no, no", () => {
+    if (JSON.stringify(moduleOfPath("/resultados/dotacion")) !== '["cargos","actividades"]') throw new Error(JSON.stringify(moduleOfPath("/resultados/dotacion")));
   });
 }
 main().then(summary);

@@ -30,7 +30,7 @@ export default async function Dotacion({ searchParams }: { searchParams: Promise
         <div><h1>Dotación requerida</h1><Purpose k="dotacion" /><div className="sub">{label} · {needs.length}{needs.length !== a.positions.length ? ` de ${a.positions.length}` : ""} cargo-sede · escenario {scenario} · reserva de capacidad {fmt(params.reservePct * 100, 0)} %</div></div>
         <div className="tools"><ModeForm mode={mode} keep={pf.current} /><ExportButtons view="dotacion" mode={mode} extra={filterQuery(pf.current)} /></div>
       </div>
-      {a.positions.length > 0 && <FilterBar key={filterQuery(pf.current)} fields={pf.fields} triples={pf.triples} current={pf.current} shown={pf.rows.length} total={a.positions.length} hidden={{ modo: mode }} clearHref={`/dotacion?modo=${mode}`} />}
+      {a.positions.length > 0 && <FilterBar key={filterQuery(pf.current)} fields={pf.fields} triples={pf.triples} current={pf.current} shown={pf.rows.length} total={a.positions.length} hidden={{ modo: mode }} clearHref={`/resultados/dotacion?modo=${mode}`} />}
 
       <section className="grid-kpi" aria-label="Resumen de la dotación">
         <div className="card"><div className="lbl">Personas que hay</div><div className="kpi">{fmt(total.occupants, 0)}</div><div className="note">En los cargos con cifra</div></div>

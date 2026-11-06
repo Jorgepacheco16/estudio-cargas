@@ -49,7 +49,7 @@ test("[anónimo] la página de ingreso muestra la marca, el ingreso con usuario 
 });
 
 test("[anónimo] sin ingresar no se ve ninguna pantalla interna ni se descarga nada; las tareas programadas y el webhook siguen respondiendo por su propia firma", async ({ request }) => {
-  for (const ruta of ["/", "/cargos", "/actividades?modo=demo", "/calculo", "/dotacion", "/drill", "/diagnostico/riesgos", "/sedes"]) {
+  for (const ruta of ["/", "/cargos", "/actividades?modo=demo", "/calculo", "/resultados/dotacion", "/drill", "/diagnostico/riesgos", "/sedes"]) {
     const r = await request.get(ruta, { maxRedirects: 0 });
     expect(r.status(), ruta).toBe(307);
     expect(r.headers()["location"], ruta).toContain("/ingreso");
@@ -234,7 +234,7 @@ for (const ruta of ["/?modo=demo", "/cargos?modo=demo", "/actividades?modo=demo"
   });
 }
 
-for (const ruta of ["/?modo=demo", "/cargos?modo=demo", "/actividades?modo=demo", "/sedes?modo=demo", "/calculo?modo=demo", "/dotacion?modo=demo", "/drill?modo=demo&level=area&area=Cajas"]) {
+for (const ruta of ["/?modo=demo", "/cargos?modo=demo", "/actividades?modo=demo", "/sedes?modo=demo", "/calculo?modo=demo", "/resultados/dotacion?modo=demo", "/drill?modo=demo&level=area&area=Cajas"]) {
   test(`accesibilidad (axe, sin fallas serias ni críticas): ${ruta}`, async ({ page }) => {
     await page.goto(ruta);
     const r = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa"]).analyze();
@@ -289,12 +289,14 @@ test("la pestaña de la hoja 4a muestra las columnas calculadas con los encabeza
   expect(d.suggestedFilename()).toMatch(/calculo.*\.xlsx$/);
 });
 test("la dotación requerida muestra el resumen, la tabla por área y por cargo, y se exporta", async ({ page }) => {
-  await page.goto("/dotacion?modo=demo");
+  await page.goto("/resultados/dotacion?modo=demo");
   await expect(page.getByRole("heading", { name: "Dotación requerida" })).toBeVisible();
   for (const t of ["Personas que hay", "Personas necesarias", "Brecha", "Cargos sin cifra"]) await expect(page.getByText(t, { exact: true }).first()).toBeVisible();
   await expect(page.getByRole("heading", { name: "Por área" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Por cargo" })).toBeVisible();
-  await expect(page.getByRole("link", { name: "Dotación requerida" }).first()).toBeVisible(); // está en el menú
+  await expect(page.getByRole("button", { name: "Resultados" })).toHaveAttribute("aria-expanded", "true"); // dentro de una subsección el grupo permanece desplegado
+  await expect(page.getByRole("link", { name: "Dotación requerida" })).toHaveAttribute("aria-current", "page");
+  await expect(page.getByRole("group", { name: "Diagnóstico y rediseño" })).toHaveCount(0); // un solo grupo desplegado a la vez
   const [d] = await Promise.all([page.waitForEvent("download"), page.getByRole("link", { name: "Exportar Excel" }).click()]);
   expect(d.suggestedFilename()).toMatch(/dotacion.*.xlsx$/);
 });
