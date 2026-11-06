@@ -56,7 +56,7 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ view: strin
     const user = await getUser(); const study = user ? await activeStudyId(user.id) : null;
     if (user && study) proposals = (await listProposals(getDb(), user.id, study.id)).map((p) => ({ id: p.id, kind: p.kind, summary: p.summary, status: p.status, reviewedBy: p.reviewedBy ? "persona autorizada" : null, at: p.createdAt.toISOString().slice(0, 10) }));
   }
-  const { title, tables } = tablesFor(view, analysis, dashboard, proposals, q, loaded.mode, loaded.params.reservePct, actNames, schedules);
+  const { title, tables } = tablesFor(view, analysis, dashboard, proposals, q, loaded.mode, loaded.params.reservePct, actNames, schedules, loaded.thresholds.high);
   const stamp = new Date().toISOString().slice(0, 10);
   const base = `estudio-cargas_${view}_${stamp}`;
 

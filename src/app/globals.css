@@ -467,3 +467,14 @@ a.account:focus-visible { outline: 3px solid var(--blue); outline-offset: -3px; 
   :root:not([data-theme="light"]) .theme-switch .ts-moon { color: var(--card); }
 }
 @media (prefers-reduced-motion: reduce) { .theme-switch::before { transition: none; } }
+
+/* Reparto semanal (D-102): celda persona × día que abre el horario del día */
+.day-cell { display: flex; flex-direction: column; gap: 2px; width: 100%; min-height: 64px; padding: 8px 12px; background: transparent; border: 0; border-radius: 0; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.day-cell:hover { background: var(--blue-soft); }
+.day-cell:focus-visible { outline: 3px solid var(--blue); outline-offset: -3px; }
+.day-cell .dc-total { margin-top: 4px; }
+.day-dialog { width: min(640px, calc(100vw - 32px)); max-height: calc(100vh - 48px); padding: 20px 24px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--card); color: var(--ink); box-shadow: 0 18px 48px rgba(0, 0, 0, .35); overflow: auto; }
+.day-dialog::backdrop { background: rgba(0, 0, 0, .5); }
+.day-dialog h3 { margin: 0; }
+.day-dialog .dd-soft td { color: var(--muted); background: var(--blue-soft); }
+.day-dialog .dd-actions { display: flex; justify-content: flex-end; margin-top: 16px; }

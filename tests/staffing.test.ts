@@ -96,6 +96,22 @@ async function main() {
     if (title !== "Dotación requerida" || tables[0].rows.length !== 1 || row.required !== 3 || row.gap !== 1 || row.occupants !== 2 || row.state !== STATE_ES.short) throw new Error(JSON.stringify(row));
   });
 
+  await check("Umbral de sobrecarga (D-102): con 105 % se necesita una persona menos cuando la carga cabe en el umbral; con 100 % es redondear hacia arriba; menos de 100 % se trata como 100 %", () => {
+    const pos = (headcount: number, hours: number) => analyze([staff("Cajero", headcount, 40)], [act("A1", "Cajero", hours)], prm(), TH, "all").positions[0]; // 36 h útiles por persona
+    const casos: [number, number, number, number][] = [ // [horas, umbral, esperadas, personas]
+      [187.2, 1, 6, 6], [187.2, 1.05, 5, 6], [190, 1.05, 6, 6], [180, 1, 5, 5], [180.5, 1, 6, 6], [37.5, 1.05, 1, 1], [38, 1.05, 2, 2], [187.2, 0.8, 6, 6], [187.2, 1.5, 4, 6],
+    ];
+    for (const [horas, umbral, esperadas, ocupantes] of casos) {
+      const n = needOf(pos(ocupantes, horas), umbral);
+      if (n.required !== esperadas) throw new Error(`${horas} h con umbral ${umbral}: ${n.required} ≠ ${esperadas}`);
+      if (n.exact !== null && n.required !== null && n.exact / n.required > Math.max(1, umbral) + 1e-9) throw new Error("la carga no debe pasar el umbral");
+    }
+    if (roundUpPeople(5.2) !== 6 || roundUpPeople(5.2, 1.05) !== 5 || roundUpPeople(5.2, 0.5) !== 6 || roundUpPeople(0, 1.05) !== 0) throw new Error("roundUpPeople");
+    // la tabla y los totales usan el mismo umbral
+    const ns = needsOf(analyze([staff("Cajero", 6, 40)], [act("A1", "Cajero", 187.2)], prm(), TH, "all").positions, 1.05);
+    if (ns[0].required !== 5 || summaryOf(ns).gap !== -1) throw new Error("brecha con tolerancia");
+  });
+
   await check("«Resultados» es UN solo grupo del menú, justo antes de «Usuarios y roles», con «Dotación requerida» primero y el «Agente de IA» como subsección", () => {
     const idx = (f: (e: (typeof MENU)[number]) => boolean) => MENU.findIndex(f);
     const historia = idx((e) => "href" in e && e.href === "/integraciones"), usuarios = idx((e) => "href" in e && e.href === "/usuarios");

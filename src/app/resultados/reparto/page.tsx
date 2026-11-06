@@ -12,11 +12,12 @@ import { positionFilters, type RawParams } from "@/lib/page-filters";
 import { DAY_NAMES } from "@/domain/shifts";
 import { RULE_ES, TYPE_ES, WEEK_ES, formatMinutes, positionKey, type PositionSchedule, type WeekPlan } from "@/domain/schedule";
 import { loadSchedules } from "@/server/schedule";
+import { DayCell } from "@/components/resultados/DayCell";
 
 export const metadata = { title: "Reparto semanal" };
 const MAX_SHOWN = 6;
 
-function WeekTable({ plan, days }: { plan: WeekPlan; days: number[] }) {
+function WeekTable({ plan, days, position }: { plan: WeekPlan; days: number[]; position: string }) {
   return (
     <>
       <div className="tbl-wrap" tabIndex={0} role="region" aria-label={`${WEEK_ES[plan.kind]}: tareas por persona y día`}>
@@ -27,11 +28,8 @@ function WeekTable({ plan, days }: { plan: WeekPlan; days: number[] }) {
               <tr key={p}>
                 <td><b>Persona {p + 1}</b></td>
                 {row.map((c, i) => (
-                  <td key={i} style={{ verticalAlign: "top", minWidth: 140 }}>
-                    {c.items.map((it) => <div key={it.code}><b>{it.code}</b> · {formatMinutes(it.minutes)}</div>)}
-                    {c.reserveMin > 0.5 && <div className="muted">Imprevistos · {formatMinutes(c.reserveMin)}</div>}
-                    {c.items.length === 0 && c.reserveMin <= 0.5 && <span className="muted">—</span>}
-                    <div className="muted" style={{ marginTop: 4 }}>{c.totalMin > c.capacityMin + 0.5 ? <span className="pill overload">Pasa la jornada</span> : null} {formatMinutes(c.totalMin)} de {formatMinutes(c.capacityMin)}</div>
+                  <td key={i} style={{ verticalAlign: "top", minWidth: 150, padding: 0 }}>
+                    <DayCell person={p + 1} day={DAY_NAMES[days[i]]} position={position} week={WEEK_ES[plan.kind]} cell={c} />
                   </td>
                 ))}
                 <td className="num"><b>{formatMinutes(row.reduce((s, c) => s + c.totalMin, 0))}</b></td>
@@ -40,7 +38,7 @@ function WeekTable({ plan, days }: { plan: WeekPlan; days: number[] }) {
           </tbody>
         </table>
       </div>
-      <p className="note" style={{ marginTop: 8 }}>{plan.people} {plan.people === 1 ? "persona" : "personas"} · {fmt(plan.assignedHours, 1)} h repartidas{plan.reserveHours > 0 ? ` + ${fmt(plan.reserveHours, 1)} h de imprevistos` : ""}{plan.overflowHours > 1e-6 ? ` · ${fmt(plan.overflowHours, 1)} h no caben` : ""}.</p>
+      <p className="note" style={{ marginTop: 8 }}>{plan.people} {plan.people === 1 ? "persona" : "personas"} · {fmt(plan.assignedHours, 1)} h repartidas{plan.reserveHours > 0 ? ` + ${fmt(plan.reserveHours, 1)} h de imprevistos` : ""} · uso de la capacidad {fmt(plan.utilization * 100, 0)} %{plan.freeHours > 0.05 ? ` · disponibilidad sin tareas ${fmt(plan.freeHours, 1)} h` : ""}{plan.overflowHours > 1e-6 ? ` · ${fmt(plan.overflowHours, 1)} h no caben` : ""}. Pulse un día para ver el horario de esa persona.</p>
       {plan.activities.length > 0 && (
         <div className="tbl-wrap" tabIndex={0} role="region" aria-label={`${WEEK_ES[plan.kind]}: cuánto toma cada actividad y quién la hace`}>
           <table style={{ minWidth: 860 }}>
@@ -50,9 +48,9 @@ function WeekTable({ plan, days }: { plan: WeekPlan; days: number[] }) {
                 <tr key={a.code}>
                   <td><b>{a.code}</b><div className="muted">{a.name}</div></td>
                   <td>{a.type ? TYPE_ES[a.type] : <span className="muted">Sin tipo</span>}</td>
-                  <td>{a.perEmployee ? "La hace cada persona" : RULE_ES[a.rule]}{a.simultaneous > 1 ? <div className="muted">{a.simultaneous} personas a la vez</div> : null}</td>
+                  <td>{a.perEmployee ? "Por colaborador, rotando" : RULE_ES[a.rule]}{a.shared ? <div className="muted">Compartida: no cupo entera</div> : null}{a.simultaneous > 1 ? <div className="muted">{a.simultaneous} personas a la vez</div> : null}</td>
                   <td>{a.persons.length === 0 ? "—" : a.persons.length === plan.people ? "Todas" : a.persons.map((p) => `Persona ${p}`).join(", ")}</td>
-                  <td className="num">{fmt(a.executions, 2)}{a.perEmployee ? <div className="muted">por persona</div> : null}</td>
+                  <td className="num">{fmt(a.executions, 2)}</td>
                   <td className="num">{formatMinutes(a.minutesPerExecution)}</td>
                   <td className="num"><b>{formatMinutes(a.weekMinutes)}</b></td>
                 </tr>
@@ -76,10 +74,10 @@ function PositionCard({ s }: { s: PositionSchedule }) {
         <>
           <h3 style={{ marginTop: 20 }}>{WEEK_ES.common}</h3>
           <p className="note">Actividades diarias y semanales, tal como se repiten cada semana.</p>
-          <WeekTable plan={s.common} days={s.days} />
+          <WeekTable plan={s.common} days={s.days} position={s.position} />
           <h3 style={{ marginTop: 24 }}>{WEEK_ES.periodic}</h3>
-          <p className="note">La semana común más las actividades quincenales, mensuales, trimestrales y anuales, suponiendo que todas coinciden en esa semana (el caso más exigente).{s.periodic.people > s.common.people ? ` Esa semana hacen falta ${s.periodic.people - s.common.people} ${s.periodic.people - s.common.people === 1 ? "persona más" : "personas más"}.` : ""}</p>
-          <WeekTable plan={s.periodic} days={s.days} />
+          <p className="note">La semana común más las actividades quincenales, mensuales, trimestrales y anuales, suponiendo que todas coinciden en esa semana (el caso más exigente).{s.periodic.extraPeople > 0 ? ` Esa semana harían falta ${s.periodic.extraPeople} ${s.periodic.extraPeople === 1 ? "persona más" : "personas más"} (refuerzo) o horas extra.` : ""}</p>
+          <WeekTable plan={s.periodic} days={s.days} position={s.position} />
         </>
       )}
     </section>
@@ -116,7 +114,7 @@ export default async function Reparto({ searchParams }: { searchParams: Promise<
             <li><b>Administrativa, Control y Apoyo:</b> cada ejecución la hace una sola persona; las ejecuciones se reparten entre personas.</li>
             <li><b>Coordinación:</b> una sola persona es responsable de todas las ejecuciones.</li>
             <li><b>Ocasional o no planificada:</b> no se programa. Aparece como «Imprevistos», repartida por igual entre personas y días.</li>
-            <li><b>Para todas:</b> lo que hace cada colaborador aparece en la semana de cada persona; lo que exige varias personas a la vez se asigna a varias el mismo día; nadie pasa su jornada diaria ni su semana útil (jornada × (1 − reserva)); los días son los de los turnos del cargo. Si no cabe, se suma gente y se dice.</li>
+            <li><b>Para todas:</b> las personas son las de Dotación requerida (el reparto no suma gente) y se reparten las mismas horas de Cálculo de tiempos; lo que hace cada colaborador se reparte rotando entre las personas; lo que exige varias personas a la vez se asigna a varias el mismo día; el reparto nivela para que todas queden con tiempo parejo y nadie pasa su jornada útil (jornada × (1 − reserva)) más la sobrecarga aceptada en Parámetros. Si una tarea no cabe entera con la regla de su tipo, se comparte entre personas lo mínimo y se marca. Los días son los de los turnos del cargo.</li>
           </ul>
           <p className="note">Las personas se muestran como «Persona 1, 2…»: el reparto es un modelo de cómo organizar el trabajo, no una asignación de nombres. Una actividad sin tipo registrado se reparte como «Una persona por ejecución».</p>
         </div>

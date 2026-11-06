@@ -21,9 +21,9 @@ export default async function Dotacion({ searchParams }: { searchParams: Promise
   await guardModules(["resultados", "cargos", "actividades"]);
   const raw = await searchParams;
   const modo = Array.isArray(raw.modo) ? raw.modo[0] : raw.modo;
-  const { analysis: a, mode, label, params } = await loadAnalysis(parseMode(modo));
+  const { analysis: a, mode, label, params, thresholds } = await loadAnalysis(parseMode(modo));
   const pf = positionFilters(a.positions, raw);
-  const needs = needsOf(pf.rows), total = summaryOf(needs), areas = areasOf(needs);
+  const needs = needsOf(pf.rows, thresholds.high), total = summaryOf(needs), areas = areasOf(needs);
   const partial = needs.filter((n) => n.partial && n.required !== null).length;
   const scenario = { base: "base", high_season: "temporada alta", low_season: "temporada baja", min_time: "tiempo mínimo", max_time: "tiempo máximo" }[params.scenario] ?? params.scenario;
 
@@ -37,7 +37,7 @@ export default async function Dotacion({ searchParams }: { searchParams: Promise
 
       <section className="grid-kpi" aria-label="Resumen de la dotación">
         <div className="card"><div className="lbl">Personas que hay</div><div className="kpi">{fmt(total.occupants, 0)}</div><div className="note">En los cargos con cifra</div></div>
-        <div className="card"><div className="lbl">Personas necesarias</div><div className="kpi">{fmt(total.required, 0)}</div><div className="note">{fmt(total.exact, 1)} exactas, redondeadas hacia arriba por cargo</div></div>
+        <div className="card"><div className="lbl">Personas necesarias</div><div className="kpi">{fmt(total.required, 0)}</div><div className="note">{fmt(total.exact, 1)} exactas, redondeadas por cargo con el umbral de sobrecarga ({fmt(thresholds.high * 100, 0)} %)</div></div>
         <div className="card"><div className="lbl">Brecha</div><div className="kpi">{signed(total.gap)}</div><div className="note">{total.gap > 0 ? "Faltan personas" : total.gap < 0 ? "Hay personas de más según la carga registrada" : "La dotación coincide con la carga"}</div></div>
         <div className="card"><div className="lbl">Cargos sin cifra</div><div className="kpi">{total.withoutData} <small>de {total.positions}</small></div><div className="note">Les falta cantidad, jornada o actividades completas</div></div>
       </section>
@@ -61,7 +61,7 @@ export default async function Dotacion({ searchParams }: { searchParams: Promise
 
       <section className="card" aria-label="Dotación por cargo">
         <h2>Por cargo</h2>
-        <p className="note" style={{ marginTop: 8 }}>Personas necesarias = horas de la semana ÷ horas útiles de una persona (jornada × (1 − reserva)), redondeado hacia arriba. «Brecha» positiva: faltan; negativa: hay de más.</p>
+        <p className="note" style={{ marginTop: 8 }}>Personas necesarias = horas de la semana ÷ horas útiles de una persona (jornada × (1 − reserva)), redondeado de modo que la carga no pase el umbral de sobrecarga de Parámetros ({fmt(thresholds.high * 100, 0)} %). «Brecha» positiva: faltan; negativa: hay de más.</p>
         {needs.length === 0 ? <div className="empty">{a.positions.length === 0 ? "Aún no hay cargos en este modo." : "Ningún cargo cumple los filtros elegidos. Cambie o limpie los filtros."}</div> : (
           <PagedTable
             label="Dotación por cargo"
@@ -90,7 +90,7 @@ export default async function Dotacion({ searchParams }: { searchParams: Promise
             <li><b>Horas de la semana</b> = suma de las horas por semana de las actividades completas del cargo (las mismas de Cálculo de tiempos, con el escenario elegido en Parámetros).</li>
             <li><b>Horas útiles de una persona</b> = jornada semanal × (1 − reserva de capacidad). La reserva es el tiempo que no se asigna a actividades (pausas, imprevistos).</li>
             <li><b>Personas necesarias (exactas)</b> = horas de la semana ÷ horas útiles de una persona.</li>
-            <li><b>Personas necesarias</b> = las exactas redondeadas hacia arriba, porque no existe media persona.</li>
+            <li><b>Personas necesarias</b> = la menor cantidad de personas con la que la carga no pasa el <b>umbral de sobrecarga</b> de Parámetros: exactas ÷ umbral, redondeado hacia arriba (no existe media persona). Con el umbral en 100 % es redondear hacia arriba; con 105 %, 5,2 personas de trabajo se cubren con 5 (carga de 104 %). Un umbral menor que 100 % se trata como 100 %. Para aceptar un poco de sobrecarga antes de pedir otra persona, suba ese umbral en Parámetros.</li>
             <li><b>Brecha</b> = personas necesarias − personas que hay.</li>
           </ol>
           <p className="note">Un cargo sin cantidad y jornada, o sin actividades completas, no recibe cifra: la aplicación no rellena datos por su cuenta. Si un cargo tiene actividades incompletas, su cifra es un mínimo. Un excedente es una señal para validar el inventario, no una decisión de reducir personal.</p>

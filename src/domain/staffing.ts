@@ -3,7 +3,10 @@
  * un cargo sin cantidad y jornada, o sin horas calculadas, queda «sin datos» y no recibe cifra.
  *
  *   personas necesarias (exactas) = horas de la semana ÷ horas útiles de UNA persona, donde horas útiles = jornada semanal × (1 − reserva de capacidad)
- *   personas necesarias = las exactas redondeadas hacia arriba (no existe media persona), con un margen de 1e-9 para que un resultado exacto de 3 no pase a 4
+ *   personas necesarias = la menor cantidad de personas con la que la carga NO supera el «Umbral de sobrecarga» de Parámetros (D-102): exactas ÷ umbral, redondeado hacia arriba
+ *   (no existe media persona). Con el umbral en 100 % es redondear hacia arriba; con 105 %, 5,2 personas de trabajo se cubren con 5 (104 % de carga). Un umbral menor que
+ *   100 % se trata como 100 %: la tolerancia solo puede ser a favor de la carga, nunca pedir más gente por una «holgura» que no es sobrecarga. Margen de 1e-9 para que un
+ *   resultado exacto de 3 no pase a 4.
  *   brecha = personas necesarias − personas que hay (positiva: faltan; negativa: hay de más)
  *
  * Mismas horas y misma capacidad que la pantalla de Cargos: personas necesarias exactas = ocupantes × % de capacidad cuando todas las filas de dotación tienen jornada.
@@ -29,23 +32,24 @@ export interface StaffingArea { area: string; occupants: number; exact: number; 
 export interface StaffingSummary { occupants: number; exact: number; required: number; gap: number; positions: number; withoutData: number }
 
 const EPS = 1e-9;
-export const roundUpPeople = (exact: number): number => Math.max(0, Math.ceil(exact - EPS));
+/** Personas para una carga `exact` (en personas de trabajo) que no pase de `overload` (1 = 100 %). */
+export const roundUpPeople = (exact: number, overload = 1): number => Math.max(0, Math.ceil(exact / Math.max(1, overload) - EPS));
 
 export const STATE_ES: Record<NeedState, string> = { short: "Faltan personas", balanced: "Dotación ajustada", surplus: "Posible excedente", nodata: "Sin datos" };
 
-export function needOf(p: PositionRow): StaffingNeed {
+export function needOf(p: PositionRow, overload = 1): StaffingNeed {
   const base = { dataKind: p.dataKind, area: p.area, site: p.site, position: p.position, occupants: p.occupants, hours: p.hours, hoursPerPerson: p.hoursPerPerson };
   const partial = p.activities > p.complete;
   if (p.activities === 0 && p.hours === 0) return { ...base, exact: null, required: null, gap: null, state: "nodata", partial, reading: "Sin actividades registradas" };
   if (p.hoursPerPerson === null || p.hoursPerPerson <= 0) return { ...base, exact: null, required: null, gap: null, state: "nodata", partial, reading: "Falta registrar cantidad y jornada del cargo (Cargos y dotación)" };
   if (p.hours <= 0) return { ...base, exact: null, required: null, gap: null, state: "nodata", partial, reading: "Hay actividades pero ninguna con datos completos" };
-  const exact = p.hours / p.hoursPerPerson, required = roundUpPeople(exact), gap = required - p.occupants;
+  const exact = p.hours / p.hoursPerPerson, required = Math.max(1, roundUpPeople(exact, overload)), gap = required - p.occupants;
   const state: NeedState = gap > 0 ? "short" : gap < 0 ? "surplus" : "balanced";
   const say = state === "short" ? `Faltan ${gap} ${gap === 1 ? "persona" : "personas"}` : state === "surplus" ? `Hay ${-gap} ${-gap === 1 ? "persona" : "personas"} de más según la carga registrada: valide que el inventario esté completo antes de decidir` : "La dotación coincide con la carga registrada";
   return { ...base, exact, required, gap, state, partial, reading: say + (partial ? " · Cifra mínima: hay actividades con datos incompletos" : "") };
 }
 
-export const needsOf = (positions: PositionRow[]): StaffingNeed[] => positions.map(needOf);
+export const needsOf = (positions: PositionRow[], overload = 1): StaffingNeed[] => positions.map((p) => needOf(p, overload));
 
 /** Totales por área; solo suman los cargos con cifra. `withoutData` cuenta los que no la tienen. */
 export function areasOf(needs: StaffingNeed[]): StaffingArea[] {
