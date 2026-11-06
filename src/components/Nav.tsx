@@ -12,6 +12,7 @@ const ICON: Record<string, string> = {
   "/cargos": "M16 11a4 4 0 10-8 0 4 4 0 008 0zM4 21a8 8 0 0116 0",
   "/actividades": "M9 6h11M9 12h11M9 18h11M4 6h.01M4 12h.01M4 18h.01",
   "/calculo": "M12 6v6l4 2M21 12a9 9 0 11-18 0 9 9 0 0118 0z",
+  "/dotacion": "M9 11a3 3 0 100-6 3 3 0 000 6zM3 20a6 6 0 0112 0M17 8v6M14 11h6M17 20h4",
   "/drill": "M4 4h16M7 9h10M10 14h4M12 19v-1",
   grupo: "M9 11l3 3 8-8M20 12v7a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h9",
   "/sedes": "M3 21h18M5 21V8l7-5 7 5v13M9 21v-6h6v6",

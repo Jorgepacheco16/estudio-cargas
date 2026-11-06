@@ -11,6 +11,7 @@ export const MENU: NavEntry[] = [
   { href: "/cargos", label: "Cargos y dotación" },
   { href: "/actividades", label: "Actividades" },
   { href: "/calculo", label: "Cálculo de tiempos" },
+  { href: "/dotacion", label: "Dotación requerida" },
   { href: "/drill", label: "Drill-down: Carga por áreas" },
   {
     group: GRUPO_DIAGNOSTICO,

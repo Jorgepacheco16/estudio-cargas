@@ -5,8 +5,9 @@ import { compareSites } from "@/domain/sites";
 import { CALC_4A, calcValue } from "@/domain/calc4a";
 import { PRESETS, PRESET_ES, LEVEL_ES, METRIC_ES, drillRows, type DrillFilters, type LevelKey } from "@/domain/drill";
 import type { Mode } from "@/domain/summary";
+import { needsOf, STATE_ES } from "@/domain/staffing";
 
-export const VIEWS = ["tablero", "cargos", "actividades", "calculo", "areas", "sedes", "drill", "agente"] as const;
+export const VIEWS = ["tablero", "cargos", "actividades", "calculo", "areas", "sedes", "drill", "agente", "dotacion"] as const;
 export type View = (typeof VIEWS)[number];
 export const isView = (v: string): v is View => (VIEWS as readonly string[]).includes(v);
 
@@ -23,6 +24,20 @@ export function cargosTable(a: Analysis): Table {
       { key: "pct", header: "% de capacidad", fmt: "0.0%" }, { key: "acts", header: "Actividades", fmt: "0" }, { key: "complete", header: "Completas", fmt: "0" }, { key: "reading", header: "Lectura", width: 70 },
     ],
     rows: a.positions.map((p) => ({ kind: KIND(p.dataKind), area: p.area, site: p.site, position: p.position, occupants: p.occupants, capacity: r2(p.capacity), hours: r2(p.hours), pct: pctOf(p.pct), acts: p.activities, complete: p.complete, reading: p.reading })),
+  };
+}
+
+/** Dotación requerida (D-99): personas necesarias por cargo y brecha frente a las que hay. */
+export function dotacionTable(a: Analysis): Table {
+  return {
+    name: "Dotación requerida",
+    columns: [
+      { key: "kind", header: "Tipo de dato", width: 12 }, { key: "area", header: "Área", width: 28 }, { key: "site", header: "Centro de operaciones", width: 18 }, { key: "position", header: "Cargo", width: 30 },
+      { key: "occupants", header: "Personas que hay", fmt: "0" }, { key: "hours", header: "Horas de la semana", fmt: "#,##0.00" }, { key: "per", header: "Horas útiles por persona (h/sem)", fmt: "#,##0.00" },
+      { key: "exact", header: "Personas necesarias (exactas)", fmt: "#,##0.00" }, { key: "required", header: "Personas necesarias", fmt: "0" }, { key: "gap", header: "Brecha (+ faltan, − sobran)", fmt: "+0;-0;0" },
+      { key: "state", header: "Estado", width: 20 }, { key: "reading", header: "Lectura", width: 70 },
+    ],
+    rows: needsOf(a.positions).map((n) => ({ kind: KIND(n.dataKind), area: n.area, site: n.site, position: n.position, occupants: n.occupants, hours: r2(n.hours), per: r2(n.hoursPerPerson), exact: r2(n.exact), required: n.required, gap: n.gap, state: STATE_ES[n.state], reading: n.reading })),
   };
 }
 
@@ -146,5 +161,6 @@ export function tablesFor(view: View, a: Analysis, d: Dashboard, proposals: Prop
     case "sedes": return { title: "Comparador de centros de operaciones", tables: [sedesTable(a, q.area ?? "", q.position ?? "", mode, reservePct)] };
     case "drill": { const lv = (["study", "area", "position", "activity"] as const).find((x) => x === q.level) ?? "study"; return { title: "Drill-down", tables: [drillTable(a, q.config ?? "carga-por-area", lv, { area: q.area, site: q.site, position: q.position, alertOnly: (q.alert as DrillFilters["alertOnly"]) ?? "", ...(q.code ? { code: q.code } : {}) } as DrillFilters)] }; }
     case "agente": return { title: "Agente de IA", tables: [agenteTable(proposals)] };
+    case "dotacion": return { title: "Dotación requerida", tables: [dotacionTable(a)] };
   }
 }

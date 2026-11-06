@@ -73,7 +73,7 @@ export function moduleOfPath(pathname: string): AppModule | AppModule[] | null {
   if (hit("/integraciones")) return "integraciones";
   if (hit("/agente")) return "agente";
   if (hit("/usuarios")) return "usuarios";
-  if (hit("/calculo") || hit("/drill") || hit("/sedes")) return ["cargos", "actividades"]; // se calculan con cargos y actividades
+  if (hit("/calculo") || hit("/dotacion") || hit("/drill") || hit("/sedes")) return ["cargos", "actividades"]; // se calculan con cargos y actividades
   return null;
 }
 
