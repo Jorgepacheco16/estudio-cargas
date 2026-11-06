@@ -54,11 +54,14 @@ export const WEEK_ES: Record<WeekKind, string> = { common: "Semana común", peri
 export interface CellItem { code: string; minutes: number; rank: number }
 /** Una tarea de una persona en un día, en el orden sugerido: cuánto dura (no a qué hora). Los imprevistos son una fila más, de tipo «reserve». */
 export interface DayTask { kind: "task" | "reserve"; code: string; name: string; minutes: number }
+/** Orden de las tareas de un día guardado por una persona con permiso (D-104): códigos en orden y cuándo se guardó. Es una preferencia de la vista, no un dato del estudio. */
+export interface SavedOrder { codes: string[]; at: string }
 export interface Cell {
   items: CellItem[]; reserveMin: number; totalMin: number;
   /** Jornada útil del día (sin tolerancia). */ capacityMin: number;
   /** Lo más que se asigna en un día: la jornada útil más la sobrecarga aceptada. */ toleranceMin: number;
   /** Tareas del día en el orden sugerido (primero lo diario, luego lo semanal y lo periódico, al final los imprevistos). */ tasks: DayTask[];
+  /** Orden guardado para este día (null = el sugerido). Lo llena attachSavedOrders. */ saved: SavedOrder | null;
 }
 export interface ActivitySummary {
   code: string; name: string; type: ActivityTypeKey | null; rule: SplitRule;
@@ -257,6 +260,29 @@ export function orderedTasks(items: { code: string; name: string; minutes: numbe
   return tasks;
 }
 
+/**
+ * Aplica un orden guardado (códigos) a las tareas de un día: primero las que están en la lista, en ese orden; las que no están (actividades nuevas) siguen después, en su orden
+ * sugerido; los códigos guardados que ya no existen se ignoran. Con una lista vacía o ausente devuelve el orden sugerido. No modifica la lista recibida.
+ */
+export function applyOrder<T extends { code: string }>(tasks: readonly T[], saved: readonly string[] | null | undefined): T[] {
+  if (!saved || saved.length === 0) return [...tasks];
+  const rank = (t: T, i: number) => { const k = saved.indexOf(t.code); return k < 0 ? 1e6 + i : k; };
+  return tasks.map((t, i) => ({ t, r: rank(t, i) })).sort((a, b) => a.r - b.r).map((x) => x.t);
+}
+
+/** Clave de un orden guardado: cargo, semana, persona (1, 2…) y día de la semana (0 = lunes). */
+export const orderKey = (positionKey: string, week: WeekKind, person: number, weekday: number) => `${positionKey}|${week}|${person}|${weekday}`;
+
+/** Pone en cada celda su orden guardado (si lo hay). Modifica y devuelve los mismos reparto, que acaban de construirse. */
+export function attachSavedOrders(schedules: PositionSchedule[], orders: ReadonlyMap<string, SavedOrder>): PositionSchedule[] {
+  if (orders.size === 0) return schedules;
+  for (const s of schedules) for (const w of [s.common, s.periodic]) {
+    if (!w) continue;
+    w.grid.forEach((row, p) => row.forEach((cell, d) => { cell.saved = orders.get(orderKey(s.key, w.kind, p + 1, s.days[d])) ?? null; }));
+  }
+  return schedules;
+}
+
 /** Cambia de lugar la tarea `index` (`-1` la sube, `1` la baja) y devuelve una lista nueva; en los extremos no hace nada. Nunca modifica la lista recibida. */
 export function moveTask<T>(rows: readonly T[], index: number, direction: -1 | 1): T[] {
   const to = index + direction, out = [...rows];
@@ -271,7 +297,7 @@ function plan(kind: WeekKind, lines: Line[], n: number, days: number[], cd: numb
   const grid: Cell[][] = Array.from({ length: n }, (_, p) => Array.from({ length: D }, (_, d) => {
     const its: CellItem[] = [...sim.items[p][d].entries()].map(([code, minutes]) => ({ code, minutes, rank: rankByCode.get(code) ?? 2 })).sort((a, b) => a.rank - b.rank || a.code.localeCompare(b.code));
     const tasks = orderedTasks(its.map((i) => ({ ...i, name: nameByCode.get(i.code) ?? i.code })), sim.reserveCell[p][d]);
-    return { items: its, reserveMin: sim.reserveCell[p][d], totalMin: sim.load[p][d] * 60, capacityMin: cd * 60, toleranceMin: cd * T * 60, tasks };
+    return { items: its, reserveMin: sim.reserveCell[p][d], totalMin: sim.load[p][d] * 60, capacityMin: cd * 60, toleranceMin: cd * T * 60, tasks, saved: null };
   }));
   const summaries: ActivitySummary[] = lines.filter((l) => l.rule !== "reserve" && (l.periodKind === "periodic" ? kind === "periodic" : true)).map((l) => ({
     code: l.code, name: l.name, type: l.type, rule: l.rule, persons: [...(sim.who.get(l.code) ?? [])].sort((a, b) => a - b), executions: sim.execs.get(l.code) ?? 0, minutesPerExecution: l.hoursPerExec * 60,

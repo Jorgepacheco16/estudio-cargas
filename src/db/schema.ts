@@ -621,3 +621,29 @@ export const deviations = pgTable("deviations", {
   status: text("status").notNull().default("open"),
   detectedAt: timestamp("detected_at", { withTimezone: true }).notNull().defaultNow(),
 });
+
+/* ───────── Orden de las tareas del Reparto semanal (D-104): una preferencia de esa vista, NO un dato del estudio ───────── */
+/**
+ * Orden en que se muestran las tareas de una persona en un día de «Reparto semanal». Se guarda por cargo (su clave normalizada), semana, persona (1, 2…) y día de la semana (0 = lunes).
+ * Solo guarda códigos de actividad en orden: no cambia actividades, tiempos ni cálculos de ninguna sección. Los códigos que ya no existan se ignoran y los nuevos quedan al final.
+ * Lo ve quien tenga «Resultados» y lo cambia quien lo tenga en Edición (políticas en sql/0013).
+ */
+export const scheduleOrders = pgTable("schedule_orders", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  studyId: studyFk(),
+  positionKey: text("position_key").notNull(),
+  weekKind: text("week_kind").notNull(),
+  person: smallint("person").notNull(),
+  day: smallint("day").notNull(),
+  codes: text("codes").array().notNull(),
+  updatedBy: uuid("updated_by").notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [
+  unique("schedule_orders_uq").on(t.studyId, t.positionKey, t.weekKind, t.person, t.day),
+  index("schedule_orders_study_idx").on(t.studyId),
+  check("schedule_orders_key_ck", sql`length(${t.positionKey}) between 1 and 400`),
+  check("schedule_orders_week_ck", sql`${t.weekKind} in ('common', 'periodic')`),
+  check("schedule_orders_person_ck", sql`${t.person} between 1 and 200`),
+  check("schedule_orders_day_ck", sql`${t.day} between 0 and 6`),
+  check("schedule_orders_codes_ck", sql`cardinality(${t.codes}) between 1 and 100`),
+]);

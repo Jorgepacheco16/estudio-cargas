@@ -173,12 +173,26 @@ test("«Resultados» (D-100): solo el Super usuario lo ve; al habilitarlo en un 
   await dia.getByRole("button", { name: "Restablecer el orden sugerido" }).click();
   await expect(filas.nth(0)).toContainText("E-1");
   await expect(dia.getByRole("button", { name: "Restablecer el orden sugerido" })).toHaveCount(0);
-  await dia.getByRole("button", { name: "Bajar E-1" }).click(); // y el orden elegido se refleja también en el resumen de la celda al cerrar
+  await dia.getByRole("button", { name: "Bajar E-1" }).click();
+  await dia.getByRole("button", { name: "Guardar este orden" }).click(); // D-104: lo guarda quien tiene Resultados en Edición
+  await expect(dia.getByRole("status")).toContainText("Orden guardado");
+  await expect(dia.getByRole("button", { name: "Guardar este orden" })).toBeDisabled(); // nada pendiente por guardar
   const axeDia = await new AxeBuilder({ page: admin }).withTags(["wcag2a", "wcag2aa"]).analyze();
   expect(axeDia.violations.filter((v) => v.impact === "serious" || v.impact === "critical").map((v) => `${v.id}: ${v.nodes.length}`)).toEqual([]);
   await admin.keyboard.press("Escape");
   await expect(dia).toBeHidden();
-  await expect(tarjeta.getByRole("button", { name: /Ver las tareas de la persona 1 el lunes/i }).first().locator(".dc-line").first()).toContainText("E-3");
+  const celdaLunes = tarjeta.getByRole("button", { name: /Ver las tareas de la persona 1 el lunes/i }).first();
+  await expect(celdaLunes.locator(".dc-line").first()).toContainText("E-3");
+  await expect(celdaLunes).toContainText("orden guardado");
+  // al recargar, el orden sigue guardado (queda en la base, no solo en la pantalla)
+  await admin.goto("/resultados/reparto");
+  await listo(admin, "Reparto semanal");
+  await admin.locator('section[aria-label="Reparto de Cajero"]').getByRole("button", { name: /Ver las tareas de la persona 1 el lunes.*con orden guardado/i }).first().click();
+  const diaGuardado = admin.getByRole("dialog", { name: /Persona 1 · Lunes/ });
+  await expect(diaGuardado.locator("tbody tr").nth(0)).toContainText("E-3");
+  await expect(diaGuardado.getByText(/Este día tiene un orden guardado/)).toBeVisible();
+  await admin.keyboard.press("Escape");
+  await expect(diaGuardado).toBeHidden();
   const axeReparto = await new AxeBuilder({ page: admin }).withTags(["wcag2a", "wcag2aa"]).analyze();
   expect(axeReparto.violations.filter((v) => v.impact === "serious" || v.impact === "critical").map((v) => `${v.id}: ${v.nodes.length}`)).toEqual([]);
   const [dr] = await Promise.all([admin.waitForEvent("download"), admin.getByRole("link", { name: "Exportar Excel" }).click()]);
@@ -213,9 +227,28 @@ test("«Resultados» (D-100): solo el Super usuario lo ve; al habilitarlo en un 
   await listo(ana, "Reparto semanal");
   await expect(ana.getByRole("heading", { name: "Cajero" })).toBeVisible();
   await expect(ana.getByRole("heading", { name: "Auxiliar" })).toHaveCount(0); // otra área
+  // Ana (Lectura en Resultados) ve el orden que guardó el Super usuario, puede probar otro, pero no guardarlo
+  await ana.locator('section[aria-label="Reparto de Cajero"]').getByRole("button", { name: /Ver las tareas de la persona 1 el lunes.*con orden guardado/i }).first().click();
+  const diaAna = ana.getByRole("dialog", { name: /Persona 1 · Lunes/ });
+  await expect(diaAna.locator("tbody tr").nth(0)).toContainText("E-3");
+  await expect(diaAna.getByRole("button", { name: "Guardar este orden" })).toHaveCount(0);
+  await expect(diaAna.getByText(/pero no guardarlos/)).toBeVisible();
+  await diaAna.getByRole("button", { name: "Subir E-1" }).click();
+  await expect(diaAna.locator("tbody tr").nth(0)).toContainText("E-1");
+  await ana.keyboard.press("Escape");
   for (const vista of ["dotacion", "reparto"]) expect((await ana.request.get(`/api/export/${vista}?format=csv&modo=real`)).status(), `descarga de ${vista} con el permiso`).toBe(200);
   await ana.goto("/resultados/agente");
   await ana.waitForURL(/sin-acceso/);
+  // el Super usuario quita el orden guardado para dejar todo como estaba
+  await admin.goto("/resultados/reparto");
+  await listo(admin, "Reparto semanal");
+  await admin.locator('section[aria-label="Reparto de Cajero"]').getByRole("button", { name: /Ver las tareas de la persona 1 el lunes/i }).first().click();
+  const diaQuitar = admin.getByRole("dialog", { name: /Persona 1 · Lunes/ });
+  await diaQuitar.getByRole("button", { name: "Restablecer el orden sugerido" }).click();
+  await diaQuitar.getByRole("button", { name: "Guardar (quitar el orden guardado)" }).click();
+  await expect(diaQuitar.getByRole("status")).toContainText("Se quitó el orden guardado");
+  await admin.keyboard.press("Escape");
+  await expect(admin.locator('section[aria-label="Reparto de Cajero"]').getByRole("button", { name: /con orden guardado/i })).toHaveCount(0);
   // y vuelve a quedar como estaba para no afectar a las demás pruebas
   await admin.goto("/usuarios?vista=roles");
   await listo(admin, "Usuarios y roles");
@@ -396,7 +429,7 @@ test("Parámetros (D-103): el umbral de sobrecarga acepta más de 100 % (hasta 2
   await expect(admin.locator('.banner[role="alert"]')).toContainText("entre 0 y 200");
   await admin.fill("#p_overloadThreshold", "105");
   await guardar();
-  await admin.waitForLoadState("networkidle");
+  await expect(admin.getByText(/Parámetros guardados/)).toBeVisible(); // esperar la confirmación: si se navega antes, el guardado se corta
   await admin.goto("/parametros");
   await listo(admin, "Parámetros");
   await expect(admin.locator("#p_overloadThreshold")).toHaveValue("105");
@@ -408,7 +441,7 @@ test("Parámetros (D-103): el umbral de sobrecarga acepta más de 100 % (hasta 2
   await listo(admin, "Parámetros");
   await admin.fill("#p_overloadThreshold", "100");
   await guardar();
-  await admin.waitForLoadState("networkidle");
+  await expect(admin.getByText(/Parámetros guardados/)).toBeVisible(); // esperar la confirmación: si se navega antes, el guardado se corta
   await admin.goto("/parametros");
   await expect(admin.locator("#p_overloadThreshold")).toHaveValue("100");
 });
