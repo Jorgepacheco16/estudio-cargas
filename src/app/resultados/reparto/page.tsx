@@ -38,7 +38,7 @@ function WeekTable({ plan, days, position }: { plan: WeekPlan; days: number[]; p
           </tbody>
         </table>
       </div>
-      <p className="note" style={{ marginTop: 8 }}>{plan.people} {plan.people === 1 ? "persona" : "personas"} · {fmt(plan.assignedHours, 1)} h repartidas{plan.reserveHours > 0 ? ` + ${fmt(plan.reserveHours, 1)} h de imprevistos` : ""} · uso de la capacidad {fmt(plan.utilization * 100, 0)} %{plan.freeHours > 0.05 ? ` · disponibilidad sin tareas ${fmt(plan.freeHours, 1)} h` : ""}{plan.overflowHours > 1e-6 ? ` · ${fmt(plan.overflowHours, 1)} h no caben` : ""}. Pulse un día para ver el horario de esa persona.</p>
+      <p className="note" style={{ marginTop: 8 }}>{plan.people} {plan.people === 1 ? "persona" : "personas"} · {fmt(plan.assignedHours, 1)} h repartidas{plan.reserveHours > 0 ? ` + ${fmt(plan.reserveHours, 1)} h de imprevistos` : ""} · uso de la capacidad {fmt(plan.utilization * 100, 0)} %{plan.freeHours > 0.05 ? ` · disponibilidad sin tareas ${fmt(plan.freeHours, 1)} h` : ""}{plan.overflowHours > 1e-6 ? ` · ${fmt(plan.overflowHours, 1)} h no caben` : ""}. Pulse un día para ver las tareas de esa persona en orden y, si quiere, cambiar el orden.</p>
       {plan.activities.length > 0 && (
         <div className="tbl-wrap" tabIndex={0} role="region" aria-label={`${WEEK_ES[plan.kind]}: cuánto toma cada actividad y quién la hace`}>
           <table style={{ minWidth: 860 }}>

@@ -4,6 +4,7 @@
  * Qué entrega, por cada cargo con turnos: una «semana común» (actividades diarias y semanales) y una «semana con actividades periódicas» (la común más las quincenales, mensuales,
  * trimestrales y anuales, suponiendo el peor caso: todas coinciden en esa semana). Cada una es una tabla persona × día; cada celda tiene su horario sugerido (orden y horas).
  * Las personas son «Persona 1, 2…»: nunca nombres (regla 6). Los tiempos y las frecuencias salen del motor real (computeActivity); aquí solo se reparten.
+ * Cada celda trae sus tareas en un orden sugerido y con su tiempo, SIN horas del día: no se sabe a qué hora ocurre cada tarea en la operación (D-103).
  *
  * Principios (D-102, conclusiones con el titular):
  *   1) El número de personas es EL DE «DOTACIÓN REQUERIDA»: el reparto nunca suma gente. Si una regla no cabe, se parte la tarea lo mínimo y se marca.
@@ -38,14 +39,12 @@ export function ruleOf(type: ActivityTypeKey | null, planning: "planned" | "unpl
 }
 
 export interface ActivityExtra { name: string; type: ActivityTypeKey | null }
-/** Un turno del cargo: sus horas («07:00») y los días (0 = lunes … 6 = domingo) en que trabaja. */
-export interface ShiftDef { name: string; start: string | null; end: string | null; breakMin: number | null; days: number[] }
 export interface ScheduleInput {
   staff: StaffingInput[]; acts: ActivityInput[]; params: Params; positions: PositionRow[];
   /** Nombre y tipo de cada actividad, por código en minúsculas. */
   extras: Map<string, ActivityExtra>;
-  /** Turnos de cada cargo, por clave de cargo (ver positionKey). Los días del reparto son la unión de los días de sus turnos. */
-  shifts: Map<string, ShiftDef[]>;
+  /** Días (0 = lunes … 6 = domingo) en que trabaja el cargo, por clave de cargo (ver positionKey): la unión de los días de sus turnos. */
+  shiftDays: Map<string, number[]>;
   /** «Umbral de sobrecarga» de Parámetros como razón (1,05 = 105 %): cuánta sobrecarga se acepta antes de pedir otra persona. Menos de 1 se trata como 1. */
   overload?: number;
 }
@@ -53,13 +52,13 @@ export interface ScheduleInput {
 export type WeekKind = "common" | "periodic";
 export const WEEK_ES: Record<WeekKind, string> = { common: "Semana común", periodic: "Semana con actividades periódicas" };
 export interface CellItem { code: string; minutes: number; rank: number }
-/** Una fila del horario sugerido de una persona en un día: la tarea, cuánto dura y, si el turno tiene hora de inicio, de qué hora a qué hora. */
-export interface TimelineRow { kind: "task" | "reserve" | "break"; code: string; name: string; minutes: number; from: string | null; to: string | null }
+/** Una tarea de una persona en un día, en el orden sugerido: cuánto dura (no a qué hora). Los imprevistos son una fila más, de tipo «reserve». */
+export interface DayTask { kind: "task" | "reserve"; code: string; name: string; minutes: number }
 export interface Cell {
   items: CellItem[]; reserveMin: number; totalMin: number;
   /** Jornada útil del día (sin tolerancia). */ capacityMin: number;
   /** Lo más que se asigna en un día: la jornada útil más la sobrecarga aceptada. */ toleranceMin: number;
-  timeline: TimelineRow[]; shiftName: string | null; startClock: string | null; endClock: string | null;
+  /** Tareas del día en el orden sugerido (primero lo diario, luego lo semanal y lo periódico, al final los imprevistos). */ tasks: DayTask[];
 }
 export interface ActivitySummary {
   code: string; name: string; type: ActivityTypeKey | null; rule: SplitRule;
@@ -248,45 +247,31 @@ export const dailyCapacity = (hoursPerPerson: number, days: number, prm: Params)
   return Math.min(hoursPerPerson, prm.dailyWorkHours && prm.dailyWorkHours > 0 ? Math.max(evenly, prm.dailyWorkHours * (1 - prm.reservePct)) : evenly);
 };
 
-const HHMM = /^(\d{1,2}):(\d{2})/;
-const toMin = (s: string | null): number | null => { const m = s ? HHMM.exec(s) : null; return m ? Number(m[1]) * 60 + Number(m[2]) : null; };
-const clock = (min: number) => { const m = ((Math.round(min) % 1440) + 1440) % 1440; return `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`; };
-
-/** Turno que se usa para sugerir las horas de un día: de los que trabajan ese día, el que empieza más temprano. */
-export function pickShift(shifts: ShiftDef[], day: number): ShiftDef | null {
-  const todays = shifts.filter((s) => s.days.includes(day));
-  return todays.sort((a, b) => (toMin(a.start) ?? 1e9) - (toMin(b.start) ?? 1e9) || a.name.localeCompare(b.name))[0] ?? null;
-}
-
 /**
- * Horario sugerido de una persona en un día: primero lo diario, luego lo semanal, luego lo periódico y al final los imprevistos; desde la hora de inicio del turno, con el descanso
- * del turno después de la tarea con la que se llega a la mitad del trabajo. Es un ORDEN y unas horas sugeridas (no se sabe a qué hora ocurre cada tarea en la operación).
+ * Orden sugerido de las tareas de una persona en un día: primero lo diario, luego lo semanal, luego lo periódico y al final los imprevistos; dentro de cada grupo, por código.
+ * Solo es un orden (y el tiempo de cada una): no hay horas del día porque no se sabe a qué hora ocurre cada tarea. La persona puede cambiarlo en la vista (moveTask).
  */
-export function buildTimeline(tasks: { code: string; name: string; minutes: number; rank: number }[], reserveMin: number, shift: ShiftDef | null): { rows: TimelineRow[]; start: string | null; end: string | null } {
-  const work: TimelineRow[] = [...tasks].sort((a, b) => a.rank - b.rank || a.code.localeCompare(b.code))
-    .map((t) => ({ kind: "task" as const, code: t.code, name: t.name, minutes: t.minutes, from: null, to: null }));
-  if (reserveMin > 0.5) work.push({ kind: "reserve", code: "Imprevistos", name: "Reserva para actividades ocasionales o no planificadas", minutes: reserveMin, from: null, to: null });
-  const total = work.reduce((s, r) => s + r.minutes, 0), brk = shift?.breakMin ?? 0;
-  const rows: TimelineRow[] = []; let acc = 0, placed = false;
-  for (const r of work) {
-    rows.push(r); acc += r.minutes;
-    if (!placed && brk > 0 && total > 0 && acc >= total / 2 - EPS && r !== work[work.length - 1]) { rows.push({ kind: "break", code: "Descanso", name: `Descanso del turno (${brk} min)`, minutes: brk, from: null, to: null }); placed = true; }
-  }
-  const start = toMin(shift?.start ?? null);
-  if (start === null) return { rows, start: null, end: null };
-  let t = start;
-  for (const r of rows) { r.from = clock(t); t += r.minutes; r.to = clock(t); }
-  return { rows, start: clock(start), end: clock(t) };
+export function orderedTasks(items: { code: string; name: string; minutes: number; rank: number }[], reserveMin: number): DayTask[] {
+  const tasks: DayTask[] = [...items].sort((a, b) => a.rank - b.rank || a.code.localeCompare(b.code)).map((t) => ({ kind: "task" as const, code: t.code, name: t.name, minutes: t.minutes }));
+  if (reserveMin > 0.5) tasks.push({ kind: "reserve", code: "Imprevistos", name: "Reserva para actividades ocasionales o no planificadas", minutes: reserveMin });
+  return tasks;
 }
 
-function plan(kind: WeekKind, lines: Line[], n: number, days: number[], shifts: ShiftDef[], cd: number, cw: number, T: number): WeekPlan {
+/** Cambia de lugar la tarea `index` (`-1` la sube, `1` la baja) y devuelve una lista nueva; en los extremos no hace nada. Nunca modifica la lista recibida. */
+export function moveTask<T>(rows: readonly T[], index: number, direction: -1 | 1): T[] {
+  const to = index + direction, out = [...rows];
+  if (index < 0 || index >= rows.length || to < 0 || to >= rows.length) return out;
+  [out[index], out[to]] = [out[to], out[index]];
+  return out;
+}
+
+function plan(kind: WeekKind, lines: Line[], n: number, days: number[], cd: number, cw: number, T: number): WeekPlan {
   const D = days.length, sim = simulate(lines, kind, n, D, cd, cw, T);
   const rankByCode = new Map(lines.map((l) => [l.code, rankOf(l.periodKind)])), nameByCode = new Map(lines.map((l) => [l.code, l.name]));
-  const dayShift = days.map((d) => pickShift(shifts, d));
   const grid: Cell[][] = Array.from({ length: n }, (_, p) => Array.from({ length: D }, (_, d) => {
     const its: CellItem[] = [...sim.items[p][d].entries()].map(([code, minutes]) => ({ code, minutes, rank: rankByCode.get(code) ?? 2 })).sort((a, b) => a.rank - b.rank || a.code.localeCompare(b.code));
-    const tl = buildTimeline(its.map((i) => ({ ...i, name: nameByCode.get(i.code) ?? i.code })), sim.reserveCell[p][d], dayShift[d]);
-    return { items: its, reserveMin: sim.reserveCell[p][d], totalMin: sim.load[p][d] * 60, capacityMin: cd * 60, toleranceMin: cd * T * 60, timeline: tl.rows, shiftName: dayShift[d]?.name ?? null, startClock: tl.start, endClock: tl.end };
+    const tasks = orderedTasks(its.map((i) => ({ ...i, name: nameByCode.get(i.code) ?? i.code })), sim.reserveCell[p][d]);
+    return { items: its, reserveMin: sim.reserveCell[p][d], totalMin: sim.load[p][d] * 60, capacityMin: cd * 60, toleranceMin: cd * T * 60, tasks };
   }));
   const summaries: ActivitySummary[] = lines.filter((l) => l.rule !== "reserve" && (l.periodKind === "periodic" ? kind === "periodic" : true)).map((l) => ({
     code: l.code, name: l.name, type: l.type, rule: l.rule, persons: [...(sim.who.get(l.code) ?? [])].sort((a, b) => a - b), executions: sim.execs.get(l.code) ?? 0, minutesPerExecution: l.hoursPerExec * 60,
@@ -304,8 +289,7 @@ export function buildSchedules(input: ScheduleInput): PositionSchedule[] {
   const T = Math.max(1, input.overload ?? 1);
   return input.positions.map((p): PositionSchedule => {
     const key = positionKey(p.dataKind, p.area, p.site, p.position);
-    const shifts = input.shifts.get(key) ?? [];
-    const days = [...new Set(shifts.flatMap((s) => s.days))].sort((a, b) => a - b);
+    const days = [...(input.shiftDays.get(key) ?? [])].sort((a, b) => a - b);
     const base = { key, dataKind: p.dataKind, area: p.area, site: p.site, position: p.position, days, common: null, periodic: null, notes: [] as string[] };
     const need = needOf(p, T);
     const required = need.required;
@@ -313,8 +297,8 @@ export function buildSchedules(input: ScheduleInput): PositionSchedule[] {
     if (required === null || p.hoursPerPerson === null) return { ...base, state: "nodata", reason: need.reading, required };
     const { lines, excluded, untyped } = linesOf(input, key);
     const cw = p.hoursPerPerson, cd = dailyCapacity(cw, days.length, input.params);
-    const common = plan("common", lines, required, days, shifts, cd, cw, T);
-    const periodic = plan("periodic", lines, required, days, shifts, cd, cw, T);
+    const common = plan("common", lines, required, days, cd, cw, T);
+    const periodic = plan("periodic", lines, required, days, cd, cw, T);
     const notes = base.notes;
     if (excluded > 0) notes.push(`${excluded} ${excluded === 1 ? "actividad con datos incompletos no entra" : "actividades con datos incompletos no entran"} en el reparto.`);
     if (untyped > 0) notes.push(`${untyped} ${untyped === 1 ? "actividad sin tipo registrado se reparte" : "actividades sin tipo registrado se reparten"} como «Una persona por ejecución».`);
