@@ -153,21 +153,32 @@ test("«Resultados» (D-100): solo el Super usuario lo ve; al habilitarlo en un 
   await expect(admin.locator("td", { hasText: /^Persona 1$/ }).first()).toBeVisible();
   await expect(admin.getByRole("columnheader", { name: "Lunes" }).first()).toBeVisible();
   await expect(admin.locator(".banner", { hasText: /sin tipo registrado se reparte/ }).first()).toBeVisible();
-  // Detalle del día (D-102): pulsar la celda de una persona abre su horario ordenado, con horas sugeridas desde el inicio del turno (07:00 en la siembra); se cierra con Esc
+  // Detalle del día (D-103): pulsar la celda de una persona abre sus tareas en orden, con su tiempo y SIN horas del día; el orden se puede cambiar con las flechas (solo en la vista) y restablecer; se cierra con Esc
   const tarjeta = admin.locator('section[aria-label="Reparto de Cajero"]');
-  await tarjeta.getByRole("button", { name: /Ver el horario de la persona 1 el lunes/i }).first().click();
+  await tarjeta.getByRole("button", { name: /Ver las tareas de la persona 1 el lunes/i }).first().click();
   const dia = admin.getByRole("dialog", { name: /Persona 1 · Lunes/ });
   await expect(dia).toBeVisible();
-  await expect(dia.getByRole("columnheader", { name: "Hora" })).toBeVisible();
-  await expect(dia.getByRole("columnheader", { name: "Tarea" })).toBeVisible();
-  await expect(dia.getByRole("columnheader", { name: "Tiempo" })).toBeVisible();
-  await expect(dia.getByText(/^07:00 – /)).toBeVisible();
-  await expect(dia.getByText("Arqueo de caja").first()).toBeVisible();
+  for (const h of ["#", "Tarea", "Tiempo", "Orden"]) await expect(dia.getByRole("columnheader", { name: h })).toBeVisible();
+  await expect(dia.getByText(/\b\d{1,2}:\d{2}\b/)).toHaveCount(0); // ninguna hora del día
   await expect(dia.getByText(/Trabajo del día/)).toBeVisible();
+  const filas = dia.locator("tbody tr");
+  await expect(filas.nth(0)).toContainText("E-1");
+  await expect(filas.nth(1)).toContainText("E-3");
+  await expect(dia.getByRole("button", { name: "Subir E-1" })).toBeDisabled(); // extremo: no se puede subir la primera
+  await dia.getByRole("button", { name: "Bajar E-1" }).click();
+  await expect(filas.nth(0)).toContainText("E-3");
+  await expect(filas.nth(1)).toContainText("E-1");
+  await expect(dia.getByRole("button", { name: "Bajar E-1" })).toBeDisabled();
+  await expect(dia.getByRole("status")).toContainText("ahora es la tarea 2 de");
+  await dia.getByRole("button", { name: "Restablecer el orden sugerido" }).click();
+  await expect(filas.nth(0)).toContainText("E-1");
+  await expect(dia.getByRole("button", { name: "Restablecer el orden sugerido" })).toHaveCount(0);
+  await dia.getByRole("button", { name: "Bajar E-1" }).click(); // y el orden elegido se refleja también en el resumen de la celda al cerrar
   const axeDia = await new AxeBuilder({ page: admin }).withTags(["wcag2a", "wcag2aa"]).analyze();
   expect(axeDia.violations.filter((v) => v.impact === "serious" || v.impact === "critical").map((v) => `${v.id}: ${v.nodes.length}`)).toEqual([]);
   await admin.keyboard.press("Escape");
   await expect(dia).toBeHidden();
+  await expect(tarjeta.getByRole("button", { name: /Ver las tareas de la persona 1 el lunes/i }).first().locator(".dc-line").first()).toContainText("E-3");
   const axeReparto = await new AxeBuilder({ page: admin }).withTags(["wcag2a", "wcag2aa"]).analyze();
   expect(axeReparto.violations.filter((v) => v.impact === "serious" || v.impact === "critical").map((v) => `${v.id}: ${v.nodes.length}`)).toEqual([]);
   const [dr] = await Promise.all([admin.waitForEvent("download"), admin.getByRole("link", { name: "Exportar Excel" }).click()]);
@@ -373,6 +384,33 @@ test("Registro de cambios (Historia): lista lo hecho y quién lo hizo, filtra po
   await ana.goto("/historia?vista=cambios");
   await ana.waitForURL(/sin-acceso/);
   expect((await ana.request.get("/api/cambios/export")).status()).toBe(403);
+});
+
+test("Parámetros (D-103): el umbral de sobrecarga acepta más de 100 % (hasta 200 %), rechaza lo que pasa de ahí y Dotación requerida usa el valor", async () => {
+  const guardar = () => admin.getByRole("button", { name: "Guardar parámetros" }).click();
+  await admin.goto("/parametros");
+  await listo(admin, "Parámetros");
+  await expect(admin.getByText(/105 % acepta un poco de sobrecarga/)).toBeVisible(); // la ayuda del campo explica el uso
+  await admin.fill("#p_overloadThreshold", "250");
+  await guardar();
+  await expect(admin.locator('.banner[role="alert"]')).toContainText("entre 0 y 200");
+  await admin.fill("#p_overloadThreshold", "105");
+  await guardar();
+  await admin.waitForLoadState("networkidle");
+  await admin.goto("/parametros");
+  await listo(admin, "Parámetros");
+  await expect(admin.locator("#p_overloadThreshold")).toHaveValue("105");
+  await admin.goto("/resultados/dotacion");
+  await listo(admin, "Dotación requerida");
+  await expect(admin.getByText(/umbral de sobrecarga \(105 %\)/).first()).toBeVisible();
+  // vuelve a 100 % para no afectar a las demás pruebas
+  await admin.goto("/parametros");
+  await listo(admin, "Parámetros");
+  await admin.fill("#p_overloadThreshold", "100");
+  await guardar();
+  await admin.waitForLoadState("networkidle");
+  await admin.goto("/parametros");
+  await expect(admin.locator("#p_overloadThreshold")).toHaveValue("100");
 });
 
 test("cambiar de cuenta en el mismo navegador nunca muestra a la persona anterior", async ({ browser }) => {

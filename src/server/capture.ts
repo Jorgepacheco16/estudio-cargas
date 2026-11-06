@@ -12,6 +12,7 @@ import { LABELS } from "../domain/labels";
 import { LONG_TEXT_MAX } from "../domain/limits";
 
 export type FieldKind = "text" | "longtext" | "bool" | "scale" | "int" | "num" | "pct" | "date" | "list" | "activity" | "area";
+/** `max` de un porcentaje (`pct`) es la RAZÓN máxima (2 = 200 %); sin él, 100 %. */
 export interface Field { key: string; label: string; kind: FieldKind; list?: keyof typeof LABELS; required?: boolean; notNull?: boolean; min?: number; max?: number; hint?: string }
 export interface SheetDef { id: string; title: string; table: PgTable; keyCols: string[]; idCol: "id" | "studyId"; fields: Field[]; entity: string }
 
@@ -26,7 +27,7 @@ export const SHEETS: SheetDef[] = [
     N("workDaysPerWeek", "Días laborales por semana", { notNull: true, min: 1, max: 7, hint: "Días a la semana en que el cargo está disponible (la operación abre). Convierte las actividades «por día» en veces por semana. No es lo que trabaja cada colaborador: cada persona trabaja las horas semanales de su cargo." }),
     N("dailyWorkHours", "Jornada laboral diaria (horas)", { min: 1, max: 24, hint: "Horas que trabaja un colaborador cada día (por ejemplo 7). Es informativo: no cambia los cálculos. Con las horas semanales del cargo aclara cuántos días trabaja cada persona (42 h ÷ 7 h = 6 días, con 1 de descanso): aunque el cargo esté disponible 7 días, cada colaborador realiza sus actividades en 6." }),
     { key: "weeksPerYear", label: "Semanas por año", kind: "int", notNull: true, max: 53 }, { key: "reservePct", label: "Reserva de capacidad (%)", kind: "pct", notNull: true },
-    { key: "overloadThreshold", label: "Umbral de sobrecarga (%)", kind: "pct", notNull: true }, { key: "lowLoadThreshold", label: "Umbral de carga baja (%)", kind: "pct", notNull: true },
+    { key: "overloadThreshold", label: "Umbral de sobrecarga (%)", kind: "pct", notNull: true, max: 2, hint: "Carga máxima aceptada de un cargo antes de marcarlo en alerta y antes de pedir otra persona en Dotación requerida. 100 % es su capacidad; 105 % acepta un poco de sobrecarga. Hasta 200 %." }, { key: "lowLoadThreshold", label: "Umbral de carga baja (%)", kind: "pct", notNull: true },
     N("hourlyCostCop", "Costo por hora (COP)", { max: 1e9 }), L("scenario", "Escenario", "L_Escenario", { notNull: true }),
     { ...B("assumptionsValidated", "Supuestos validados por el responsable"), notNull: true },
     { key: "weightImpact", label: "Peso: impacto", kind: "int", notNull: true, max: 10 }, { key: "weightEase", label: "Peso: facilidad", kind: "int", notNull: true, max: 10 },
@@ -71,9 +72,9 @@ export function parseForm(def: SheetDef, raw: Record<string, FormDataEntryValue>
         const body = f.kind === "pct" ? s.replace(/\s*%$/, "") : s; // un «%» solo se admite al final
         const n = DECIMAL.test(body) ? Number(body.replace(",", ".")) : Number.NaN;
         const v = f.kind === "pct" ? n / 100 : n;
-        const hi = f.kind === "pct" ? 1 : f.max ?? 1e12;
+        const hi = f.kind === "pct" ? f.max ?? 1 : f.max ?? 1e12;
         const lo = f.kind === "pct" ? 0 : f.min ?? 0;
-        if (!Number.isFinite(n) || v < lo || v > hi) errors.push(`${f.label}: escriba un número ${f.kind === "pct" ? "entre 0 y 100" : `entre ${lo} y ${hi}`}`);
+        if (!Number.isFinite(n) || v < lo || v > hi) errors.push(`${f.label}: escriba un número ${f.kind === "pct" ? `entre 0 y ${Math.round(hi * 100)}` : `entre ${lo} y ${hi}`}`);
         else values[f.key] = f.kind === "pct" ? v.toFixed(4) : String(n);
         break;
       }

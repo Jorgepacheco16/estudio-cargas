@@ -1,6 +1,6 @@
 import { analyze } from "../src/domain/summary";
 import { needOf } from "../src/domain/staffing";
-import { buildSchedules, buildTimeline, formatMinutes, pickShift, positionKey, ruleOf, RULE_BY_TYPE, ACTIVITY_TYPES, type ActivityExtra, type ActivityTypeKey, type PositionSchedule, type ShiftDef, type WeekPlan } from "../src/domain/schedule";
+import { buildSchedules, formatMinutes, moveTask, orderedTasks, positionKey, ruleOf, RULE_BY_TYPE, ACTIVITY_TYPES, type ActivityExtra, type ActivityTypeKey, type PositionSchedule, type WeekPlan } from "../src/domain/schedule";
 import { computeActivity, occupantsOf, personDaysOf, type ActivityInput, type Params, type StaffingInput } from "../src/domain/engine";
 import { tablesFor, VIEWS } from "../src/lib/tables";
 import { MENU, menuHrefs } from "../src/lib/nav";
@@ -10,7 +10,7 @@ import { check, summary } from "./helpers";
 /**
  * Reparto semanal (D-101 y D-102). Las horas salen del motor real (computeActivity vía analyze). Se comprueba que el reparto: use SIEMPRE las personas de «Dotación requerida» (nunca
  * más), reparta exactamente las horas de Cálculo, nivele, respete la capacidad con la sobrecarga aceptada, aplique la regla de cada TIPO de actividad (confirmada por el titular) y
- * sugiera un horario ordenado con horas a partir del turno.
+ * ofrezca las tareas de cada día en un orden sugerido, con su tiempo y SIN horas del día (D-103).
  */
 const TH = { high: 1, low: 0.5 };
 const prm = (over: Partial<Params> = {}): Params => ({ workDaysPerWeek: 6, weeksPerMonth: 52 / 12, weeksPerYear: 52, reservePct: 0.1, scenario: "base", ...over });
@@ -26,14 +26,13 @@ const act = (code: string, position: string, o: Over = {}): ActivityInput => {
   };
 };
 const MON_SAT = [0, 1, 2, 3, 4, 5];
-const turno = (days: number[], extra: Partial<ShiftDef> = {}): ShiftDef[] => (days.length ? [{ name: "Turno 1", start: "07:00", end: "15:00", breakMin: 30, days, ...extra }] : []);
 interface Run { schedules: PositionSchedule[]; hours: (position?: string) => number; required: (position?: string) => number | null }
-function run(st: StaffingInput[], ac: ActivityInput[], types: Record<string, ActivityTypeKey | null> = {}, days: number[] = MON_SAT, over: Partial<Params> = {}, overload = 1, shift: Partial<ShiftDef> = {}): Run {
+function run(st: StaffingInput[], ac: ActivityInput[], types: Record<string, ActivityTypeKey | null> = {}, days: number[] = MON_SAT, over: Partial<Params> = {}, overload = 1): Run {
   const p = prm(over), a = analyze(st, ac, p, TH, "all");
   const extras = new Map<string, ActivityExtra>(ac.map((x) => [x.code.toLowerCase(), { name: `Actividad ${x.code}`, type: x.code in types ? types[x.code] : "operational" }]));
-  const shifts = new Map(a.positions.map((x) => [positionKey(x.dataKind, x.area, x.site, x.position), turno(days, shift)]));
+  const shiftDays = new Map(a.positions.flatMap((x) => (days.length ? [[positionKey(x.dataKind, x.area, x.site, x.position), days] as const] : [])));
   return {
-    schedules: buildSchedules({ staff: st, acts: ac, params: p, positions: a.positions, extras, shifts, overload }),
+    schedules: buildSchedules({ staff: st, acts: ac, params: p, positions: a.positions, extras, shiftDays, overload }),
     hours: (position = "Cajero") => a.positions.find((x) => x.position === position)?.hours ?? 0,
     required: (position = "Cajero") => { const x = a.positions.find((y) => y.position === position); return x ? needOf(x, overload).required : null; },
   };
@@ -218,34 +217,37 @@ async function main() {
     if (s.days.join() !== "0,2,4" || ok(s).common.grid[0].length !== 3 || !s.notes.some((n) => /3 días por sus turnos/.test(n)) || !near(ok(s).common.assignedHours, r.hours())) throw new Error(s.days + " | " + s.notes);
   });
 
-  await check("Horario sugerido: primero lo diario, luego lo semanal y lo periódico, al final los imprevistos; las horas parten del inicio del turno y el descanso va después de la tarea con la que se llega a la mitad", () => {
-    const shift: ShiftDef = { name: "Mañana", start: "07:00", end: "15:00", breakMin: 30, days: [0] };
-    const { rows, start, end } = buildTimeline([{ code: "B2", name: "Semanal", minutes: 60, rank: 1 }, { code: "A1", name: "Diaria", minutes: 120, rank: 0 }, { code: "Z9", name: "Periódica", minutes: 60, rank: 2 }], 30, shift);
-    if (rows.map((r) => r.code).join() !== "A1,B2,Descanso,Z9,Imprevistos") throw new Error(rows.map((r) => r.code).join()); // 270 min de trabajo: se llega a la mitad (135) con B2
-    const horas = rows.map((r) => `${r.from}-${r.to}`).join(" ");
-    if (horas !== "07:00-09:00 09:00-10:00 10:00-10:30 10:30-11:30 11:30-12:00" || start !== "07:00" || end !== "12:00") throw new Error(horas + " | " + start + " " + end);
-    const sinInicio = buildTimeline([{ code: "A1", name: "Diaria", minutes: 90, rank: 0 }], 0, { ...shift, start: null });
-    if (sinInicio.start !== null || sinInicio.rows[0].from !== null || sinInicio.rows.length !== 1) throw new Error("sin hora de inicio no se inventan horas");
-    const sinDescanso = buildTimeline([{ code: "A1", name: "a", minutes: 60, rank: 0 }, { code: "A2", name: "b", minutes: 60, rank: 0 }], 0, { ...shift, breakMin: null });
-    if (sinDescanso.rows.some((r) => r.kind === "break") || sinDescanso.end !== "09:00") throw new Error("sin descanso registrado no se inserta");
-    const alMedianoche = buildTimeline([{ code: "A1", name: "a", minutes: 120, rank: 0 }], 0, { ...shift, start: "23:00", breakMin: 0 });
-    if (alMedianoche.end !== "01:00") throw new Error("pasa de medianoche: " + alMedianoche.end);
+  await check("Orden sugerido del día (sin horas): primero lo diario, luego lo semanal y lo periódico, al final los imprevistos; dentro de cada grupo por código; cada tarea trae su nombre y su tiempo", () => {
+    const t = orderedTasks([{ code: "B2", name: "Semanal", minutes: 60, rank: 1 }, { code: "A1", name: "Diaria", minutes: 120, rank: 0 }, { code: "A0", name: "Otra diaria", minutes: 30, rank: 0 }, { code: "Z9", name: "Periódica", minutes: 45, rank: 2 }], 30);
+    if (t.map((x) => x.code).join() !== "A0,A1,B2,Z9,Imprevistos" || t.map((x) => x.kind).join() !== "task,task,task,task,reserve") throw new Error(t.map((x) => x.code).join());
+    if (t[1].name !== "Diaria" || t[1].minutes !== 120 || t[4].minutes !== 30) throw new Error("nombre y tiempo");
+    if (Object.keys(t[0]).sort().join() !== "code,kind,minutes,name") throw new Error("no debe haber horas ni descansos: " + Object.keys(t[0]));
+    if (orderedTasks([], 0.2).length !== 0 || orderedTasks([], 30).length !== 1) throw new Error("imprevistos mínimos");
   });
 
-  await check("Cada celda trae su horario: coincide con sus tareas, suma lo mismo que el día y usa el turno que trabaja ese día (el que empieza más temprano)", () => {
-    const turnos: ShiftDef[] = [{ name: "Tarde", start: "13:00", end: "21:00", breakMin: 30, days: [0, 1] }, { name: "Mañana", start: "06:00", end: "14:00", breakMin: 30, days: [1, 2] }];
-    if (pickShift(turnos, 0)?.name !== "Tarde" || pickShift(turnos, 1)?.name !== "Mañana" || pickShift(turnos, 2)?.name !== "Mañana" || pickShift(turnos, 3) !== null) throw new Error("turno por día");
-    const r = run([staff("Cajero", 2, 40)], [act("A1", "Cajero", { hours: 1, executions: 10 }), act("D1", "Cajero", { hours: 0.5, executions: 1, period: "day" }), act("R1", "Cajero", { hours: 2, executions: 1, planning: "unplanned" })], { A1: "administrative", D1: "operational", R1: "operational" }, MON_SAT, {}, 1, { start: "07:00" });
+  await check("Cambiar el orden: sube o baja una tarea, no hace nada en los extremos y nunca modifica la lista recibida (el cambio es solo de la vista)", () => {
+    const base = ["A", "B", "C", "D"] as const;
+    const j = (xs: readonly string[]) => xs.join("");
+    if (j(moveTask(base, 1, -1)) !== "BACD" || j(moveTask(base, 1, 1)) !== "ACBD" || j(moveTask(base, 0, 1)) !== "BACD" || j(moveTask(base, 3, -1)) !== "ABDC") throw new Error("mover");
+    if (j(moveTask(base, 0, -1)) !== "ABCD" || j(moveTask(base, 3, 1)) !== "ABCD" || j(moveTask(base, -1, 1)) !== "ABCD" || j(moveTask(base, 9, -1)) !== "ABCD") throw new Error("extremos");
+    if (j(base) !== "ABCD") throw new Error("la lista original no debe cambiar");
+    let xs: readonly string[] = base; for (const [i, d] of [[0, 1], [1, 1], [2, 1], [3, -1]] as const) xs = moveTask(xs, i, d);
+    if ([...xs].sort().join("") !== "ABCD") throw new Error("mover nunca pierde ni duplica tareas");
+  });
+
+  await check("Cada celda trae sus tareas en orden, con el mismo total del día, y el reparto no trae horas del día", () => {
+    const r = run([staff("Cajero", 2, 40)], [act("A1", "Cajero", { hours: 1, executions: 10 }), act("D1", "Cajero", { hours: 0.5, executions: 1, period: "day" }), act("R1", "Cajero", { hours: 2, executions: 1, planning: "unplanned" })], { A1: "administrative", D1: "operational", R1: "operational" });
     const { common } = ok(one(r));
     for (const row of common.grid) for (const c of row) {
-      const trabajo = c.timeline.filter((x) => x.kind !== "break").reduce((s, x) => s + x.minutes, 0);
-      if (!near(trabajo, c.totalMin) || c.timeline.filter((x) => x.kind === "task").length !== c.items.length) throw new Error("el horario no coincide con la celda");
-      if (c.timeline.length > 0 && (c.startClock !== "07:00" || c.shiftName !== "Turno 1")) throw new Error("hora de inicio: " + c.startClock);
-      for (let i = 1; i < c.timeline.length; i++) if (c.timeline[i].from !== c.timeline[i - 1].to) throw new Error("las horas deben ser contiguas");
+      const trabajo = c.tasks.reduce((s, x) => s + x.minutes, 0);
+      if (!near(trabajo, c.totalMin) || c.tasks.filter((x) => x.kind === "task").length !== c.items.length) throw new Error("las tareas no coinciden con la celda");
+      const ranks = c.tasks.map((x) => x.kind === "reserve" ? 9 : c.items.find((i) => i.code === x.code)!.rank);
+      if (ranks.some((x, i) => i > 0 && x < ranks[i - 1])) throw new Error("orden: lo diario primero, los imprevistos al final");
+      if (JSON.stringify(c).includes("startClock") || JSON.stringify(c).includes("\"from\"")) throw new Error("no hay horas del día");
     }
   });
 
-  await check("Propiedad con 400 cargos al azar (siempre los mismos): las personas son las de Dotación, la semana común repartida suma exactamente las horas de Cálculo, nadie pasa la capacidad aceptada, no sobra ninguna hora y los horarios son contiguos", () => {
+  await check("Propiedad con 400 cargos al azar (siempre los mismos): las personas son las de Dotación, la semana común repartida suma exactamente las horas de Cálculo, nadie pasa la capacidad aceptada, no sobra ninguna hora y las tareas de cada día suman el total de su celda", () => {
     let seed = 20261106;
     const rnd = () => { seed = (seed * 1664525 + 1013904223) % 4294967296; return seed / 4294967296; };
     const pick = <T,>(xs: readonly T[]): T => xs[Math.floor(rnd() * xs.length)];
@@ -263,7 +265,7 @@ async function main() {
           planning: rnd() < 0.1 ? "unplanned" : "planned", calcMode: rnd() < 0.2 ? "per_unit" : "per_event", unitsPerExecution: 1 + Math.floor(rnd() * 5) });
       });
       const st = [staff("Cajero", ocupantes, jornada)], p = prm({ dailyWorkHours: rnd() < 0.4 ? pick([6, 8]) : null });
-      const r = run(st, ac, types, dias, { dailyWorkHours: p.dailyWorkHours }, overload, { start: pick(["06:00", "07:30", null]) });
+      const r = run(st, ac, types, dias, { dailyWorkHours: p.dailyWorkHours }, overload);
       const sch = one(r);
       if (sch.state !== "ok") continue;
       conReparto++;
@@ -279,7 +281,7 @@ async function main() {
         if (w.kind === "common" && w.overflowHours > 1e-6) throw new Error(`${nota}: en la semana común no debía sobrar nada (${w.overflowHours} h)`);
         for (const row of w.grid) {
           if (w.overflowHours <= 1e-6) { for (const c of row) if (c.totalMin > cd * overload * 60 + 1e-4) throw new Error(`${nota}: un día pasa la capacidad aceptada`); if (weekOf(row) > cw * overload * 60 + 1e-4) throw new Error(`${nota}: una semana pasa la capacidad aceptada`); }
-          for (const c of row) for (let i = 1; i < c.timeline.length; i++) if (c.timeline[i].from !== c.timeline[i - 1].to) throw new Error(`${nota}: horario no contiguo`);
+          for (const c of row) if (Math.abs(c.tasks.reduce((s, x) => s + x.minutes, 0) - c.totalMin) > 0.5 + 1e-6) throw new Error(`${nota}: las tareas del día no suman el total de la celda`); // una reserva menor de medio minuto no se muestra como fila
         }
       }
     }
@@ -291,21 +293,21 @@ async function main() {
     for (const [m, t] of want) if (formatMinutes(m) !== t) throw new Error(`${m} → ${formatMinutes(m)} (se esperaba ${t})`);
   });
 
-  await check("Exportación del reparto: una fila por persona, día y tarea con su hora sugerida y los mismos minutos que la pantalla; «Actividades» y los cargos sin reparto con su motivo", () => {
+  await check("Exportación del reparto: una fila por persona, día y tarea con su orden sugerido y los mismos minutos que la pantalla; «Actividades» y los cargos sin reparto con su motivo", () => {
     const st = [staff("Cajero", 2, 40), staff("Auxiliar", 2, 40)], ac = [act("A1", "Cajero", { hours: 2, executions: 6 }), act("A2", "Cajero", { hours: 1, executions: 1, period: "month" }), act("U1", "Cajero", { hours: 1, executions: 2, planning: "unplanned" }), act("X1", "Auxiliar", { hours: 1 })];
     const p = prm(), a = analyze(st, ac, p, TH, "all");
     const extras = new Map<string, ActivityExtra>(ac.map((x) => [x.code.toLowerCase(), { name: `Actividad ${x.code}`, type: "operational" }]));
-    const shifts = new Map([[positionKey("real", "Cajas", "CO1", "Cajero"), turno(MON_SAT)]]); // el Auxiliar no tiene turnos
-    const schedules = buildSchedules({ staff: st, acts: ac, params: p, positions: a.positions, extras, shifts });
+    const shiftDays = new Map([[positionKey("real", "Cajas", "CO1", "Cajero"), MON_SAT]]); // el Auxiliar no tiene turnos
+    const schedules = buildSchedules({ staff: st, acts: ac, params: p, positions: a.positions, extras, shiftDays });
     const { title, tables } = tablesFor("reparto", a, null as never, [], {}, "all", 0.1, undefined, schedules);
     if (title !== "Reparto semanal" || tables.map((t) => t.name).join() !== "Reparto,Actividades,Sin reparto") throw new Error(title + " " + tables.map((t) => t.name));
     const cajero = schedules.find((x) => x.position === "Cajero")!; const w = [cajero.common!, cajero.periodic!];
     const esperado = w.flatMap((x) => x.grid.flat()).reduce((sum, c) => sum + c.items.reduce((t, i) => t + i.minutes, 0) + c.reserveMin, 0);
-    const filas = tables[0].rows as { minutes: number; person: string; from: string | null; to: string | null; code: string }[];
+    const filas = tables[0].rows as { minutes: number; person: string; order: number; code: string }[];
     const exportado = filas.reduce((sum, r) => sum + r.minutes, 0);
     if (Math.abs(esperado - exportado) > 0.05 * filas.length) throw new Error(`pantalla ${esperado} ≠ Excel ${exportado}`);
     if (!filas.every((r) => /^Persona \d+$/.test(r.person))) throw new Error("solo «Persona N», nunca nombres");
-    if (!filas.every((r) => /^\d\d:\d\d$/.test(r.from ?? "") && /^\d\d:\d\d$/.test(r.to ?? ""))) throw new Error("cada fila trae su hora sugerida");
+    if (!filas.every((r) => Number.isInteger(r.order) && r.order >= 1) || "from" in filas[0] || tables[0].columns.some((c) => /Desde|Hasta/.test(c.header))) throw new Error("cada fila trae su orden sugerido y ninguna hora del día");
     if (!filas.some((r) => r.code === "Imprevistos") || tables[1].rows.length !== w[0].activities.length + w[1].activities.length) throw new Error("imprevistos y actividades");
     const sin = tables[2].rows as { position: string; reason: string }[];
     if (sin.length !== 1 || sin[0].position !== "Auxiliar" || !/turnos/.test(sin[0].reason)) throw new Error(JSON.stringify(sin));

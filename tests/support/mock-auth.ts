@@ -39,14 +39,22 @@ async function create(email: string, password: string): Promise<User> {
 }
 
 /** La sesión sigue viva solo si su fila existe en auth.sessions (el Super usuario la cierra al cambiar la clave de la persona). */
-const alive = async (s: Sess | undefined): Promise<string | null> => (s && (await sql`select 1 from auth.sessions where id = ${s.sid}`).length ? s.id : null);
+const alive = async (s: Sess | undefined): Promise<string | null> => {
+  if (!s) return null;
+  // Con la base local de pruebas (PGlite) las consultas simultáneas a veces fallan con «portal does not exist»: se reintenta antes de dar la sesión por perdida (en PostgreSQL real no ocurre).
+  for (let intento = 0; ; intento++) {
+    try { return (await sql`select 1 from auth.sessions where id = ${s.sid}`).length ? s.id : null; }
+    catch (e) { if (intento >= 4) throw e; await new Promise((r) => setTimeout(r, 40 * (intento + 1))); }
+  }
+};
 /** La clave vigente es el cifrado de la base si existe (lo escribe la función segura del Super usuario o el cambio propio); si no, la que se creó en memoria. */
 async function passwordOk(u: User, password: string): Promise<boolean> {
   const [row] = await sql`select encrypted_password p from auth.users where id = ${u.id}`;
   return row?.p ? bcrypt.compare(password, row.p as string) : u.password === password;
 }
 
-const server = createServer(async (req, res) => {
+const server = createServer((req, res) => { handle(req, res).catch((e) => { console.error("error atendiendo", req.url, (e as Error).message); if (!res.headersSent) { res.writeHead(500, { "content-type": "application/json" }); res.end(JSON.stringify({ code: 500, msg: "error del simulador" })); } else res.end(); }); }); // un error de la base no tumba el simulador
+async function handle(req: import("node:http").IncomingMessage, res: import("node:http").ServerResponse) {
   const url = new URL(req.url ?? "/", `http://127.0.0.1:${PORT}`);
   const body = await new Promise<Record<string, unknown>>((ok) => { let d = ""; req.on("data", (c) => (d += c)); req.on("end", () => { try { ok(d ? JSON.parse(d) : {}); } catch { ok({}); } }); });
   const send = (code: number, obj?: unknown) => { res.writeHead(code, { "content-type": "application/json" }); res.end(obj === undefined ? "" : JSON.stringify(obj)); };
@@ -85,5 +93,5 @@ const server = createServer(async (req, res) => {
   if (path === "/__reset" && req.method === "POST") { users.clear(); byId.clear(); access.clear(); refresh.clear(); return send(200, { ok: true }); }
   if (path === "/__user" && req.method === "POST") { const u = await create(String(body.email), String(body.password ?? "Clave-de-prueba-1")); return send(200, { id: u.id, email: u.email }); }
   return send(404, { error: "no existe" });
-});
+}
 server.listen(PORT, "127.0.0.1", () => console.log(`Autenticación simulada en http://127.0.0.1:${PORT}`));

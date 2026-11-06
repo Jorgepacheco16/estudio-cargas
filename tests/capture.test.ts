@@ -46,6 +46,22 @@ async function main() {
       }
     });
 
+    await check("Umbral de sobrecarga (D-103): admite hasta 200 % (105 % para tolerar un poco de sobrecarga) y dice el límite real; los demás porcentajes siguen limitados a 100 %", () => {
+      const field = (o: Record<string, string>, label: string) => parseForm(def("param"), fd(o)).errors.filter((e) => e.startsWith(label)).join(" | ");
+      for (const [txt, guardado] of [["105", "1.0500"], ["105 %", "1.0500"], ["100", "1.0000"], ["200", "2.0000"], ["110,5", "1.1050"]] as const) {
+        const r = parseForm(def("param"), fd({ overloadThreshold: txt }));
+        if (field({ overloadThreshold: txt }, "Umbral de sobrecarga") !== "" || r.values.overloadThreshold !== guardado) throw new Error(`${txt}: ${JSON.stringify(r)}`);
+      }
+      for (const txt of ["200,5", "250", "-1", "abc", "1%2%"]) {
+        const e = field({ overloadThreshold: txt }, "Umbral de sobrecarga");
+        if (!e) throw new Error(`${txt} debía rechazarse`);
+        if (/^[\d,.]+$/.test(txt) && !e.includes("entre 0 y 200")) throw new Error(`el mensaje debía decir el límite real (200): ${e}`);
+      }
+      if (!field({ reservePct: "101" }, "Reserva").includes("entre 0 y 100") || !field({ lowLoadThreshold: "101" }, "Umbral de carga baja").includes("entre 0 y 100")) throw new Error("los demás porcentajes siguen en 100");
+      const campo = def("param").fields.find((f) => f.key === "overloadThreshold")!;
+      if (!/105 %/.test(campo.hint ?? "") || !/Dotación requerida/.test(campo.hint ?? "")) throw new Error("la ayuda del campo debe explicar el uso del umbral");
+    });
+
     await check("Validación de parámetros: no numérico, fuera de rango y formato estricto se rechazan (nunca 0); «semanas por mes» ya no es editable", () => {
       const bad = (o: Record<string, string>, frag: string) => {
         const e = parseForm(def("param"), fd(o)).errors.join(" | ");
