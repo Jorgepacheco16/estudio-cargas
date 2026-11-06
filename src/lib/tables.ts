@@ -6,8 +6,10 @@ import { CALC_4A, calcValue } from "@/domain/calc4a";
 import { PRESETS, PRESET_ES, LEVEL_ES, METRIC_ES, drillRows, type DrillFilters, type LevelKey } from "@/domain/drill";
 import type { Mode } from "@/domain/summary";
 import { needsOf, STATE_ES } from "@/domain/staffing";
+import { DAY_NAMES } from "@/domain/shifts";
+import { RULE_ES, TYPE_ES, WEEK_ES, type PositionSchedule } from "@/domain/schedule";
 
-export const VIEWS = ["tablero", "cargos", "actividades", "calculo", "areas", "sedes", "drill", "agente", "dotacion"] as const;
+export const VIEWS = ["tablero", "cargos", "actividades", "calculo", "areas", "sedes", "drill", "agente", "dotacion", "reparto"] as const;
 export type View = (typeof VIEWS)[number];
 export const isView = (v: string): v is View => (VIEWS as readonly string[]).includes(v);
 
@@ -39,6 +41,30 @@ export function dotacionTable(a: Analysis): Table {
     ],
     rows: needsOf(a.positions).map((n) => ({ kind: KIND(n.dataKind), area: n.area, site: n.site, position: n.position, occupants: n.occupants, hours: r2(n.hours), per: r2(n.hoursPerPerson), exact: r2(n.exact), required: n.required, gap: n.gap, state: STATE_ES[n.state], reading: n.reading })),
   };
+}
+
+/** Reparto semanal (D-101): una fila por persona, día y actividad (minutos), y una tabla con cómo se reparte cada actividad y cuánto toma. Las personas son «Persona 1, 2…». */
+export function repartoTables(schedules: PositionSchedule[]): Table[] {
+  const plans = schedules.flatMap((s) => (s.common && s.periodic ? [{ s, w: s.common }, { s, w: s.periodic }] : []));
+  const names = new Map(plans.flatMap(({ w }) => w.activities.map((a) => [a.code, a.name] as const)));
+  const base = (s: PositionSchedule, week: string) => ({ kind: KIND(s.dataKind), area: s.area, site: s.site, position: s.position, week });
+  const common = [
+    { key: "kind", header: "Tipo de dato", width: 12 }, { key: "area", header: "Área", width: 26 }, { key: "site", header: "Centro de operaciones", width: 18 }, { key: "position", header: "Cargo", width: 28 }, { key: "week", header: "Semana", width: 32 },
+  ];
+  const cells = plans.flatMap(({ s, w }) => w.grid.flatMap((row, p) => row.flatMap((c, d) => [
+    ...c.items.map((i) => ({ ...base(s, WEEK_ES[w.kind]), person: `Persona ${p + 1}`, day: DAY_NAMES[s.days[d]], code: i.code, name: names.get(i.code) ?? null, minutes: r2(i.minutes) })),
+    ...(c.reserveMin > 0.5 ? [{ ...base(s, WEEK_ES[w.kind]), person: `Persona ${p + 1}`, day: DAY_NAMES[s.days[d]], code: "Imprevistos", name: "Reserva para actividades ocasionales o no planificadas", minutes: r2(c.reserveMin) }] : []),
+  ])));
+  const acts = plans.flatMap(({ s, w }) => w.activities.map((a) => ({
+    ...base(s, WEEK_ES[w.kind]), code: a.code, name: a.name, type: a.type ? TYPE_ES[a.type] : "Sin tipo", rule: a.perEmployee ? "La hace cada persona" : RULE_ES[a.rule], who: a.persons.length === w.people ? "Todas" : a.persons.map((p) => `Persona ${p}`).join(", "),
+    executions: r2(a.executions), perExec: r2(a.minutesPerExecution), total: r2(a.weekMinutes),
+  })));
+  const pending = schedules.filter((s) => s.state !== "ok").map((s) => ({ kind: KIND(s.dataKind), area: s.area, site: s.site, position: s.position, reason: s.reason }));
+  return [
+    { name: "Reparto", columns: [...common, { key: "person", header: "Persona", width: 12 }, { key: "day", header: "Día", width: 12 }, { key: "code", header: "Actividad", width: 14 }, { key: "name", header: "Nombre de la actividad", width: 44 }, { key: "minutes", header: "Minutos", fmt: "#,##0.0" }], rows: cells },
+    { name: "Actividades", columns: [...common, { key: "code", header: "Código", width: 14 }, { key: "name", header: "Nombre de la actividad", width: 44 }, { key: "type", header: "Tipo", width: 16 }, { key: "rule", header: "Cómo se reparte", width: 28 }, { key: "who", header: "Quién", width: 24 }, { key: "executions", header: "Ejecuciones", fmt: "#,##0.##" }, { key: "perExec", header: "Minutos de cada ejecución", fmt: "#,##0.0" }, { key: "total", header: "Minutos de la semana", fmt: "#,##0.0" }], rows: acts },
+    ...(pending.length ? [{ name: "Sin reparto", columns: [{ key: "kind", header: "Tipo de dato", width: 12 }, { key: "area", header: "Área", width: 26 }, { key: "site", header: "Centro de operaciones", width: 18 }, { key: "position", header: "Cargo", width: 28 }, { key: "reason", header: "Motivo", width: 80 }], rows: pending }] : []),
+  ];
 }
 
 export function areasTable(a: Analysis): Table {
@@ -151,7 +177,7 @@ export function drillTable(a: Analysis, config: string, level: LevelKey, filters
 }
 
 export interface ViewQuery { area?: string; position?: string; config?: string; level?: string; site?: string; code?: string; alert?: string }
-export function tablesFor(view: View, a: Analysis, d: Dashboard, proposals: ProposalRow[] = [], q: ViewQuery = {}, mode: Mode = "all", reservePct = 0.1, names?: Map<string, string>): { title: string; tables: Table[] } {
+export function tablesFor(view: View, a: Analysis, d: Dashboard, proposals: ProposalRow[] = [], q: ViewQuery = {}, mode: Mode = "all", reservePct = 0.1, names?: Map<string, string>, schedules: PositionSchedule[] = []): { title: string; tables: Table[] } {
   switch (view) {
     case "tablero": return { title: "Inicio", tables: [...dashboardTables(d).slice(0, 1), cargosTable(a), ...dashboardTables(d).slice(1)] };
     case "cargos": return { title: "Cargos y dotación", tables: [cargosTable(a)] };
@@ -162,5 +188,6 @@ export function tablesFor(view: View, a: Analysis, d: Dashboard, proposals: Prop
     case "drill": { const lv = (["study", "area", "position", "activity"] as const).find((x) => x === q.level) ?? "study"; return { title: "Drill-down", tables: [drillTable(a, q.config ?? "carga-por-area", lv, { area: q.area, site: q.site, position: q.position, alertOnly: (q.alert as DrillFilters["alertOnly"]) ?? "", ...(q.code ? { code: q.code } : {}) } as DrillFilters)] }; }
     case "agente": return { title: "Agente de IA", tables: [agenteTable(proposals)] };
     case "dotacion": return { title: "Dotación requerida", tables: [dotacionTable(a)] };
+    case "reparto": return { title: "Reparto semanal", tables: repartoTables(schedules) };
   }
 }
