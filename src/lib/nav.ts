@@ -32,6 +32,7 @@ export const MENU: NavEntry[] = [
     items: [
       { href: "/resultados/dotacion", label: "Dotación requerida" },
       { href: "/resultados/reparto", label: "Reparto semanal" },
+      { href: "/resultados/informe", label: "Informe" },
       { href: "/resultados/agente", label: "Agente de IA" },
     ],
   },

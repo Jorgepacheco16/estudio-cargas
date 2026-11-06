@@ -356,7 +356,7 @@ async function main() {
   await check("«Reparto semanal» está en el grupo Resultados, después de Dotación requerida, y lo gobiernan los mismos permisos; existe la vista de exportación", () => {
     if (!(VIEWS as readonly string[]).includes("reparto") || !menuHrefs().includes("/resultados/reparto")) throw new Error("falta la vista o el menú");
     const g = MENU.find((e) => "group" in e && e.group === "Resultados") as { items: { href: string }[] };
-    if (g.items.map((i) => i.href).join() !== "/resultados/dotacion,/resultados/reparto,/resultados/agente") throw new Error(g.items.map((i) => i.href).join());
+    if (g.items.map((i) => i.href).join() !== "/resultados/dotacion,/resultados/reparto,/resultados/informe,/resultados/agente") throw new Error(g.items.map((i) => i.href).join());
     if (JSON.stringify(moduleOfPath("/resultados/reparto")) !== '["resultados","cargos","actividades"]') throw new Error("permisos");
   });
 }
