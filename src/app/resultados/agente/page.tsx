@@ -28,7 +28,7 @@ export default async function Agente({ searchParams }: { searchParams: Promise<R
   const user = await getUser();
   if (!user) redirect("/login");
   const study = await activeStudyId(user.id);
-  requireRead(study, "agente");
+  requireRead(study, ["resultados", "agente"]);
   const proposals = study ? await listProposals(getDb(), user.id, study.id) : [];
   const cargos = study ? await listCoverageCargos(getDb(), user.id, study.id) : [];
   const configured = Boolean(process.env.ANTHROPIC_API_KEY);

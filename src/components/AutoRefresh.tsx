@@ -3,7 +3,7 @@ import { useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 
 /** Pantallas de lectura que se mantienen al día (sustituye a Realtime, D-55). Las pantallas con formularios de captura no se refrescan solas. */
-const PANTALLAS = new Set(["/", "/cargos", "/actividades", "/sedes", "/drill", "/historia", "/agente"]);
+const PANTALLAS = new Set(["/", "/cargos", "/actividades", "/sedes", "/drill", "/historia", "/resultados/agente"]);
 
 /**
  * Cada `segundos` vuelve a pedir los datos al servidor si la pestaña está visible y la persona no está escribiendo,

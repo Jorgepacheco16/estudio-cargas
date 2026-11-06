@@ -3,7 +3,7 @@
  * Niveles: Sin acceso · Lectura · Edición (Edición incluye Lectura).
  */
 export const MODULES = [
-  "estudio", "parametros", "cargos", "actividades", "medibilidad", "pertinencia", "riesgos", "oportunidades", "rediseno", "plan", "historia", "integraciones", "agente", "usuarios",
+  "estudio", "parametros", "cargos", "actividades", "medibilidad", "pertinencia", "riesgos", "oportunidades", "rediseno", "plan", "historia", "integraciones", "agente", "resultados", "usuarios",
 ] as const;
 export type AppModule = (typeof MODULES)[number];
 export const LEVELS = ["none", "read", "edit"] as const;
@@ -12,7 +12,7 @@ export type Level = (typeof LEVELS)[number];
 export const LEVEL_LABEL: Record<Level, string> = { none: "Sin acceso", read: "Lectura", edit: "Edición" };
 export const MODULE_LABEL: Record<AppModule, string> = {
   estudio: "Estudio", parametros: "Parámetros", cargos: "Cargos y dotación", actividades: "Actividades", medibilidad: "Medibilidad", pertinencia: "Pertinencia", riesgos: "Riesgos",
-  oportunidades: "Oportunidades", rediseno: "Rediseño", plan: "Plan de acción", historia: "Historia y mediciones", integraciones: "Integraciones con Google", agente: "Agente de IA", usuarios: "Usuarios y roles",
+  oportunidades: "Oportunidades", rediseno: "Rediseño", plan: "Plan de acción", historia: "Historia y mediciones", integraciones: "Integraciones con Google", agente: "Agente de IA", resultados: "Resultados", usuarios: "Usuarios y roles",
 };
 
 /** Módulos que exigen Lectura en otro para poder trabajar (por ejemplo, evaluar una actividad exige poder leerla). */
@@ -24,6 +24,7 @@ export const REQUIRES: Partial<Record<AppModule, Partial<Record<AppModule, Level
   plan: { oportunidades: "read" },
   historia: { actividades: "read" },
   agente: { actividades: "read" },
+  resultados: { cargos: "read", actividades: "read" }, // el informe se construye con lo capturado en cargos y actividades
 };
 
 const rank = (l: Level) => LEVELS.indexOf(l);
@@ -71,9 +72,10 @@ export function moduleOfPath(pathname: string): AppModule | AppModule[] | null {
   if (hit("/diagnostico/plan-de-accion")) return "plan";
   if (hit("/historia")) return "historia";
   if (hit("/integraciones")) return "integraciones";
-  if (hit("/agente")) return "agente";
+  if (hit("/resultados/agente") || hit("/agente")) return ["resultados", "agente"]; // el Agente de IA es una subsección de Resultados (D-100)
+  if (hit("/resultados")) return ["resultados", "cargos", "actividades"]; // las demás subsecciones de Resultados se calculan con cargos y actividades
   if (hit("/usuarios")) return "usuarios";
-  if (hit("/calculo") || hit("/resultados/dotacion") || hit("/drill") || hit("/sedes")) return ["cargos", "actividades"]; // se calculan con cargos y actividades
+  if (hit("/calculo") || hit("/drill") || hit("/sedes")) return ["cargos", "actividades"]; // se calculan con cargos y actividades
   return null;
 }
 
@@ -82,8 +84,8 @@ export const SUPER_ROLE = "Super usuario";
 export const DEFAULT_ROLES: { name: string; system: boolean; perms: Permissions }[] = [
   { name: SUPER_ROLE, system: true, perms: allPermissions("edit") },
   // «Estudio»: solo el Super usuario crea estudios nuevos (Edición); Editor y Lector pueden ver la ventana y cambiar de estudio (Lectura).
-  { name: "Editor", system: false, perms: { ...allPermissions("edit"), usuarios: "none", estudio: "read" } },
-  { name: "Lector", system: false, perms: { ...allPermissions("read"), usuarios: "none" } },
+  { name: "Editor", system: false, perms: { ...allPermissions("edit"), usuarios: "none", estudio: "read", resultados: "none" } },
+  { name: "Lector", system: false, perms: { ...allPermissions("read"), usuarios: "none", resultados: "none" } },
 ];
 
 /** Resumen corto de lo que un rol permite, para listas y el cuadro de permisos. */

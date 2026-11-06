@@ -30,7 +30,7 @@ const Icon = ({ d }: { d?: string }) => (
 /** `allowed`: rutas del menú a las que la persona tiene acceso (D-91); null = sin restricción (demostración), donde «Usuarios y roles» no se ofrece. */
 export function Nav({ allowed = null }: { allowed?: string[] | null }) {
   const path = usePathname();
-  const ok = (href: string) => (allowed ? allowed.includes(href) : href !== "/usuarios");
+  const ok = (href: string) => (allowed ? allowed.includes(href) : href !== "/usuarios" && !href.startsWith("/resultados")); // la demostración no ve «Usuarios y roles» ni «Resultados» (D-100)
   const [picked, setPicked] = useState<{ group: string; at: string } | null>(null); // grupo que la persona abrió o cerró a mano EN ESTA página; al cambiar de página vale el que contiene la página
   const groups = MENU.flatMap((e) => ("group" in e ? [{ ...e, items: e.items.filter((i) => ok(i.href)) }] : [])).filter((g) => g.items.length > 0);
   const inside = groups.find((g) => g.items.some((i) => isActive(path, i.href)))?.group ?? "";

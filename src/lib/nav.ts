@@ -27,11 +27,11 @@ export const MENU: NavEntry[] = [
   { href: "/sedes", label: "Comparador de centros de operaciones" },
   { href: "/historia", label: "Historia y desviaciones" },
   { href: "/integraciones", label: "Integraciones" },
-  { href: "/agente", label: "Agente de IA" },
   {
     group: GRUPO_RESULTADOS,
     items: [
       { href: "/resultados/dotacion", label: "Dotación requerida" },
+      { href: "/resultados/agente", label: "Agente de IA" },
     ],
   },
   { href: "/usuarios", label: "Usuarios y roles" },

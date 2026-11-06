@@ -96,20 +96,22 @@ async function main() {
     if (title !== "Dotación requerida" || tables[0].rows.length !== 1 || row.required !== 3 || row.gap !== 1 || row.occupants !== 2 || row.state !== STATE_ES.short) throw new Error(JSON.stringify(row));
   });
 
-  await check("«Resultados» es UN solo grupo del menú, entre «Agente de IA» y «Usuarios y roles», y su primera subsección es «Dotación requerida»", () => {
+  await check("«Resultados» es UN solo grupo del menú, justo antes de «Usuarios y roles», con «Dotación requerida» primero y el «Agente de IA» como subsección", () => {
     const idx = (f: (e: (typeof MENU)[number]) => boolean) => MENU.findIndex(f);
-    const agente = idx((e) => "href" in e && e.href === "/agente"), usuarios = idx((e) => "href" in e && e.href === "/usuarios");
+    const historia = idx((e) => "href" in e && e.href === "/integraciones"), usuarios = idx((e) => "href" in e && e.href === "/usuarios");
     const grupos = MENU.filter((e) => "group" in e && e.group === GRUPO_RESULTADOS);
     if (grupos.length !== 1) throw new Error("debe haber un solo grupo «Resultados»");
     const g = idx((e) => "group" in e && e.group === GRUPO_RESULTADOS);
-    if (!(agente >= 0 && g === agente + 1 && usuarios === g + 1)) throw new Error(`orden del menú: agente ${agente}, resultados ${g}, usuarios ${usuarios}`);
+    if (!(historia >= 0 && g === historia + 1 && usuarios === g + 1)) throw new Error(`orden del menú: integraciones ${historia}, resultados ${g}, usuarios ${usuarios}`);
+    if (menuHrefs().includes("/agente")) throw new Error("el Agente de IA ya no es un enlace suelto del menú");
     const items = (grupos[0] as { items: { href: string; label: string }[] }).items;
-    if (items[0].href !== "/resultados/dotacion" || items[0].label !== "Dotación requerida") throw new Error(JSON.stringify(items[0]));
+    if (items[0].href !== "/resultados/dotacion" || items[0].label !== "Dotación requerida" || !items.some((i) => i.href === "/resultados/agente" && i.label === "Agente de IA")) throw new Error(JSON.stringify(items));
     if (menuHrefs().includes("/dotacion")) throw new Error("no debe quedar «Dotación requerida» suelta en el menú");
   });
 
-  await check("«Dotación requerida» la gobiernan Cargos y Actividades (igual que Cálculo de tiempos): quien tiene ambos la ve y quien no, no", () => {
-    if (JSON.stringify(moduleOfPath("/resultados/dotacion")) !== '["cargos","actividades"]') throw new Error(JSON.stringify(moduleOfPath("/resultados/dotacion")));
+  await check("«Dotación requerida» exige el permiso «Resultados» además de Cargos y Actividades; el Agente de IA, «Resultados» y su propio permiso", () => {
+    if (JSON.stringify(moduleOfPath("/resultados/dotacion")) !== '["resultados","cargos","actividades"]') throw new Error(JSON.stringify(moduleOfPath("/resultados/dotacion")));
+    if (JSON.stringify(moduleOfPath("/resultados/agente")) !== '["resultados","agente"]') throw new Error(JSON.stringify(moduleOfPath("/resultados/agente")));
   });
 }
 main().then(summary);

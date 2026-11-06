@@ -49,7 +49,7 @@ test("[anónimo] la página de ingreso muestra la marca, el ingreso con usuario 
 });
 
 test("[anónimo] sin ingresar no se ve ninguna pantalla interna ni se descarga nada; las tareas programadas y el webhook siguen respondiendo por su propia firma", async ({ request }) => {
-  for (const ruta of ["/", "/cargos", "/actividades?modo=demo", "/calculo", "/resultados/dotacion", "/drill", "/diagnostico/riesgos", "/sedes"]) {
+  for (const ruta of ["/", "/cargos", "/actividades?modo=demo", "/calculo", "/resultados/dotacion", "/resultados/agente", "/drill", "/diagnostico/riesgos", "/sedes"]) {
     const r = await request.get(ruta, { maxRedirects: 0 });
     expect(r.status(), ruta).toBe(307);
     expect(r.headers()["location"], ruta).toContain("/ingreso");
@@ -118,7 +118,7 @@ test("toda la navegación principal responde y las páginas de captura piden una
   for (const l of links) {
     const r = await page.goto(l.href);
     expect(r?.status(), `${l.text} (${l.href})`).toBeLessThan(400);
-    if (["/estudio", "/parametros", "/integraciones", "/historia", "/agente"].includes(l.href)) await expect(page, `${l.href} debe pedir una cuenta`).toHaveURL(/\/ingreso\?requiere=1/);
+    if (["/estudio", "/parametros", "/integraciones", "/historia"].includes(l.href)) await expect(page, `${l.href} debe pedir una cuenta`).toHaveURL(/\/ingreso\?requiere=1/);
   }
 });
 
@@ -234,7 +234,7 @@ for (const ruta of ["/?modo=demo", "/cargos?modo=demo", "/actividades?modo=demo"
   });
 }
 
-for (const ruta of ["/?modo=demo", "/cargos?modo=demo", "/actividades?modo=demo", "/sedes?modo=demo", "/calculo?modo=demo", "/resultados/dotacion?modo=demo", "/drill?modo=demo&level=area&area=Cajas"]) {
+for (const ruta of ["/?modo=demo", "/cargos?modo=demo", "/actividades?modo=demo", "/sedes?modo=demo", "/calculo?modo=demo", "/drill?modo=demo&level=area&area=Cajas"]) {
   test(`accesibilidad (axe, sin fallas serias ni críticas): ${ruta}`, async ({ page }) => {
     await page.goto(ruta);
     const r = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa"]).analyze();
@@ -288,17 +288,16 @@ test("la pestaña de la hoja 4a muestra las columnas calculadas con los encabeza
   const [d] = await Promise.all([page.waitForEvent("download"), page.getByRole("link", { name: "Exportar Excel" }).click()]);
   expect(d.suggestedFilename()).toMatch(/calculo.*\.xlsx$/);
 });
-test("la dotación requerida muestra el resumen, la tabla por área y por cargo, y se exporta", async ({ page }) => {
-  await page.goto("/resultados/dotacion?modo=demo");
-  await expect(page.getByRole("heading", { name: "Dotación requerida" })).toBeVisible();
-  for (const t of ["Personas que hay", "Personas necesarias", "Brecha", "Cargos sin cifra"]) await expect(page.getByText(t, { exact: true }).first()).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Por área" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Por cargo" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Resultados" })).toHaveAttribute("aria-expanded", "true"); // dentro de una subsección el grupo permanece desplegado
-  await expect(page.getByRole("link", { name: "Dotación requerida" })).toHaveAttribute("aria-current", "page");
-  await expect(page.getByRole("group", { name: "Diagnóstico y rediseño" })).toHaveCount(0); // un solo grupo desplegado a la vez
-  const [d] = await Promise.all([page.waitForEvent("download"), page.getByRole("link", { name: "Exportar Excel" }).click()]);
-  expect(d.suggestedFilename()).toMatch(/dotacion.*.xlsx$/);
+test("«Resultados» (D-100) no se ofrece en la demostración: ni en el menú ni abriendo sus direcciones", async ({ page }) => {
+  await page.goto("/");
+  const menu = page.getByRole("navigation", { name: "Principal" });
+  await expect(menu.getByRole("button", { name: "Resultados" })).toHaveCount(0);
+  await expect(menu.getByRole("link", { name: "Agente de IA" })).toHaveCount(0);
+  await expect(menu.getByRole("link", { name: "Dotación requerida" })).toHaveCount(0);
+  for (const ruta of ["/resultados/dotacion", "/resultados/agente", "/agente"]) {
+    await page.goto(ruta);
+    await expect(page, ruta).toHaveURL(/\/ingreso\?requiere=1/);
+  }
 });
 test("las listas se muestran de 10 en 10, con «Filas por página» y navegación entre páginas", async ({ page }) => {
   await page.goto("/calculo?modo=demo");
