@@ -291,6 +291,10 @@ test("Texto del informe (D-106): el borrador sembrado se ve con sus cifras; un n
   await admin.goto("/resultados/informe");
   await listo(admin, "Texto del informe");
   await expect(admin.getByText("Versión 1: borrador.")).toBeVisible();
+  // D-107: sin versión aprobada no hay descarga: los botones no están y la dirección rechaza el borrador
+  await expect(admin.getByText("se descargan de la versión aprobada")).toBeVisible();
+  await expect(admin.getByRole("group", { name: "Descargar el informe aprobado" }).getByRole("link")).toHaveCount(0);
+  expect((await admin.request.get("/api/informe/descarga?formato=pdf&v=1")).status()).toBe(409);
   const resumen = admin.getByRole("article", { name: "Resumen ejecutivo" });
   await expect(resumen).toContainText("Cifras citadas:");
   await expect(admin.getByRole("button", { name: "Aprobar esta versión" })).toBeEnabled();
@@ -314,9 +318,23 @@ test("Texto del informe (D-106): el borrador sembrado se ve con sus cifras; un n
   await expect(admin.getByText("Versión 1 aprobada", { exact: true })).toBeVisible();
   await expect(admin.getByRole("button", { name: "Aprobar esta versión" })).toHaveCount(0);
   await expect(admin.getByRole("button", { name: "Editar el texto" })).toHaveCount(0);
-  // Ana, sin «Resultados», no lo ve
+  // D-107: la versión aprobada se descarga en PDF, Word y PowerPoint, con el logo del cliente
+  const grupo = admin.getByRole("group", { name: "Descargar el informe aprobado" });
+  await expect(grupo.getByRole("link")).toHaveText(["PDF", "Word", "PowerPoint"]);
+  for (const [f, magia, tipo] of [["pdf", "%PDF", /application\/pdf/], ["docx", "PK", /wordprocessingml/], ["pptx", "PK", /presentationml/]] as const) {
+    const r = await admin.request.get(`/api/informe/descarga?formato=${f}&v=1`);
+    expect(r.status(), f).toBe(200);
+    expect(r.headers()["content-type"], f).toMatch(tipo);
+    expect(r.headers()["content-disposition"], f).toMatch(new RegExp(`informe-de-resultados_v1_\\d{4}-\\d{2}-\\d{2}\\.${f}`));
+    expect((await r.body()).subarray(0, magia.length).toString("latin1"), f).toBe(magia);
+  }
+  expect((await admin.request.get("/api/informe/descarga?formato=exe&v=1")).status()).toBe(400);
+  const [dl] = await Promise.all([admin.waitForEvent("download"), grupo.getByRole("link", { name: "PDF" }).click()]);
+  expect(dl.suggestedFilename()).toMatch(/\.pdf$/);
+  // Ana, sin «Resultados», no lo ve ni lo descarga
   await ana.goto("/resultados/informe");
   await ana.waitForURL(/sin-acceso/);
+  expect((await ana.request.get("/api/informe/descarga?formato=pdf&v=1")).status()).toBe(403);
 });
 
 test("la persona escribe su nombre en «Mi cuenta» y se le ve con él (encabezado y lista de usuarios)", async () => {

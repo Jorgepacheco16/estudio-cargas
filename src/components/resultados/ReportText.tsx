@@ -27,6 +27,7 @@ export function ReportText({ versions, selected, basis, canManage, canGenerate, 
   const approval = selected?.status === "draft" ? canApprove(selected.sections) : null;
   const regenBlocked = !canGenerate ? "Redactar de nuevo exige Edición en Agente de IA y acceso a todas las áreas." : usage >= limit ? `Se alcanzó el tope diario de redacciones (${limit}).` : null;
   const editable = selected?.status === "draft" && canManage;
+  const official = selected?.status === "approved" ? selected : versions.find((v) => v.status === "approved") ?? null; // la que se descarga: la aprobada que se está viendo o, si no, la vigente
 
   return (
     <section aria-labelledby="texto" style={{ display: "flex", flexDirection: "column", gap: 14 }}>
@@ -48,6 +49,14 @@ export function ReportText({ versions, selected, basis, canManage, canGenerate, 
         </div>
       </div>
 
+      <div role="group" aria-label="Descargar el informe aprobado" style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center" }}>
+        {official ? (
+          <>
+            <span className="note" style={{ margin: 0 }}>Descargar la versión {official.number} aprobada, con el logo del cliente:</span>
+            {([["pdf", "PDF"], ["docx", "Word"], ["pptx", "PowerPoint"]] as const).map(([f, label]) => <a key={f} className="btn" href={`/api/informe/descarga?formato=${f}&v=${official.number}`} download>{label}</a>)}
+          </>
+        ) : <span className="note" style={{ margin: 0 }}>El PDF, el Word y el PowerPoint se descargan de la versión aprobada: apruebe una para habilitarlos.</span>}
+      </div>
       {canManage && blocked && !first && !draft && <p className="note" style={{ margin: 0 }}>{blocked}</p>}
       {first && <div className="banner" role="status"><span>Todavía no hay ninguna versión del texto. {canManage ? (blocked ? blocked : "Pulse «Generar el informe» para que el agente redacte el primer borrador.") : "Quien tenga Edición en Resultados puede generarla."}</span></div>}
       {selected?.status === "approved" && <div className="banner" role="status" style={{ background: "var(--green-soft)", color: "var(--green-dark)" }}><span><b>Versión {selected.number} aprobada</b> el {when(selected.approvedAt)}. Es la versión oficial: no se modifica; para cambiar algo se crea una versión nueva.</span></div>}
