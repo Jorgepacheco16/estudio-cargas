@@ -17,6 +17,7 @@ export const ENTITY_INFO: Record<string, { section: string; kind: ChangeKind }> 
   deviation: { section: "Historia y mediciones", kind: "datos" }, deviation_detection: { section: "Historia y mediciones", kind: "datos" },
   sheet_connection: { section: "Integraciones con Google", kind: "datos" }, sync: { section: "Integraciones con Google", kind: "datos" },
   agent_run: { section: "Agente de IA", kind: "datos" }, agent_proposal: { section: "Agente de IA", kind: "datos" }, coverage_run: { section: "Agente de IA", kind: "datos" },
+  report_version: { section: "Informe de resultados", kind: "datos" },
   membership: { section: "Usuarios y roles", kind: "admin" }, membership_name: { section: "Usuarios y roles", kind: "admin" }, member_password_reset: { section: "Usuarios y roles", kind: "admin" },
   role: { section: "Usuarios y roles", kind: "admin" }, invitation: { section: "Usuarios y roles", kind: "admin" }, invitation_accepted: { section: "Usuarios y roles", kind: "admin" },
 };
@@ -30,6 +31,7 @@ export const SECTIONS = [...new Set(Object.values(ENTITY_INFO).map((v) => v.sect
 /** Qué se hizo, con el verbo en pasado (lo que ve la persona). */
 export const ACTION_LABEL: Record<string, string> = {
   insert: "Creó", update: "Modificó", delete: "Eliminó", import: "Importó", run: "Ejecutó", explain: "Explicó", sync: "Sincronizó", restore: "Restauró", approve: "Aprobó", reject: "Rechazó",
+  edit: "Editó", regenerate: "Redactó de nuevo", discard: "Descartó",
 };
 export const actionLabel = (a: string) => ACTION_LABEL[a] ?? a.charAt(0).toUpperCase() + a.slice(1);
 export const ORIGIN_LABEL: Record<string, string> = { app: "Aplicación", sheet: "Hoja de Google", import: "Importación", autocorrect: "Autocorrector", agent: "Agente de IA" };

@@ -12,7 +12,11 @@ import { LEVEL_ES, SCENARIO_ES, buildReportFacts } from "@/domain/report";
 import { STATE_ES } from "@/domain/staffing";
 import type { RawParams } from "@/lib/page-filters";
 import { loadSchedules } from "@/server/schedule";
+import { ReportText } from "@/components/resultados/ReportText";
+import { canEdit } from "@/lib/access";
+import { REPORT_DAILY_LIMIT, listVersions, loadReportBasis, reportUsage } from "@/server/report-version";
 
+export const maxDuration = 60; // redactar el texto con el agente puede tardar
 export const metadata = { title: "Informe de resultados" };
 const signed = (n: number) => (n > 0 ? `+${n}` : String(n).replace("-", "−"));
 const pct = (n: number | null, d = 0) => (n === null ? "—" : `${fmt(n * 100, d)} %`);
@@ -27,6 +31,14 @@ export default async function Informe({ searchParams }: { searchParams: Promise<
   const loaded = study ? await loadSchedules(getDb(), user.id, study.id, mode) : null;
   const facts = loaded ? buildReportFacts({ positions: loaded.positions, schedules: loaded.schedules, kpis: loaded.kpis, overload: loaded.overload, reservePct: loaded.params.reservePct, scenario: loaded.params.scenario }) : null;
   const empty = !facts || facts.data.positions === 0;
+  const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v);
+  // El texto del informe (D-106) es del estudio real; quien puede cambiarlo es quien tiene Edición en Resultados, y redactar con el agente exige además Edición en Agente de IA y todas las áreas.
+  const canManage = !!study && canEdit(study, "resultados"), canGenerate = canManage && !!study && canEdit(study, "agente") && !!study.access?.allAreas;
+  const allAreas = !!study?.access?.allAreas; // el texto resume todo el estudio: solo lo ve quien tiene acceso a todas las áreas
+  const textOn = !!study && mode === "real" && !empty && allAreas;
+  const [versions, basis, usage] = textOn && study ? await Promise.all([listVersions(getDb(), user.id, study.id), loadReportBasis(getDb(), user.id, study.id), reportUsage(getDb(), user.id, study.id)]) : [[], null, 0];
+  const wanted = Number(one(raw.v));
+  const selected = versions.find((v) => v.number === wanted) ?? versions.find((v) => v.status === "draft") ?? versions.find((v) => v.status === "approved") ?? versions[0] ?? null;
 
   return (
     <main>
@@ -38,9 +50,12 @@ export default async function Informe({ searchParams }: { searchParams: Promise<
         <div className="tools"><ModeForm mode={mode} /><ExportButtons view="informe" mode={mode} /></div>
       </div>
 
+      {one(raw.ok) && <div className="banner" role="status" style={{ background: "var(--blue-soft)", color: "var(--blue)" }}>{one(raw.ok)}</div>}
+      {one(raw.error) && <div className="banner" role="alert" style={{ background: "var(--red-soft)", color: "var(--red-dark)" }}>{one(raw.error)}</div>}
+
       {empty || !facts ? <section className="card"><div className="empty">Aún no hay cargos ni actividades en este modo. Regístrelos en <Link href="/cargos">Cargos y dotación</Link> y <Link href="/actividades">Actividades</Link>.</div></section> : (
         <>
-          <p className="note" style={{ margin: 0 }}>Estas son las cifras del informe, calculadas por la aplicación: las mismas de Dotación requerida y de Reparto semanal, reunidas en un solo lugar. El texto del informe, redactado por el agente de IA, se agrega en una etapa siguiente.</p>
+          <p className="note" style={{ margin: 0 }}>Estas son las cifras del informe, calculadas por la aplicación: las mismas de Dotación requerida y de Reparto semanal, reunidas en un solo lugar. Más abajo está el texto del informe, redactado por el agente de IA a partir de estas cifras.</p>
 
           <section className="grid-kpi" aria-label="Cifras clave">
             <div className="card"><div className="lbl">Personas que hay</div><div className="kpi">{fmt(facts.totals.occupants, 0)}</div><div className="note">En los {facts.data.positionsWithFigure} cargos con cifra</div></div>
@@ -78,6 +93,10 @@ export default async function Informe({ searchParams }: { searchParams: Promise<
               {facts.weeks.common && <p className="note" style={{ margin: "6px 0 0" }}>En la semana común quedan {fmt(facts.weeks.common.freeHours, 0)} h de disponibilidad sin tareas.</p>}
             </section>
           </section>
+
+          {textOn && basis ? <ReportText versions={versions} selected={selected} basis={basis} canManage={canManage} canGenerate={canGenerate} usage={usage} limit={REPORT_DAILY_LIMIT} />
+            : !allAreas ? <p className="note" style={{ margin: 0 }}>El texto del informe cubre todas las áreas del estudio; su acceso está limitado a algunas áreas, por eso no se muestra aquí.</p>
+            : mode !== "real" ? <p className="note" style={{ margin: 0 }}>El texto del informe se redacta sobre el estudio real: cambie el modo de análisis a REAL para verlo.</p> : null}
 
           <section className="card" aria-labelledby="calidad">
             <h2 id="calidad">Calidad de los datos</h2>

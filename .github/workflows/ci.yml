@@ -51,6 +51,8 @@ jobs:
           psql "$DATABASE_URL_ADMIN" -v ON_ERROR_STOP=1 -f sql/0012_modulo_resultados.sql
           psql "$DATABASE_URL_ADMIN" -v ON_ERROR_STOP=1 -f drizzle/0016_orden_reparto.sql
           psql "$DATABASE_URL_ADMIN" -v ON_ERROR_STOP=1 -f sql/0013_orden_reparto.sql
+          psql "$DATABASE_URL_ADMIN" -v ON_ERROR_STOP=1 -f drizzle/0017_informe_versiones.sql
+          psql "$DATABASE_URL_ADMIN" -v ON_ERROR_STOP=1 -f sql/0014_informe_versiones.sql
       - run: npm run test:rls
       - run: npm run test:f3
       - run: npm run test:capture
@@ -61,6 +63,7 @@ jobs:
       - run: npm run test:areasdb
       - run: npm run test:changelogdb
       - run: npm run test:orderdb
+      - run: npm run test:reportdb
       - run: npm run test:matrix
       - run: npm run test:policies
       - run: npm run test:backup
@@ -85,6 +88,7 @@ jobs:
       - run: npm run test:staffing
       - run: npm run test:schedule
       - run: npm run test:report
+      - run: npm run test:reporttext
       - name: Prueba dorada contra el Excel (LibreOffice real)
         run: sudo apt-get update && sudo apt-get install -y libreoffice-calc && npm run test:golden
       - run: npm audit --omit=dev --audit-level=high
@@ -144,7 +148,7 @@ jobs:
       - name: Migraciones reales sobre PostgreSQL real
         run: |
           psql "$DATABASE_URL_ADMIN" -v ON_ERROR_STOP=1 -f sql/local_bootstrap.sql
-          for f in drizzle/0000_init.sql sql/0001_rls.sql drizzle/0001_weeks_per_month_precision.sql drizzle/0002_sheet_connections_actor.sql sql/0002_sheets.sql drizzle/0003_deviation_thresholds.sql sql/0003_history.sql drizzle/0004_position_shifts.sql sql/0004_shifts.sql drizzle/0005_shift_days.sql drizzle/0006_position_operation.sql drizzle/0007_diagnostico_centro_operaciones.sql drizzle/0008_position_shift_type.sql drizzle/0009_daily_work_hours.sql drizzle/0010_roles_usuarios.sql sql/0005_roles_rls.sql drizzle/0011_area_obligatoria.sql sql/0007_areas_rls.sql drizzle/0012_nombre_cuenta.sql sql/0008_display_name.sql sql/0009_admin_password.sql drizzle/0013_modulo_estudio.sql sql/0010_modulo_estudio.sql drizzle/0014_registro_cambios.sql sql/0011_registro_cambios.sql drizzle/0015_modulo_resultados.sql sql/0012_modulo_resultados.sql drizzle/0016_orden_reparto.sql sql/0013_orden_reparto.sql; do
+          for f in drizzle/0000_init.sql sql/0001_rls.sql drizzle/0001_weeks_per_month_precision.sql drizzle/0002_sheet_connections_actor.sql sql/0002_sheets.sql drizzle/0003_deviation_thresholds.sql sql/0003_history.sql drizzle/0004_position_shifts.sql sql/0004_shifts.sql drizzle/0005_shift_days.sql drizzle/0006_position_operation.sql drizzle/0007_diagnostico_centro_operaciones.sql drizzle/0008_position_shift_type.sql drizzle/0009_daily_work_hours.sql drizzle/0010_roles_usuarios.sql sql/0005_roles_rls.sql drizzle/0011_area_obligatoria.sql sql/0007_areas_rls.sql drizzle/0012_nombre_cuenta.sql sql/0008_display_name.sql sql/0009_admin_password.sql drizzle/0013_modulo_estudio.sql sql/0010_modulo_estudio.sql drizzle/0014_registro_cambios.sql sql/0011_registro_cambios.sql drizzle/0015_modulo_resultados.sql sql/0012_modulo_resultados.sql drizzle/0016_orden_reparto.sql sql/0013_orden_reparto.sql drizzle/0017_informe_versiones.sql sql/0014_informe_versiones.sql; do
             psql "$DATABASE_URL_ADMIN" -v ON_ERROR_STOP=1 -f "$f"
           done
       - run: npm run build
@@ -174,7 +178,7 @@ jobs:
       - name: Migraciones reales sobre PostgreSQL real
         run: |
           psql "$DATABASE_URL_ADMIN" -v ON_ERROR_STOP=1 -f sql/local_bootstrap.sql
-          for f in drizzle/0000_init.sql sql/0001_rls.sql drizzle/0001_weeks_per_month_precision.sql drizzle/0002_sheet_connections_actor.sql sql/0002_sheets.sql drizzle/0003_deviation_thresholds.sql sql/0003_history.sql drizzle/0004_position_shifts.sql sql/0004_shifts.sql drizzle/0005_shift_days.sql drizzle/0006_position_operation.sql drizzle/0007_diagnostico_centro_operaciones.sql drizzle/0008_position_shift_type.sql drizzle/0009_daily_work_hours.sql drizzle/0010_roles_usuarios.sql sql/0005_roles_rls.sql drizzle/0011_area_obligatoria.sql sql/0007_areas_rls.sql drizzle/0012_nombre_cuenta.sql sql/0008_display_name.sql sql/0009_admin_password.sql drizzle/0013_modulo_estudio.sql sql/0010_modulo_estudio.sql drizzle/0014_registro_cambios.sql sql/0011_registro_cambios.sql drizzle/0015_modulo_resultados.sql sql/0012_modulo_resultados.sql drizzle/0016_orden_reparto.sql sql/0013_orden_reparto.sql; do
+          for f in drizzle/0000_init.sql sql/0001_rls.sql drizzle/0001_weeks_per_month_precision.sql drizzle/0002_sheet_connections_actor.sql sql/0002_sheets.sql drizzle/0003_deviation_thresholds.sql sql/0003_history.sql drizzle/0004_position_shifts.sql sql/0004_shifts.sql drizzle/0005_shift_days.sql drizzle/0006_position_operation.sql drizzle/0007_diagnostico_centro_operaciones.sql drizzle/0008_position_shift_type.sql drizzle/0009_daily_work_hours.sql drizzle/0010_roles_usuarios.sql sql/0005_roles_rls.sql drizzle/0011_area_obligatoria.sql sql/0007_areas_rls.sql drizzle/0012_nombre_cuenta.sql sql/0008_display_name.sql sql/0009_admin_password.sql drizzle/0013_modulo_estudio.sql sql/0010_modulo_estudio.sql drizzle/0014_registro_cambios.sql sql/0011_registro_cambios.sql drizzle/0015_modulo_resultados.sql sql/0012_modulo_resultados.sql drizzle/0016_orden_reparto.sql sql/0013_orden_reparto.sql drizzle/0017_informe_versiones.sql sql/0014_informe_versiones.sql; do
             psql "$DATABASE_URL_ADMIN" -v ON_ERROR_STOP=1 -f "$f"
           done
       - name: Sembrar un estudio completo en la base de origen
