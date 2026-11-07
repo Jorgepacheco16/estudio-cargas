@@ -96,7 +96,7 @@
         "eslint-config-next": "16.4.2",
         "jszip": "3.10.2",
         "tsx": "^4.23.15",
-        "typescript": "^5"
+        "typescript": "^7"
     },
     "overrides": {
         "image-size": "2.1.0"
