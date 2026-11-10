@@ -182,7 +182,7 @@ test("«Resultados» (D-100): solo el Super usuario lo ve; al habilitarlo en un 
   await admin.keyboard.press("Escape");
   await expect(dia).toBeHidden();
   const celdaLunes = tarjeta.getByRole("button", { name: /Ver las tareas de la persona 1 el lunes/i }).first();
-  await expect(celdaLunes.locator(".dc-line").first()).toContainText("E-3");
+  await expect(celdaLunes.locator(".rp-task").first()).toContainText("E-3"); // la celda del Reparto muestra sus primeras tareas (D-109)
   await expect(celdaLunes).toContainText("orden guardado");
   // al recargar, el orden sigue guardado (queda en la base, no solo en la pantalla)
   await admin.goto("/resultados/reparto");
