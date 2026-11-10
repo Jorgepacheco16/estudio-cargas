@@ -34,6 +34,7 @@ export function DayCell({ person, day, position, week, cell, target, canSave }: 
     else setError(r.error);
   });
   const lines = shown.filter((t) => t.kind === "task"), reserve = shown.find((t) => t.kind === "reserve");
+  if (cell.rest) return <div className="day-cell" role="group" aria-label={`Persona ${person}: descanso el ${day.toLowerCase()}`}><span className="dc-line"><b>Descanso</b></span><span className="dc-total muted">Sin tareas este día</span></div>;
   return (
     <>
       <button type="button" className="day-cell" onClick={open} aria-haspopup="dialog" aria-label={`Ver las tareas de la persona ${person} el ${day.toLowerCase()}: ${formatMinutes(cell.totalMin)} de ${formatMinutes(cell.capacityMin)}${hasSaved ? ", con orden guardado" : ""}`}>

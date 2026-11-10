@@ -31,7 +31,7 @@ export function cargosTable(a: Analysis): Table {
 }
 
 /** Dotación requerida (D-99): personas necesarias por cargo y brecha frente a las que hay. */
-export function dotacionTable(a: Analysis, overload = 1): Table {
+export function dotacionTable(a: Analysis, overload = 1, roundFrom = 0): Table {
   return {
     name: "Dotación requerida",
     columns: [
@@ -40,7 +40,7 @@ export function dotacionTable(a: Analysis, overload = 1): Table {
       { key: "exact", header: "Personas necesarias (exactas)", fmt: "#,##0.00" }, { key: "required", header: "Personas necesarias", fmt: "0" }, { key: "gap", header: "Brecha (+ faltan, − sobran)", fmt: "+0;-0;0" },
       { key: "state", header: "Estado", width: 20 }, { key: "reading", header: "Lectura", width: 70 },
     ],
-    rows: needsOf(a.positions, overload).map((n) => ({ kind: KIND(n.dataKind), area: n.area, site: n.site, position: n.position, occupants: n.occupants, hours: r2(n.hours), per: r2(n.hoursPerPerson), exact: r2(n.exact), required: n.required, gap: n.gap, state: STATE_ES[n.state], reading: n.reading })),
+    rows: needsOf(a.positions, overload, roundFrom).map((n) => ({ kind: KIND(n.dataKind), area: n.area, site: n.site, position: n.position, occupants: n.occupants, hours: r2(n.hours), per: r2(n.hoursPerPerson), exact: r2(n.exact), required: n.required, gap: n.gap, state: STATE_ES[n.state], reading: n.reading })),
   };
 }
 
@@ -53,8 +53,8 @@ export function repartoTables(schedules: PositionSchedule[]): Table[] {
     { key: "kind", header: "Tipo de dato", width: 12 }, { key: "area", header: "Área", width: 26 }, { key: "site", header: "Centro de operaciones", width: 18 }, { key: "position", header: "Cargo", width: 28 }, { key: "week", header: "Semana", width: 32 },
   ];
   // tareas de cada persona y día, en el orden guardado (o el sugerido) y con su tiempo (sin horas del día)
-  const cells = plans.flatMap(({ s, w }) => w.grid.flatMap((row, p) => row.flatMap((c, d) => applyOrder(c.tasks, c.saved?.codes).map((r, order) => (
-    { ...base(s, WEEK_ES[w.kind]), person: `Persona ${p + 1}`, day: DAY_NAMES[s.days[d]], order: order + 1, code: r.code, name: names.get(r.code) ?? r.name, minutes: r2(r.minutes) })))));
+  const cells = plans.flatMap(({ s, w }) => w.grid.flatMap((row, p) => row.flatMap((c, d) => (c.rest ? [{ code: "Descanso", name: "Día de descanso", minutes: 0 }] : applyOrder(c.tasks, c.saved?.codes)).map((r, order) => (
+    { ...base(s, WEEK_ES[w.kind]), person: `Persona ${p + 1}`, day: DAY_NAMES[s.days[d]], order: c.rest ? 0 : order + 1, code: r.code, name: names.get(r.code) ?? r.name, minutes: r2(r.minutes) })))));
   const acts = plans.flatMap(({ s, w }) => w.activities.map((a) => ({
     ...base(s, WEEK_ES[w.kind]), code: a.code, name: a.name, type: a.type ? TYPE_ES[a.type] : "Sin tipo", rule: a.perEmployee ? "La hace cada persona" : RULE_ES[a.rule], who: a.persons.length === w.people ? "Todas" : a.persons.map((p) => `Persona ${p}`).join(", "),
     executions: r2(a.executions), perExec: r2(a.minutesPerExecution), total: r2(a.weekMinutes),
@@ -199,7 +199,7 @@ export function drillTable(a: Analysis, config: string, level: LevelKey, filters
 }
 
 export interface ViewQuery { area?: string; position?: string; config?: string; level?: string; site?: string; code?: string; alert?: string }
-export function tablesFor(view: View, a: Analysis, d: Dashboard, proposals: ProposalRow[] = [], q: ViewQuery = {}, mode: Mode = "all", reservePct = 0.1, names?: Map<string, string>, schedules: PositionSchedule[] = [], overload = 1, facts?: ReportFacts): { title: string; tables: Table[] } {
+export function tablesFor(view: View, a: Analysis, d: Dashboard, proposals: ProposalRow[] = [], q: ViewQuery = {}, mode: Mode = "all", reservePct = 0.1, names?: Map<string, string>, schedules: PositionSchedule[] = [], overload = 1, facts?: ReportFacts, roundFrom = 0): { title: string; tables: Table[] } {
   switch (view) {
     case "tablero": return { title: "Inicio", tables: [...dashboardTables(d).slice(0, 1), cargosTable(a), ...dashboardTables(d).slice(1)] };
     case "cargos": return { title: "Cargos y dotación", tables: [cargosTable(a)] };
@@ -209,7 +209,7 @@ export function tablesFor(view: View, a: Analysis, d: Dashboard, proposals: Prop
     case "sedes": return { title: "Comparador de centros de operaciones", tables: [sedesTable(a, q.area ?? "", q.position ?? "", mode, reservePct)] };
     case "drill": { const lv = (["study", "area", "position", "activity"] as const).find((x) => x === q.level) ?? "study"; return { title: "Drill-down", tables: [drillTable(a, q.config ?? "carga-por-area", lv, { area: q.area, site: q.site, position: q.position, alertOnly: (q.alert as DrillFilters["alertOnly"]) ?? "", ...(q.code ? { code: q.code } : {}) } as DrillFilters)] }; }
     case "agente": return { title: "Agente de IA", tables: [agenteTable(proposals)] };
-    case "dotacion": return { title: "Dotación requerida", tables: [dotacionTable(a, overload)] };
+    case "dotacion": return { title: "Dotación requerida", tables: [dotacionTable(a, overload, roundFrom)] };
     case "reparto": return { title: "Reparto semanal", tables: repartoTables(schedules) };
     case "informe": return { title: "Informe de resultados", tables: facts ? informeTables(facts) : [] };
   }

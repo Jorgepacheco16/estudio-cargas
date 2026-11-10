@@ -1,6 +1,6 @@
 import { analyze } from "../src/domain/summary";
-import { needOf } from "../src/domain/staffing";
-import { applyOrder, attachSavedOrders, buildSchedules, formatMinutes, moveTask, orderKey, orderedTasks, positionKey, ruleOf, RULE_BY_TYPE, ACTIVITY_TYPES, type ActivityExtra, type ActivityTypeKey, type PositionSchedule, type SavedOrder, type WeekPlan } from "../src/domain/schedule";
+import { needOf, roundUpPeople } from "../src/domain/staffing";
+import { applyOrder, attachSavedOrders, buildSchedules, formatMinutes, moveTask, orderKey, orderedTasks, positionKey, ruleOf, workDaysOf, RULE_BY_TYPE, ACTIVITY_TYPES, type ActivityExtra, type ActivityTypeKey, type PositionSchedule, type SavedOrder, type WeekPlan } from "../src/domain/schedule";
 import { computeActivity, occupantsOf, personDaysOf, type ActivityInput, type Params, type StaffingInput } from "../src/domain/engine";
 import { tablesFor, VIEWS } from "../src/lib/tables";
 import { MENU, menuHrefs } from "../src/lib/nav";
@@ -25,16 +25,16 @@ const act = (code: string, position: string, o: Over = {}): ActivityInput => {
     waitMin: null, waitOccupies: null, travelMin: null, reworkPct: null, reworkMin: null, ...rest,
   };
 };
-const MON_SAT = [0, 1, 2, 3, 4, 5];
+const MON_SAT = [0, 1, 2, 3, 4, 5], ALL_DAYS = [0, 1, 2, 3, 4, 5, 6];
 interface Run { schedules: PositionSchedule[]; hours: (position?: string) => number; required: (position?: string) => number | null }
-function run(st: StaffingInput[], ac: ActivityInput[], types: Record<string, ActivityTypeKey | null> = {}, days: number[] = MON_SAT, over: Partial<Params> = {}, overload = 1): Run {
+function run(st: StaffingInput[], ac: ActivityInput[], types: Record<string, ActivityTypeKey | null> = {}, days: number[] = MON_SAT, over: Partial<Params> = {}, overload = 1, activityDays?: Map<string, number[] | null>): Run {
   const p = prm(over), a = analyze(st, ac, p, TH, "all");
   const extras = new Map<string, ActivityExtra>(ac.map((x) => [x.code.toLowerCase(), { name: `Actividad ${x.code}`, type: x.code in types ? types[x.code] : "operational" }]));
   const shiftDays = new Map(a.positions.flatMap((x) => (days.length ? [[positionKey(x.dataKind, x.area, x.site, x.position), days] as const] : [])));
   return {
-    schedules: buildSchedules({ staff: st, acts: ac, params: p, positions: a.positions, extras, shiftDays, overload }),
+    schedules: buildSchedules({ staff: st, acts: ac, params: p, positions: a.positions, extras, shiftDays, activityDays, overload }),
     hours: (position = "Cajero") => a.positions.find((x) => x.position === position)?.hours ?? 0,
-    required: (position = "Cajero") => { const x = a.positions.find((y) => y.position === position); return x ? needOf(x, overload).required : null; },
+    required: (position = "Cajero") => { const x = a.positions.find((y) => y.position === position); return x ? needOf(x, overload, p.staffRoundFrom ?? 0).required : null; },
   };
 }
 const one = (r: Run, position = "Cajero") => { const s = r.schedules.find((x) => x.position === position); if (!s) throw new Error("no está " + position); return s; };
@@ -315,17 +315,97 @@ async function main() {
       const staffRows = st, prmx = prm({ dailyWorkHours: p.dailyWorkHours });
       const esperado = ac.filter((x) => (x.period === "day" || x.period === "week") && x.planning === "planned" && types[x.code] !== "occasional").reduce((t, x) => t + (computeActivity(x, prmx, occupantsOf(staffRows, x), personDaysOf(staffRows, x, prmx)).hTotal ?? 0), 0);
       if (!near(common.assignedHours, esperado, 1e-6)) throw new Error(`${nota}: repartido ${common.assignedHours} ≠ Cálculo ${esperado}`);
-      const cw = jornada * 0.9, cd = Math.min(cw, p.dailyWorkHours ? Math.max(cw / dias.length, p.dailyWorkHours * 0.9) : cw / dias.length);
+      const cw = jornada * 0.9, W = workDaysOf(cw, dias.length, prmx), cd = Math.min(cw, p.dailyWorkHours ? Math.max(cw / W, p.dailyWorkHours * 0.9) : cw / W), hayDescanso = dias.length > W;
       for (const w of [common, periodic]) {
-        if (w.overflowHours > 1e-6 && w.extraPeople < 1) throw new Error(`${nota}: ${w.kind}: horas que no caben sin pedir refuerzo; personas ${w.people}, no caben ${w.overflowHours}, asignado ${w.assignedHours}+${w.reserveHours}, capacidad ${w.capacityHours}, compartidas ${w.activities.filter((x) => x.shared).map((x) => x.code)}`);
-        if (w.kind === "common" && w.overflowHours > 1e-6) throw new Error(`${nota}: en la semana común no debía sobrar nada (${w.overflowHours} h)`);
+        if (!hayDescanso && w.overflowHours > 1e-6 && w.extraPeople < 1) throw new Error(`${nota}: ${w.kind}: horas que no caben sin pedir refuerzo; personas ${w.people}, no caben ${w.overflowHours}, asignado ${w.assignedHours}+${w.reserveHours}, capacidad ${w.capacityHours}, compartidas ${w.activities.filter((x) => x.shared).map((x) => x.code)}`);
+        if (!hayDescanso && w.kind === "common" && w.overflowHours > 1e-6) throw new Error(`${nota}: en la semana común no debía sobrar nada (${w.overflowHours} h)`);
         for (const row of w.grid) {
+          if (row.filter((c) => c.rest).length > dias.length - W || row.some((c) => c.rest && (c.totalMin > 0 || c.tasks.length > 0 || c.capacityMin !== 0))) throw new Error(`${nota}: cada persona descansa a lo más ${dias.length - W} día(s) y ese día no tiene tareas`);
+          if (w.restMissing === 0 && row.filter((c) => c.rest).length !== dias.length - W) throw new Error(`${nota}: sin descansos pendientes, cada persona descansa exactamente ${dias.length - W} día(s)`);
           if (w.overflowHours <= 1e-6) { for (const c of row) if (c.totalMin > cd * overload * 60 + 1e-4) throw new Error(`${nota}: un día pasa la capacidad aceptada`); if (weekOf(row) > cw * overload * 60 + 1e-4) throw new Error(`${nota}: una semana pasa la capacidad aceptada`); }
           for (const c of row) if (Math.abs(c.tasks.reduce((s, x) => s + x.minutes, 0) - c.totalMin) > 0.5 + 1e-6) throw new Error(`${nota}: las tareas del día no suman el total de la celda`); // una reserva menor de medio minuto no se muestra como fila
         }
       }
     }
     if (conReparto < 300) throw new Error("la prueba debía cubrir al menos 300 cargos con reparto; cubrió " + conReparto);
+  });
+
+  await check("Descanso rotativo (D-108): con el cargo abierto 7 días y 42 h en 6 días, cada persona descansa exactamente 1 día, los descansos van primero al domingo, el día de descanso no tiene tareas y se reparten las mismas horas de Cálculo", () => {
+    const st = [staff("Fiscal", 6, 42)], ac = [
+      act("TES1", "Fiscal", { hours: 1, executions: 3, period: "day" }), act("CAJ1", "Fiscal", { hours: 0.75, executions: 5, period: "day" }),
+      act("CAJ2", "Fiscal", { hours: 3, executions: 4, period: "week" }), act("COO1", "Fiscal", { hours: 0.5, executions: 1, period: "day" }),
+    ];
+    const types: Record<string, ActivityTypeKey | null> = { TES1: "control", CAJ1: "operational", CAJ2: "administrative", COO1: "coordination" };
+    const r = run(st, ac, types, ALL_DAYS, { workDaysPerWeek: 7, dailyWorkHours: 7, staffRoundFrom: 0.5 }, 1, new Map([["tes1", MON_SAT]]));
+    const s = one(r, "Fiscal"), { common, periodic } = ok(s);
+    for (const w of [common, periodic]) {
+      for (const row of w.grid) {
+        const libres = row.filter((c) => c.rest);
+        if (libres.length !== 1) throw new Error("cada persona descansa 1 día; descansa " + libres.length);
+        if (libres.some((c) => c.totalMin > 0 || c.tasks.length > 0 || c.capacityMin !== 0 || c.toleranceMin !== 0)) throw new Error("el día de descanso no tiene tareas ni jornada");
+      }
+      const dom = w.grid.filter((row) => row[6].rest).length;
+      for (let d = 0; d < 6; d++) if (w.grid.filter((row) => row[d].rest).length > dom) throw new Error("el domingo debe concentrar los descansos");
+      if (dom < Math.ceil(w.people / 2)) throw new Error("al menos la mitad descansa el domingo (así cada una tiene 2 domingos libres al mes); descansan " + dom);
+    }
+    if (!s.notes.some((n) => /descansa el otro/.test(n) && /rotan/.test(n) && /domingos al mes/.test(n))) throw new Error("falta la nota de rotación: " + s.notes.join(" | "));
+    const esperado = ac.filter((x) => x.period === "day" || x.period === "week").reduce((t, x) => t + (computeActivity(x, prm({ workDaysPerWeek: 7, dailyWorkHours: 7 }), occupantsOf(st, x), personDaysOf(st, x, prm({ workDaysPerWeek: 7, dailyWorkHours: 7 }))).hTotal ?? 0), 0);
+    if (!near(common.assignedHours, esperado, 1e-6)) throw new Error("repartido " + common.assignedHours + " ≠ Cálculo " + esperado);
+  });
+
+  await check("Días por actividad (D-108): una actividad con turnos de lunes a sábado nunca cae el domingo; sin turnos marcados cae en todos los días del cargo; la reserva y lo demás siguen igual", () => {
+    const st = [staff("Fiscal", 4, 42)], ac = [act("TES1", "Fiscal", { hours: 1, executions: 2, period: "day" }), act("CAJ1", "Fiscal", { hours: 1, executions: 2, period: "day" }), act("SEM1", "Fiscal", { hours: 2, executions: 3, period: "week" })];
+    const types: Record<string, ActivityTypeKey | null> = { TES1: "control", CAJ1: "operational", SEM1: "administrative" };
+    const lim = ok(one(run(st, ac, types, ALL_DAYS, { workDaysPerWeek: 7, dailyWorkHours: 7 }, 1, new Map([["tes1", MON_SAT], ["sem1", MON_SAT]])), "Fiscal")).common;
+    const libre = ok(one(run(st, ac, types, ALL_DAYS, { workDaysPerWeek: 7, dailyWorkHours: 7 }), "Fiscal")).common;
+    if (sum(minutesOf(lim, "TES1").map((row) => [row[6]])) !== 0 || sum(minutesOf(lim, "SEM1").map((row) => [row[6]])) !== 0) throw new Error("lo de lunes a sábado cayó en domingo");
+    if (sum(minutesOf(lim, "CAJ1").map((row) => [row[6]])) <= 0) throw new Error("CAJ1 sin turnos marcados debe caer también el domingo");
+    if (sum(minutesOf(libre, "TES1").map((row) => [row[6]])) <= 0) throw new Error("sin turnos marcados, la actividad cae todos los días");
+    if (!near(sum(minutesOf(lim, "TES1")), sum(minutesOf(libre, "TES1")))) throw new Error("las horas de la actividad no deben cambiar, solo en qué días caen");
+  });
+
+  await check("Cobertura del descanso (D-108): con una sola persona en un cargo de 7 días no se concede un descanso que dejaría días sin nadie, y se avisa que hacen falta más personas; las tareas nunca caen en un día de descanso", () => {
+    const st = [staff("Fiscal", 1, 42)], ac = [act("CAJ1", "Fiscal", { hours: 0.5, executions: 2, period: "day" })];
+    const s = one(run(st, ac, { CAJ1: "operational" }, ALL_DAYS, { workDaysPerWeek: 7, dailyWorkHours: 7 }), "Fiscal"), { common } = ok(s);
+    if (common.people !== 1 || common.restMissing !== 1) throw new Error("debía faltar 1 descanso: " + common.restMissing);
+    if (common.grid[0].some((c) => c.rest)) throw new Error("no debía haber descanso con una sola persona");
+    if (!s.notes.some((n) => /No se pudo dar un descanso/.test(n) && /más personas/.test(n))) throw new Error("falta el aviso: " + s.notes.join(" | "));
+  });
+
+  await check("Regla de redondeo (D-108): 5,0 a 5,4 son 5 y desde 5,5 son 6; con 0 siempre hacia arriba; con 1 solo sube la carga entera; la sobrecarga aceptada se descuenta antes", () => {
+    const f = (x: number, over = 1, from = 0) => roundUpPeople(x, over, from);
+    const casos: [number, number][] = [[5, 5], [5.0000001, 5], [5.2, 5], [5.4, 5], [5.49, 5], [5.5, 6], [5.6, 6], [5.99, 6], [0.3, 0], [0.5, 1]];
+    for (const [x, esperadas] of casos) if (f(x, 1, 0.5) !== esperadas) throw new Error(x + " con 0,5 → " + f(x, 1, 0.5) + " ≠ " + esperadas);
+    if (f(5.2) !== 6 || f(5.01, 1, 0) !== 6 || f(5, 1, 0) !== 5) throw new Error("con 0 siempre hacia arriba");
+    if (f(5.9, 1, 1) !== 5 || f(6, 1, 1) !== 6) throw new Error("con 1 nunca sube por la fracción");
+    if (f(5.2, 1.05, 0.5) !== 5 || f(5.7, 1.05, 0.5) !== 5 || f(5.6, 1, 0.5) !== 6) throw new Error("la sobrecarga se descuenta antes de redondear");
+    if (f(5.2, 1, 5) !== 5 || f(5.2, 1, -1) !== 6) throw new Error("la fracción se limita entre 0 y 1");
+  });
+
+  await check("Dotación y Reparto usan la misma regla: con 5,2 personas de trabajo salen 5 (no 6), cada una queda sobre su jornada, el reparto lo acepta sin marcar sobrecarga y lo explica", () => {
+    // 36 h útiles por persona; 187,2 h son 5,2 personas
+    const st = [staff("Cajero", 6, 40)], ac = [act("A1", "Cajero", { hours: 3.6, executions: 52, period: "week" })];
+    const r = run(st, ac, { A1: "operational" }, MON_SAT, { staffRoundFrom: 0.5 });
+    const s = one(r), { common } = ok(s);
+    if (s.required !== 5 || common.people !== 5) throw new Error("personas " + s.required + "/" + common.people);
+    if (common.overflowHours > 1e-6 || common.extraPeople !== 0) throw new Error("el reparto debía aceptar la carga del redondeo: no caben " + common.overflowHours);
+    if (!s.notes.some((n) => /104 %/.test(n) && /desde 50 %/.test(n))) throw new Error("falta la explicación del redondeo: " + s.notes.join(" | "));
+    const sin = one(run(st, ac, { A1: "operational" }, MON_SAT, { staffRoundFrom: 0 }));
+    if (sin.required !== 6) throw new Error("con 0 son 6: " + sin.required);
+    const lectura = needOf(analyze(st, ac, prm({ staffRoundFrom: 0.5 }), TH, "all").positions[0], 1, 0.5).reading;
+    if (!/104 %/.test(lectura)) throw new Error("la lectura de Dotación debe decir la carga: " + lectura);
+  });
+
+  await check("Exportación del reparto: el día de descanso sale como una fila «Descanso» (orden 0, 0 minutos) y la suma de minutos sigue siendo la de la pantalla", () => {
+    const st = [staff("Fiscal", 3, 42)], ac = [act("CAJ1", "Fiscal", { hours: 1, executions: 16, period: "day" })];
+    const p = prm({ workDaysPerWeek: 7, dailyWorkHours: 7 }), a = analyze(st, ac, p, TH, "all");
+    const extras = new Map<string, ActivityExtra>([["caj1", { name: "Actividad CAJ1", type: "operational" }]]);
+    const schedules = buildSchedules({ staff: st, acts: ac, params: p, positions: a.positions, extras, shiftDays: new Map([[positionKey("real", "Cajas", "CO1", "Fiscal"), ALL_DAYS]]) });
+    const { tables } = tablesFor("reparto", a, null as never, [], {}, "all", 0.1, undefined, schedules);
+    const filas = tables[0].rows as { code: string; order: number; minutes: number; person: string }[];
+    const descansos = filas.filter((x) => x.code === "Descanso");
+    const esperados = schedules[0].common!.grid.flat().filter((c) => c.rest).length + schedules[0].periodic!.grid.flat().filter((c) => c.rest).length;
+    if (descansos.length !== esperados || esperados === 0 || descansos.some((x) => x.order !== 0 || x.minutes !== 0)) throw new Error("filas de descanso " + descansos.length + " / " + esperados);
   });
 
   await check("Minutos legibles: 45 min, 2 h, 2 h 15 min; los minutos con decimales se redondean y 59,6 no queda en «60 min»", () => {

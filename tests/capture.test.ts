@@ -76,6 +76,17 @@ async function main() {
       if (def("param").fields.some((f) => f.key === "weeksPerMonth")) throw new Error("weeksPerMonth sigue editable");
     });
 
+    await check("Fracción desde la cual se suma una persona (D-108): se escribe en % y se guarda como fracción de 0 a 1; no admite más de 100 % y explica el redondeo", () => {
+      for (const [txt, guardado] of [["50", "0.5000"], ["50 %", "0.5000"], ["0", "0.0000"], ["100", "1.0000"], ["33,5", "0.3350"]] as const) {
+        const r = parseForm(def("param"), fd({ staffRoundFrom: txt }));
+        if (r.errors.some((e) => e.startsWith("Fracción")) || r.values.staffRoundFrom !== guardado) throw new Error(`${txt}: ${JSON.stringify(r)}`);
+      }
+      for (const txt of ["101", "-5", "abc"]) if (!parseForm(def("param"), fd({ staffRoundFrom: txt })).errors.some((e) => e.startsWith("Fracción"))) throw new Error(txt + " debía rechazarse");
+      if (!parseForm(def("param"), fd({ staffRoundFrom: "101" })).errors.join(" ").includes("entre 0 y 100")) throw new Error("el mensaje debía decir el límite");
+      const campo = def("param").fields.find((f) => f.key === "staffRoundFrom")!;
+      if (!/5,4/.test(campo.hint ?? "") || !/5,5/.test(campo.hint ?? "")) throw new Error("la ayuda debe dar el ejemplo 5,4 → 5 y 5,5 → 6");
+    });
+
     studyId = await createStudy(app.db, owner, "Estudio de prueba captura");
     await admin.db.execute(sql`insert into public.memberships (study_id, user_id, role) values (${studyId}, ${viewer}, 'viewer')`);
     let recs: Record<string, string> = {};
@@ -209,6 +220,16 @@ async function main() {
       if ((await saveRow(app.db, owner, studyId, d, p, row.version)) !== "updated") throw new Error("no actualizó");
       const [after] = await listRows(app.db, owner, studyId, d);
       if (Number(after.reservePct) !== 0.15) throw new Error(String(after.reservePct));
+    });
+
+    await check("Fracción para sumar una persona (D-108): un estudio nuevo trae 50 %, se actualiza como los demás parámetros y la base rechaza más de 100 %", async () => {
+      const d = def("param");
+      const [row] = await listRows(app.db, owner, studyId, d);
+      if (Number(row.staffRoundFrom) !== 0.5) throw new Error("por defecto debía ser 0,5: " + String(row.staffRoundFrom));
+      if ((await saveRow(app.db, owner, studyId, d, parseForm(d, fd({ staffRoundFrom: "30" })).values, row.version)) !== "updated") throw new Error("no actualizó");
+      const [after] = await listRows(app.db, owner, studyId, d);
+      if (Number(after.staffRoundFrom) !== 0.3) throw new Error(String(after.staffRoundFrom));
+      await rejects(admin.db.execute(sql`update public.study_parameters set staff_round_from = 1.5 where study_id = ${studyId}`), "23514");
     });
 
     await check("Un viewer no puede crear ni borrar; el owner borra y quedan auditorías insert/update/delete con origen «app»", async () => {

@@ -39,6 +39,7 @@ export interface ReportInput {
   kpis: { activities: number; complete: number };
   /** «Umbral de sobrecarga» de Parámetros como razón (1,05 = 105 %). */ overload: number;
   reservePct: number; scenario: string;
+  /** «Fracción desde la cual se suma una persona» de Parámetros (D-108); ausente = 0 (siempre hacia arriba). */ roundFrom?: number;
 }
 
 export const SCENARIO_ES: Record<string, string> = { base: "base", high_season: "temporada alta", low_season: "temporada baja", min_time: "tiempo mínimo", max_time: "tiempo máximo" };
@@ -56,7 +57,7 @@ export function weekFact(schedules: readonly PositionSchedule[], pick: (s: Posit
 }
 
 export function buildReportFacts(i: ReportInput): ReportFacts {
-  const needs = needsOf(i.positions, i.overload), byKey = new Map(i.positions.map((p) => [`${p.dataKind}|${p.area}|${p.site}|${p.position}`, p]));
+  const needs = needsOf(i.positions, i.overload, i.roundFrom ?? 0), byKey = new Map(i.positions.map((p) => [`${p.dataKind}|${p.area}|${p.site}|${p.position}`, p]));
   const positions: PositionFact[] = needs.flatMap((n) => {
     if (n.required === null || n.exact === null || n.gap === null) return [];
     const p = byKey.get(`${n.dataKind}|${n.area}|${n.site}|${n.position}`)!;

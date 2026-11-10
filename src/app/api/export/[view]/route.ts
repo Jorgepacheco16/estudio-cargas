@@ -54,7 +54,7 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ view: strin
   let facts: ReportFacts | undefined;
   if (view === "informe") {
     const user = await getUser(), study = user ? await activeStudyId(user.id) : null;
-    if (user && study) { const l = await loadSchedules(getDb(), user.id, study.id, loaded.mode); facts = buildReportFacts({ positions: l.positions, schedules: l.schedules, kpis: l.kpis, overload: l.overload, reservePct: l.params.reservePct, scenario: l.params.scenario }); }
+    if (user && study) { const l = await loadSchedules(getDb(), user.id, study.id, loaded.mode); facts = buildReportFacts({ positions: l.positions, schedules: l.schedules, kpis: l.kpis, overload: l.overload, reservePct: l.params.reservePct, scenario: l.params.scenario, roundFrom: l.params.staffRoundFrom ?? 0 }); }
   }
   const q = Object.fromEntries(["area", "position", "config", "level", "site", "code", "alert"].map((k) => [k, sp.get(k) ?? undefined]));
   let proposals: ProposalRow[] = [];
@@ -62,7 +62,7 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ view: strin
     const user = await getUser(); const study = user ? await activeStudyId(user.id) : null;
     if (user && study) proposals = (await listProposals(getDb(), user.id, study.id)).map((p) => ({ id: p.id, kind: p.kind, summary: p.summary, status: p.status, reviewedBy: p.reviewedBy ? "persona autorizada" : null, at: p.createdAt.toISOString().slice(0, 10) }));
   }
-  const { title, tables } = tablesFor(view, analysis, dashboard, proposals, q, loaded.mode, loaded.params.reservePct, actNames, schedules, loaded.thresholds.high, facts);
+  const { title, tables } = tablesFor(view, analysis, dashboard, proposals, q, loaded.mode, loaded.params.reservePct, actNames, schedules, loaded.thresholds.high, facts, loaded.params.staffRoundFrom ?? 0);
   const stamp = new Date().toISOString().slice(0, 10);
   const base = `estudio-cargas_${view}_${stamp}`;
 

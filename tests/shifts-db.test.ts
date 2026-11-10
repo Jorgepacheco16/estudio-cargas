@@ -7,6 +7,7 @@ import { saveEntry } from "../src/server/entry/service";
 import { activityShiftSelection, deleteShift, getShiftType, listShifts, saveShift, setActivityShifts, setShiftType, shiftLinesByPositionId, shiftTextByActivityCode, shiftsByPosition } from "../src/server/shifts";
 import { withRls } from "../src/db/client";
 import { getOperation, saveOperation } from "../src/server/operation";
+import { loadSchedules } from "../src/server/schedule";
 import { LONG_TEXT_MAX } from "../src/domain/limits";
 import { check, rejects, summary, URL_ADMIN, URL_APP } from "./helpers";
 
@@ -93,6 +94,21 @@ async function main() {
       await saveShift(app.db, owner, studyId, fiscal, undefined, T("Refuerzo", "10:00", "14:00"));
       const txt = await withRls(app.db, { sub: owner }, (tx) => shiftTextByActivityCode(tx, studyId));
       if (txt.get("F-2") !== "Todos los turnos") throw new Error(txt.get("F-2"));
+    });
+
+    await check("Reparto semanal (D-108): una actividad solo cae en los días de sus turnos (L–S no cae el domingo), «Todos los turnos» y la que no tiene turnos marcados caen todos los días", async () => {
+      await setActivityShifts(app.db, owner, studyId, a3, { all: false, ids: [ids["Cierre"]] }); // «Cierre» es de lunes a sábado
+      const { schedules } = await loadSchedules(app.db, owner, studyId, "all");
+      const s = schedules.find((x) => x.position === "Fiscal de piso");
+      if (!s || s.state !== "ok" || !s.common || s.days.join() !== "0,1,2,3,4,5,6") throw new Error("reparto inesperado: " + JSON.stringify(s && { state: s.state, reason: s.reason, days: s.days }));
+      const dom = s.days.indexOf(6), enDomingo = (code: string) => s.common!.grid.reduce((t, row) => t + row[dom].items.filter((i) => i.code === code).reduce((m, i) => m + i.minutes, 0), 0);
+      const total = (code: string) => s.common!.grid.reduce((t, row) => t + row.reduce((m, c) => m + c.items.filter((i) => i.code === code).reduce((q, i) => q + i.minutes, 0), 0), 0);
+      if (enDomingo("F-3") !== 0 || total("F-3") <= 0) throw new Error("F-3 (solo Cierre, L–S) no debía caer el domingo: " + enDomingo("F-3") + " / " + total("F-3"));
+      if (enDomingo("F-2") <= 0) throw new Error("F-2 (Todos los turnos) debía caer también el domingo");
+      await setActivityShifts(app.db, owner, studyId, a3, { all: false, ids: [] }); // sin turnos marcados: sin restricción
+      const s2 = (await loadSchedules(app.db, owner, studyId, "all")).schedules.find((x) => x.position === "Fiscal de piso")!;
+      const dom2 = s2.days.indexOf(6);
+      if (!s2.common!.grid.some((row) => row[dom2].items.some((i) => i.code === "F-3"))) throw new Error("sin turnos marcados F-3 debía caer también el domingo");
     });
 
     await check("Un turno de otro cargo se descarta (y se avisa); no se guarda en la actividad", async () => {

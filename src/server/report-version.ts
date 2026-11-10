@@ -69,7 +69,7 @@ async function loadReportContext(tx: Tx, studyId: string, facts: ReportFacts): P
 
 export async function loadReportBasis(db: Db, sub: string, studyId: string): Promise<ReportBasis> {
   const l = await loadSchedules(db, sub, studyId, MODE);
-  const facts = buildReportFacts({ positions: l.positions, schedules: l.schedules, kpis: l.kpis, overload: l.overload, reservePct: l.params.reservePct, scenario: l.params.scenario });
+  const facts = buildReportFacts({ positions: l.positions, schedules: l.schedules, kpis: l.kpis, overload: l.overload, reservePct: l.params.reservePct, scenario: l.params.scenario, roundFrom: l.params.staffRoundFrom ?? 0 });
   const { diag, context } = await withRls(db, { sub }, async (tx) => ({ diag: await loadDiagnostic(tx, studyId, MODE), context: await loadReportContext(tx, studyId, facts) }));
   const catalog = buildCatalog(facts, diag);
   const hashes = Object.fromEntries(SECTION_IDS.map((id) => [id, sha(sectionCanonical(id, catalog[id], context))])) as Record<SectionId, string>;

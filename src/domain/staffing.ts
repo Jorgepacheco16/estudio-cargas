@@ -32,24 +32,31 @@ export interface StaffingArea { area: string; occupants: number; exact: number; 
 export interface StaffingSummary { occupants: number; exact: number; required: number; gap: number; positions: number; withoutData: number }
 
 const EPS = 1e-9;
-/** Personas para una carga `exact` (en personas de trabajo) que no pase de `overload` (1 = 100 %). */
-export const roundUpPeople = (exact: number, overload = 1): number => Math.max(0, Math.ceil(exact / Math.max(1, overload) - EPS));
+/**
+ * Personas para una carga `exact` (en personas de trabajo): primero se descuenta la sobrecarga aceptada (`overload`, 1 = 100 %) y luego se redondea con la regla del titular (D-108):
+ * la parte decimal suma una persona más solo si llega a `roundFrom` (0,5 = «desde 5,5 son 6»; 5,4 son 5). Con `roundFrom` 0 (o ausente) es redondear siempre hacia arriba.
+ */
+export const roundUpPeople = (exact: number, overload = 1, roundFrom = 0): number => {
+  const x = exact / Math.max(1, overload), whole = Math.floor(x + EPS), frac = x - whole;
+  if (frac <= EPS) return Math.max(0, whole);
+  return whole + (frac + EPS >= Math.min(1, Math.max(0, roundFrom)) ? 1 : 0);
+};
 
 export const STATE_ES: Record<NeedState, string> = { short: "Faltan personas", balanced: "Dotación ajustada", surplus: "Posible excedente", nodata: "Sin datos" };
 
-export function needOf(p: PositionRow, overload = 1): StaffingNeed {
+export function needOf(p: PositionRow, overload = 1, roundFrom = 0): StaffingNeed {
   const base = { dataKind: p.dataKind, area: p.area, site: p.site, position: p.position, occupants: p.occupants, hours: p.hours, hoursPerPerson: p.hoursPerPerson };
   const partial = p.activities > p.complete;
   if (p.activities === 0 && p.hours === 0) return { ...base, exact: null, required: null, gap: null, state: "nodata", partial, reading: "Sin actividades registradas" };
   if (p.hoursPerPerson === null || p.hoursPerPerson <= 0) return { ...base, exact: null, required: null, gap: null, state: "nodata", partial, reading: "Falta registrar cantidad y jornada del cargo (Cargos y dotación)" };
   if (p.hours <= 0) return { ...base, exact: null, required: null, gap: null, state: "nodata", partial, reading: "Hay actividades pero ninguna con datos completos" };
-  const exact = p.hours / p.hoursPerPerson, required = Math.max(1, roundUpPeople(exact, overload)), gap = required - p.occupants;
+  const exact = p.hours / p.hoursPerPerson, required = Math.max(1, roundUpPeople(exact, overload, roundFrom)), gap = required - p.occupants;
   const state: NeedState = gap > 0 ? "short" : gap < 0 ? "surplus" : "balanced";
   const say = state === "short" ? `Faltan ${gap} ${gap === 1 ? "persona" : "personas"}` : state === "surplus" ? `Hay ${-gap} ${-gap === 1 ? "persona" : "personas"} de más según la carga registrada: valide que el inventario esté completo antes de decidir` : "La dotación coincide con la carga registrada";
-  return { ...base, exact, required, gap, state, partial, reading: say + (partial ? " · Cifra mínima: hay actividades con datos incompletos" : "") };
+  return { ...base, exact, required, gap, state, partial, reading: say + (roundFrom > 0 && exact / required > 1 + 1e-9 ? ` · Con ${required} ${required === 1 ? "persona" : "personas"} cada una queda al ${Math.round((exact / required) * 100)} % de su jornada útil (regla de redondeo de Parámetros)` : "") + (partial ? " · Cifra mínima: hay actividades con datos incompletos" : "") };
 }
 
-export const needsOf = (positions: PositionRow[], overload = 1): StaffingNeed[] => positions.map((p) => needOf(p, overload));
+export const needsOf = (positions: PositionRow[], overload = 1, roundFrom = 0): StaffingNeed[] => positions.map((p) => needOf(p, overload, roundFrom));
 
 /** Totales por área; solo suman los cargos con cifra. `withoutData` cuenta los que no la tienen. */
 export function areasOf(needs: StaffingNeed[]): StaffingArea[] {

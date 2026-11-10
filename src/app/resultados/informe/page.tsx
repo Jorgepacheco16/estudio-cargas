@@ -29,7 +29,7 @@ export default async function Informe({ searchParams }: { searchParams: Promise<
   const mode = parseMode(Array.isArray(raw.modo) ? raw.modo[0] : raw.modo) ?? "real";
   const study = await activeStudyId(user.id);
   const loaded = study ? await loadSchedules(getDb(), user.id, study.id, mode) : null;
-  const facts = loaded ? buildReportFacts({ positions: loaded.positions, schedules: loaded.schedules, kpis: loaded.kpis, overload: loaded.overload, reservePct: loaded.params.reservePct, scenario: loaded.params.scenario }) : null;
+  const facts = loaded ? buildReportFacts({ positions: loaded.positions, schedules: loaded.schedules, kpis: loaded.kpis, overload: loaded.overload, reservePct: loaded.params.reservePct, scenario: loaded.params.scenario, roundFrom: loaded.params.staffRoundFrom ?? 0 }) : null;
   const empty = !facts || facts.data.positions === 0;
   const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v);
   // El texto del informe (D-106) es del estudio real; quien puede cambiarlo es quien tiene Edición en Resultados, y redactar con el agente exige además Edición en Agente de IA y todas las áreas.

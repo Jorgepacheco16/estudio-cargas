@@ -6,6 +6,8 @@ export interface Params {
   workDaysPerWeek: number; weeksPerMonth: number; weeksPerYear: number; reservePct: number; scenario: ScenarioKey;
   /** Jornada laboral diaria de un colaborador (horas). Si está, las actividades «por día» que hace cada colaborador se cuentan en los días que trabaja la persona (horas semanales ÷ jornada diaria), no en los días en que el cargo está disponible. Vacío = comportamiento del libro de Excel. */
   dailyWorkHours?: number | null;
+  /** Fracción (0 a 1) de persona desde la cual Dotación requerida suma una persona más: con 0,5, 5,4 personas de trabajo son 5 y 5,5 son 6. 0 = siempre hacia arriba. Ausente = 0 (D-108). */
+  staffRoundFrom?: number | null;
 }
 export interface ActivityInput {
   code: string; dataKind: "real" | "demo"; area: string; site: string; position: string; employeeCode: string | null;

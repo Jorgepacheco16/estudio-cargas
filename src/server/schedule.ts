@@ -1,7 +1,7 @@
 /** Carga de lo necesario para el reparto semanal (D-101, D-102, D-103): cargos, actividades con nombre y tipo, y los días de los turnos de cada cargo. Siempre con RLS. */
 import { eq } from "drizzle-orm";
 import { withRls, type Db } from "../db/client";
-import { activities, areas, positionShifts, positions, sites } from "../db/schema";
+import { activities, activityShifts, areas, positionShifts, positions, sites } from "../db/schema";
 import { attachSavedOrders, buildSchedules, isActivityType, positionKey, type ActivityExtra, type PositionSchedule } from "../domain/schedule";
 import type { Params } from "../domain/engine";
 import { daysOf } from "../domain/shifts";
@@ -27,7 +27,20 @@ export async function loadSchedules(db: Db, sub: string, studyId: string, mode: 
       for (const day of daysOf(r.days)) set.add(day); // sin días marcados (null) = los siete
     }
     const shiftDays = new Map([...union].map(([k, s]) => [k, [...s].sort((a, b) => a - b)]));
+    // Días en que se ejecuta cada actividad (D-108): la unión de los días de los turnos que tiene marcados; «Todos los turnos» o ninguno marcado = sin restricción (todos los días del cargo).
+    const shiftRows = await tx.select({ code: activities.code, all: activities.allShifts, shiftId: activityShifts.shiftId, days: positionShifts.days }).from(activities)
+      .leftJoin(activityShifts, eq(activityShifts.activityId, activities.id)).leftJoin(positionShifts, eq(positionShifts.id, activityShifts.shiftId)).where(eq(activities.studyId, studyId));
+    const byActivity = new Map<string, Set<number> | null>();
+    for (const r of shiftRows) {
+      const k = r.code.toLowerCase();
+      if (r.all) { byActivity.set(k, null); continue; }
+      if (r.shiftId === null) { if (!byActivity.has(k)) byActivity.set(k, null); continue; }
+      const set = byActivity.get(k) ?? new Set<number>();
+      for (const day of daysOf(r.days)) set.add(day);
+      byActivity.set(k, set);
+    }
+    const activityDays = new Map([...byActivity].map(([k, s]) => [k, s === null ? null : [...s].sort((a, b) => a - b)]));
     const orders = await listOrdersTx(tx, studyId); // órdenes guardados de las tareas (D-104)
-    return { schedules: attachSavedOrders(buildSchedules({ staff: d.staff, acts: d.acts, params: d.params, positions: analysis.positions, extras, shiftDays, overload: d.thresholds.high }), orders), positions: analysis.positions, params: d.params, overload: d.thresholds.high, kpis: { activities: analysis.kpis.activities, complete: analysis.kpis.complete } };
+    return { schedules: attachSavedOrders(buildSchedules({ staff: d.staff, acts: d.acts, params: d.params, positions: analysis.positions, extras, shiftDays, activityDays, overload: d.thresholds.high }), orders), positions: analysis.positions, params: d.params, overload: d.thresholds.high, kpis: { activities: analysis.kpis.activities, complete: analysis.kpis.complete } };
   });
 }

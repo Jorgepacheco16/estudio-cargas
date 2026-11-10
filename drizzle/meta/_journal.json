@@ -127,6 +127,13 @@
       "when": 1794005717365,
       "tag": "0017_informe_versiones",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1794342339013,
+      "tag": "0018_fraccion_redondeo_dotacion",
+      "breakpoints": true
     }
   ]
 }

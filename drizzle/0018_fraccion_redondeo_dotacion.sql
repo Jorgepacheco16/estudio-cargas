@@ -1,0 +1,2 @@
+ALTER TABLE "study_parameters" ADD COLUMN "staff_round_from" numeric(5, 4) DEFAULT '0.5000' NOT NULL;--> statement-breakpoint
+ALTER TABLE "study_parameters" ADD CONSTRAINT "study_parameters_round_from_ck" CHECK ("study_parameters"."staff_round_from" between 0 and 1);
