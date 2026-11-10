@@ -1,0 +1,2 @@
+ALTER TABLE "study_parameters" ADD COLUMN "min_shared_hours" numeric(4, 2) DEFAULT '3.00' NOT NULL;--> statement-breakpoint
+ALTER TABLE "study_parameters" ADD CONSTRAINT "study_parameters_shared_hours_ck" CHECK ("study_parameters"."min_shared_hours" between 0 and 12);

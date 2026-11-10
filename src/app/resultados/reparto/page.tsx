@@ -10,8 +10,8 @@ import { activeStudyId, parseMode } from "@/data/source";
 import { canEdit } from "@/lib/access";
 import { filterQuery } from "@/domain/filters";
 import { positionFilters, type RawParams } from "@/lib/page-filters";
-import { DAY_NAMES } from "@/domain/shifts";
-import { RULE_ES, TYPE_ES, WEEK_ES, formatMinutes, positionKey, type PositionSchedule, type WeekPlan } from "@/domain/schedule";
+import { DAY_NAMES, DAY_SHORT } from "@/domain/shifts";
+import { RULE_ES, TYPE_ES, WEEK_ES, formatMinutes, positionKey, type ActivityCheck, type PositionSchedule, type WeekPlan } from "@/domain/schedule";
 import { loadSchedules } from "@/server/schedule";
 import { DayCell } from "@/components/resultados/DayCell";
 
@@ -21,7 +21,7 @@ const MAX_SHOWN = 6;
 function WeekTable({ plan, days, position, positionKey: pkey, canSave }: { plan: WeekPlan; days: number[]; position: string; positionKey: string; canSave: boolean }) {
   return (
     <>
-      <p className="note rp-legend">Cada celda muestra el turno de la persona ese día, el total de horas y sus primeras tareas; la barra es lo que usa de la jornada útil del día. Pulse una celda para ver todas las tareas y cambiar su orden.</p>
+      <p className="note rp-legend">Cada celda muestra la franja horaria en que cuadran las tareas de la persona ese día, el total de horas y sus primeras tareas; la barra es lo que usa de la jornada útil del día. Pulse una celda para ver todas las tareas y cambiar su orden.</p>
       <div className="tbl-wrap" tabIndex={0} role="region" aria-label={`${WEEK_ES[plan.kind]}: tareas por persona y día`}>
         <table className="rp-table" style={{ minWidth: 240 + days.length * 150 }}>
           <thead><tr><th className="rp-person">Persona</th>{days.map((d) => <th key={d} className="rp-day">{DAY_NAMES[d]}</th>)}<th className="num rp-week">Semana</th></tr></thead>
@@ -37,6 +37,19 @@ function WeekTable({ plan, days, position, positionKey: pkey, canSave }: { plan:
                 <td className="num rp-week"><b>{formatMinutes(row.reduce((s, c) => s + c.totalMin, 0))}</b></td>
               </tr>
             ))}
+            {plan.overflowHours > 1e-6 && (
+              <tr className="rp-unassigned">
+                <td className="rp-person"><b>Sin asignar</b></td>
+                {plan.unassigned.map((u, i) => (
+                  <td key={i} className="rp-td">
+                    <div className="rp-un">
+                      {u.minutes > 0.5 ? <><b>{formatMinutes(u.minutes)}</b>{u.items.map((it) => <span key={it.code} className="rp-task"><span className="rp-code">{it.code}</span><span className="rp-min">{formatMinutes(it.minutes)}</span></span>)}</> : <span className="muted">—</span>}
+                    </div>
+                  </td>
+                ))}
+                <td className="num rp-week"><b>{formatMinutes(plan.overflowHours * 60)}</b></td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>
@@ -65,6 +78,39 @@ function WeekTable({ plan, days, position, positionKey: pkey, canSave }: { plan:
   );
 }
 
+const FREQ_ES: Record<ActivityCheck["frequency"], string> = { daily: "Diaria", weekly: "Semanal", periodic: "Periódica" };
+const daysText = (xs: number[]) => (xs.length === 0 ? "—" : xs.length === 7 ? "Todos" : xs.map((d) => DAY_SHORT[d]).join(" "));
+
+/** Verificación de que cada actividad que se programa queda en los días que le corresponden (D-110): una fila por actividad, con lo esperado y lo que quedó. */
+function CheckPanel({ s }: { s: PositionSchedule }) {
+  if (s.check.length === 0) return null;
+  const bad = s.check.filter((c) => c.missingDays.length > 0);
+  return (
+    <details className="adv" style={{ marginTop: 12 }} open={bad.length > 0}>
+      <summary>Verificación de actividades: {bad.length === 0 ? `las ${s.check.length} quedan en los días que les corresponden` : `${bad.length} de ${s.check.length} no quedan en todos sus días`}</summary>
+      <div className="adv-body">
+        <div className="tbl-wrap" tabIndex={0} role="region" aria-label={`Verificación de actividades de ${s.position}`}>
+          <table style={{ minWidth: 640 }}>
+            <thead><tr><th>Actividad</th><th>Frecuencia</th><th>Días que le corresponden</th><th>Días en que quedó</th><th>Estado</th></tr></thead>
+            <tbody>
+              {s.check.map((c) => (
+                <tr key={c.code + c.week}>
+                  <td><b>{c.code}</b><div className="muted">{c.name}</div></td>
+                  <td>{FREQ_ES[c.frequency]}{c.week === "periodic" ? " (semana con periódicas)" : ""}</td>
+                  <td>{c.frequency === "daily" ? daysText(c.expectedDays) : `Cualquiera de: ${daysText(c.expectedDays)}`}</td>
+                  <td>{daysText(c.scheduledDays)}</td>
+                  <td>{c.missingDays.length === 0 ? <span className="pill ok">Completa</span> : <span className="pill overload">Falta: {daysText(c.missingDays)}</span>}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <p className="note">Las diarias deben quedar en todos los días que les corresponden (los de sus turnos); las semanales y periódicas, al menos en uno. Lo que falta aparece en la fila «Sin asignar» de la semana.</p>
+      </div>
+    </details>
+  );
+}
+
 function PositionCard({ s, canSave }: { s: PositionSchedule; canSave: boolean }) {
   return (
     <section className="card" aria-label={`Reparto de ${s.position}`}>
@@ -72,6 +118,7 @@ function PositionCard({ s, canSave }: { s: PositionSchedule; canSave: boolean })
       <div className="sub">{s.area} · {s.site} · {s.dataKind === "real" ? "REAL" : "DEMO"}{s.state === "ok" ? ` · Dotación requerida: ${s.required}` : ""}{s.service ? ` · Atención del cargo: ${s.service.start} a ${s.service.end} (${fmt(s.service.hours, 1)} h)` : ""}</div>
       {s.state !== "ok" && <div className="banner" role="status" style={{ marginTop: 12 }}><span>{s.reason}</span></div>}
       {s.notes.map((n) => <div key={n} className="banner" role="status" style={{ marginTop: 12 }}><span>{n}</span></div>)}
+      {s.state === "ok" && <CheckPanel s={s} />}
       {s.state === "ok" && s.common && s.periodic && (
         <>
           <h3 style={{ marginTop: 20 }}>{WEEK_ES.common}</h3>
@@ -117,6 +164,7 @@ export default async function Reparto({ searchParams }: { searchParams: Promise<
             <li><b>Administrativa, Control y Apoyo:</b> cada ejecución la hace una sola persona; las ejecuciones se reparten entre personas.</li>
             <li><b>Coordinación:</b> una sola persona es responsable de todas las ejecuciones.</li>
             <li><b>Ocasional o no planificada:</b> no se programa. Aparece como «Imprevistos», repartida por igual entre personas y días.</li>
+            <li><b>Horarios y equilibrio:</b> una persona puede tener el mismo día tareas de turnos distintos si sus horarios se solapan (apertura y tesorería, que caen en la mañana), pero no de extremos opuestos del día (apertura y cierre); el mínimo compartido se fija en Parámetros. Dentro de lo compatible se reparte parejo entre las personas, sin importar de qué turno surgió la tarea. Nadie pasa su jornada: lo que no cabe aparece en la fila «Sin asignar».</li>
             <li><b>Descanso y días:</b> cada persona trabaja las horas de su semana en 6 días (42 h ÷ 7 h) y descansa el otro día del cargo; los descansos van primero al domingo y rotan cada semana. Una actividad solo se programa en los días de los turnos en que se ejecuta (la de tesorería, de lunes a sábado, no cae el domingo).</li>
             <li><b>Para todas:</b> las personas son las de Dotación requerida (el reparto no suma gente) y se reparten las mismas horas de Cálculo de tiempos; lo que hace cada colaborador se reparte rotando entre las personas; lo que exige varias personas a la vez se asigna a varias el mismo día; el reparto nivela para que todas queden con tiempo parejo y nadie pasa su jornada útil (jornada × (1 − reserva)) más la sobrecarga aceptada en Parámetros. Si una tarea no cabe entera con la regla de su tipo, se comparte entre personas lo mínimo y se marca. Los días son los de los turnos del cargo.</li>
           </ul>

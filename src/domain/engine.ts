@@ -8,6 +8,8 @@ export interface Params {
   dailyWorkHours?: number | null;
   /** Fracción (0 a 1) de persona desde la cual Dotación requerida suma una persona más: con 0,5, 5,4 personas de trabajo son 5 y 5,5 son 6. 0 = siempre hacia arriba. Ausente = 0 (D-108). */
   staffRoundFrom?: number | null;
+  /** Horas que deben compartir los horarios de las tareas de una misma persona en un día (D-110): 3 = apertura (05:30–13:00) con tesorería (08:00–15:30) sí, con cierre (13:00–20:30) no. Ausente = 3. */
+  minSharedHours?: number | null;
 }
 export interface ActivityInput {
   code: string; dataKind: "real" | "demo"; area: string; site: string; position: string; employeeCode: string | null;

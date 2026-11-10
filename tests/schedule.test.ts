@@ -314,7 +314,7 @@ async function main() {
       // horas de Cálculo de lo que se programa en la semana común (diario y semanal, sin la reserva)
       const staffRows = st, prmx = prm({ dailyWorkHours: p.dailyWorkHours });
       const esperado = ac.filter((x) => (x.period === "day" || x.period === "week") && x.planning === "planned" && types[x.code] !== "occasional").reduce((t, x) => t + (computeActivity(x, prmx, occupantsOf(staffRows, x), personDaysOf(staffRows, x, prmx)).hTotal ?? 0), 0);
-      if (!near(common.assignedHours, esperado, 1e-6)) throw new Error(`${nota}: repartido ${common.assignedHours} ≠ Cálculo ${esperado}`);
+      if (!near(common.assignedHours + common.overflowHours, esperado, 1e-6)) throw new Error(`${nota}: repartido ${common.assignedHours} + sin asignar ${common.overflowHours} ≠ Cálculo ${esperado}`);
       const cw = jornada * 0.9, W = workDaysOf(cw, dias.length, prmx), cd = Math.min(cw, p.dailyWorkHours ? Math.max(cw / W, p.dailyWorkHours * 0.9) : cw / W), hayDescanso = dias.length > W;
       for (const w of [common, periodic]) {
         if (!hayDescanso && w.overflowHours > 1e-6 && w.extraPeople < 1) throw new Error(`${nota}: ${w.kind}: horas que no caben sin pedir refuerzo; personas ${w.people}, no caben ${w.overflowHours}, asignado ${w.assignedHours}+${w.reserveHours}, capacidad ${w.capacityHours}, compartidas ${w.activities.filter((x) => x.shared).map((x) => x.code)}`);
@@ -350,7 +350,7 @@ async function main() {
     }
     if (!s.notes.some((n) => /descansa el otro/.test(n) && /rotan/.test(n) && /domingos al mes/.test(n))) throw new Error("falta la nota de rotación: " + s.notes.join(" | "));
     const esperado = ac.filter((x) => x.period === "day" || x.period === "week").reduce((t, x) => t + (computeActivity(x, prm({ workDaysPerWeek: 7, dailyWorkHours: 7 }), occupantsOf(st, x), personDaysOf(st, x, prm({ workDaysPerWeek: 7, dailyWorkHours: 7 }))).hTotal ?? 0), 0);
-    if (!near(common.assignedHours, esperado, 1e-6)) throw new Error("repartido " + common.assignedHours + " ≠ Cálculo " + esperado);
+    if (!near(common.assignedHours + common.overflowHours, esperado, 1e-6)) throw new Error("repartido " + common.assignedHours + " ≠ Cálculo " + esperado);
   });
 
   await check("Días por actividad (D-108): una actividad con turnos de lunes a sábado nunca cae el domingo; sin turnos marcados cae en todos los días del cargo; la reserva y lo demás siguen igual", () => {
@@ -408,43 +408,82 @@ async function main() {
     if (descansos.length !== esperados || esperados === 0 || descansos.some((x) => x.order !== 0 || x.minutes !== 0)) throw new Error("filas de descanso " + descansos.length + " / " + esperados);
   });
 
-  await check("Turnos por persona y día (D-109): nadie abre y cierra el mismo día, el turno del día cabe con TODAS las tareas restringidas de la celda, un turno no se usa los días en que no aplica y la franja de atención sale de los turnos", () => {
+  await check("Horarios compatibles y equilibrio (D-110): una persona puede tener apertura y tesorería el mismo día (se solapan) pero nunca apertura y cierre; el día queda parejo entre las personas; nadie pasa su jornada; y cada actividad queda en todos sus días", () => {
     const ALL = [0, 1, 2, 3, 4, 5, 6];
-    const AP: ShiftRef = { id: "ap", name: "Apertura", days: ALL, start: "05:30", end: "13:00" }, IN: ShiftRef = { id: "in", name: "Intermedio", days: ALL, start: "09:00", end: "16:30" }, CI: ShiftRef = { id: "ci", name: "Cierre", days: MON_SAT, start: "13:00", end: "20:30" };
+    const AP: ShiftRef = { id: "ap", name: "Apertura", days: ALL, start: "05:30", end: "13:00" }, TE: ShiftRef = { id: "te", name: "Tesorería", days: MON_SAT, start: "08:00", end: "15:30" };
+    const IN: ShiftRef = { id: "in", name: "Intermedio", days: ALL, start: "09:00", end: "16:30" }, CI: ShiftRef = { id: "ci", name: "Cierre", days: MON_SAT, start: "13:00", end: "20:30" };
     const st = [staff("Fiscal", 6, 42)], ac = [
-      act("APER", "Fiscal", { hours: 1, executions: 1, period: "day" }), act("CIER", "Fiscal", { hours: 1, executions: 1, period: "day" }), act("CAJA", "Fiscal", { hours: 1, executions: 22, period: "day" }),
-      act("ARQ1", "Fiscal", { hours: 0.5, executions: 4, period: "day" }), act("SEM1", "Fiscal", { hours: 3, executions: 5, period: "week" }), act("INT1", "Fiscal", { hours: 1, executions: 2, period: "day" }),
+      act("APER", "Fiscal", { hours: 1, executions: 1, period: "day" }), act("TESO", "Fiscal", { hours: 1.5, executions: 2, period: "day" }), act("CIER", "Fiscal", { hours: 1, executions: 1, period: "day" }),
+      act("CAJA", "Fiscal", { hours: 1, executions: 22, period: "day" }), act("ARQ1", "Fiscal", { hours: 0.5, executions: 4, period: "day" }), act("SEM1", "Fiscal", { hours: 3, executions: 5, period: "week" }), act("INT1", "Fiscal", { hours: 1, executions: 2, period: "day" }),
     ];
-    const types: Record<string, ActivityTypeKey | null> = { APER: "control", CIER: "control", CAJA: "operational", ARQ1: "operational", SEM1: "administrative", INT1: "operational" };
+    const types: Record<string, ActivityTypeKey | null> = { APER: "control", TESO: "control", CIER: "control", CAJA: "operational", ARQ1: "operational", SEM1: "administrative", INT1: "operational" };
     const p = prm({ workDaysPerWeek: 7, dailyWorkHours: 7, staffRoundFrom: 0.5 }), a = analyze(st, ac, p, TH, "all");
     const extras = new Map<string, ActivityExtra>(ac.map((x) => [x.code.toLowerCase(), { name: "Actividad " + x.code, type: types[x.code] }]));
     const key = positionKey("real", "Cajas", "CO1", "Fiscal");
-    const restricted = new Map<string, ShiftRef[] | null>([["aper", [AP]], ["cier", [CI]], ["int1", [IN]], ["arq1", [AP, IN]]]);
-    const [sch] = buildSchedules({ staff: st, acts: ac, params: p, positions: a.positions, extras, shiftDays: new Map([[key, ALL]]), activityShifts: restricted, positionShifts: new Map([[key, [AP, IN, CI]]]) });
+    const restricted = new Map<string, ShiftRef[] | null>([["aper", [AP]], ["teso", [TE]], ["cier", [CI]], ["int1", [IN]], ["arq1", [AP, IN]]]);
+    const [sch] = buildSchedules({ staff: st, acts: ac, params: p, positions: a.positions, extras, shiftDays: new Map([[key, ALL]]), activityShifts: restricted, positionShifts: new Map([[key, [AP, TE, IN, CI]]]) });
     const { common, periodic } = ok(sch);
     if (!sch.service || sch.service.start !== "05:30" || sch.service.end !== "20:30" || sch.service.hours !== 15) throw new Error("franja de atención: " + JSON.stringify(sch.service));
-    const idOf = new Map([AP, IN, CI].map((x) => [x.name, x.id]));
+    const winOf = (code: string, weekday: number): [number, number] | null => {
+      const u = restricted.get(code.toLowerCase())?.filter((x) => x.days.includes(weekday)); if (!u || u.length === 0) return null;
+      const m = (t: string) => Number(t.slice(0, 2)) * 60 + Number(t.slice(3, 5));
+      return [Math.min(...u.map((x) => m(x.start!))), Math.max(...u.map((x) => m(x.end!)))];
+    };
+    let conjuntas = 0;
     for (const w of [common, periodic]) {
-      if (w.overflowHours > 1e-6) throw new Error("el escenario debía caber: no caben " + w.overflowHours + " h");
+      if (w.overflowHours > 1e-6) throw new Error("el escenario debía caber: sin asignar " + w.overflowHours + " h");
       w.grid.forEach((row) => row.forEach((c, d) => {
-        if (c.rest) { if (c.shift !== null) throw new Error("el día de descanso no tiene turno"); return; }
-        const sets = c.items.map((i) => restricted.get(i.code.toLowerCase())).filter((x): x is ShiftRef[] => !!x);
-        if (sets.length > 0) {
-          const shared = sets.reduce((acc, x) => acc.filter((y) => x.some((z) => z.id === y.id)), sets[0]);
-          if (shared.length === 0) throw new Error("la celda mezcla turnos: " + c.items.map((i) => i.code).join(","));
-          if (!c.shift || !shared.some((y) => y.id === idOf.get(c.shift!))) throw new Error("el turno del día (" + c.shift + ") no sirve para todas sus tareas: " + c.items.map((i) => i.code).join(","));
+        if (c.rest) { if (c.shift !== null) throw new Error("el día de descanso no tiene franja"); return; }
+        if (c.totalMin > c.toleranceMin + 1e-6) throw new Error("nadie pasa su jornada del día: " + c.totalMin + " > " + c.toleranceMin);
+        const ws = c.items.map((i) => winOf(i.code, sch.days[d])).filter((x): x is [number, number] => !!x);
+        for (let i = 0; i < ws.length; i++) for (let j = i + 1; j < ws.length; j++) {
+          const sh = Math.min(ws[i][1], ws[j][1]) - Math.max(ws[i][0], ws[j][0]);
+          if (sh <= 0 || sh + 1e-9 < Math.min(180, ws[i][1] - ws[i][0], ws[j][1] - ws[j][0])) throw new Error("la celda junta horarios que no cuadran: " + c.items.map((x) => x.code).join(","));
         }
-        if (c.shift === "Cierre" && sch.days[d] === 6) throw new Error("«Cierre» (L–S) no aplica el domingo");
+        const cs = c.items.map((i) => i.code);
+        if (cs.includes("APER") && cs.includes("TESO")) conjuntas++;
+        if (cs.includes("APER") && cs.includes("CIER")) throw new Error("apertura y cierre el mismo día en una persona");
+        if (c.shift && sch.days[d] === 6 && /^1[3-9]/.test(c.shift)) throw new Error("«Cierre» (L–S) no aplica el domingo");
       }));
+      // equilibrio: cada día, las horas de las personas que trabajan no se separan más de 2 h
+      for (let d = 0; d < sch.days.length; d++) {
+        const loads = w.grid.filter((row) => !row[d].rest).map((row) => row[d].totalMin / 60);
+        if (loads.length > 1 && Math.max(...loads) - Math.min(...loads) > 2) throw new Error("día " + sch.days[d] + " desparejo: " + loads.map((x) => x.toFixed(1)).join(" / "));
+      }
     }
-    if (!sch.notes.some((n) => /no abre y cierra el mismo día/.test(n))) throw new Error("falta la nota de turnos: " + sch.notes.join(" | "));
+    if (conjuntas === 0) throw new Error("apertura y tesorería (horarios que se solapan) debían poder ir a la misma persona");
+    if (sch.check.some((c) => c.missingDays.length > 0)) throw new Error("actividades que no quedaron en sus días: " + sch.check.filter((c) => c.missingDays.length > 0).map((c) => c.code).join(","));
+    const aper = sch.check.find((c) => c.code === "APER")!, teso = sch.check.find((c) => c.code === "TESO")!;
+    if (aper.expectedDays.length !== 7 || teso.expectedDays.join() !== "0,1,2,3,4,5") throw new Error("días que corresponden: " + aper.expectedDays + " / " + teso.expectedDays);
+    if (!sch.notes.some((n) => /comparten al menos 3 h/.test(n) && /no abre y cierra el mismo día/.test(n))) throw new Error("falta la nota de horarios: " + sch.notes.join(" | "));
     // las horas de cada actividad no cambian por tener turnos
     const sin = ok(buildSchedules({ staff: st, acts: ac, params: p, positions: a.positions, extras, shiftDays: new Map([[key, ALL]]) })[0]).common;
-    for (const code of ["APER", "CIER", "CAJA", "ARQ1", "INT1", "SEM1"]) if (!near(sum(minutesOf(common, code)), sum(minutesOf(sin, code)), 1e-6)) throw new Error("las horas de " + code + " no deben cambiar por los turnos");
-    // la exportación trae el turno del día
+    for (const code of ["APER", "TESO", "CIER", "CAJA", "ARQ1", "INT1", "SEM1"]) if (!near(sum(minutesOf(common, code)), sum(minutesOf(sin, code)), 1e-6)) throw new Error("las horas de " + code + " no deben cambiar por los turnos");
+    // la exportación trae la franja del día
     const { tables } = tablesFor("reparto", a, null as never, [], {}, "all", 0.1, undefined, [sch]);
     const filas = tables[0].rows as { code: string; shift: string }[];
-    if (!tables[0].columns.some((c) => c.header === "Turno del día") || !filas.filter((f) => f.code === "CIER").every((f) => f.shift === "Cierre") || filas.filter((f) => f.code === "CIER").length === 0) throw new Error("la exportación debe traer el turno del día");
+    if (!tables[0].columns.some((c) => c.header === "Franja del día") || filas.filter((f) => f.code === "CIER").length === 0 || !filas.filter((f) => f.code === "CIER").every((f) => /^1[3-9]/.test(f.shift))) throw new Error("la exportación debe traer la franja del día");
+  });
+
+  await check("Sin asignar (D-110): con una persona y tareas de apertura y de cierre cada día, lo que no cabe queda en «Sin asignar», nadie pasa su jornada ni junta horarios opuestos, y la verificación dice qué actividad no quedó", () => {
+    const ALL = [0, 1, 2, 3, 4, 5];
+    const AP: ShiftRef = { id: "ap", name: "Apertura", days: ALL, start: "05:30", end: "13:00" }, CI: ShiftRef = { id: "ci", name: "Cierre", days: ALL, start: "13:00", end: "20:30" };
+    const st = [staff("Fiscal", 1, 42)], ac = [act("APER", "Fiscal", { hours: 2, executions: 1, period: "day" }), act("CIER", "Fiscal", { hours: 2, executions: 1, period: "day" })];
+    const p = prm({ workDaysPerWeek: 6, dailyWorkHours: 7 }), a = analyze(st, ac, p, TH, "all");
+    const extras = new Map<string, ActivityExtra>(ac.map((x) => [x.code.toLowerCase(), { name: x.code, type: "control" as ActivityTypeKey }]));
+    const key = positionKey("real", "Cajas", "CO1", "Fiscal");
+    const [sch] = buildSchedules({ staff: st, acts: ac, params: p, positions: a.positions, extras, shiftDays: new Map([[key, ALL]]), activityShifts: new Map<string, ShiftRef[] | null>([["aper", [AP]], ["cier", [CI]]]), positionShifts: new Map([[key, [AP, CI]]]) });
+    const { common } = ok(sch);
+    if (common.overflowHours <= 0) throw new Error("debía quedar algo sin asignar");
+    if (common.grid[0].some((c) => c.totalMin > c.toleranceMin + 1e-6)) throw new Error("nadie pasa su jornada");
+    if (common.grid[0].some((c) => c.items.some((i) => i.code === "APER") && c.items.some((i) => i.code === "CIER"))) throw new Error("apertura y cierre no van juntos");
+    if (common.unassigned.reduce((t, u) => t + u.minutes, 0) / 60 < common.overflowHours - 1e-6) throw new Error("lo sin asignar debe sumar lo que no cupo");
+    const faltan = sch.check.filter((c) => c.missingDays.length > 0);
+    if (faltan.length === 0 || !sch.notes.some((n) => /SIN ASIGNAR/.test(n)) || !sch.notes.some((n) => /no (quedó|quedaron) en todos sus días/.test(n))) throw new Error("falta el aviso: " + sch.notes.join(" | "));
+    // con el parámetro en 0 solo se exige que los horarios se solapen: apertura y cierre se tocan en un borde (13:00) y siguen sin poder juntarse
+    const p0 = prm({ workDaysPerWeek: 6, dailyWorkHours: 7, minSharedHours: 0 });
+    const [s0] = buildSchedules({ staff: st, acts: ac, params: p0, positions: analyze(st, ac, p0, TH, "all").positions, extras, shiftDays: new Map([[key, ALL]]), activityShifts: new Map<string, ShiftRef[] | null>([["aper", [AP]], ["cier", [CI]]]), positionShifts: new Map([[key, [AP, CI]]]) });
+    if (ok(s0).common.grid[0].some((c) => c.items.some((i) => i.code === "APER") && c.items.some((i) => i.code === "CIER"))) throw new Error("con 0 h, un borde compartido no basta");
   });
 
   await check("Franja de atención: de la primera hora de inicio a la última de fin entre los turnos con horario; sin horarios no hay franja", () => {

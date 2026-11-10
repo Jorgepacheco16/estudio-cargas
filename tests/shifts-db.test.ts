@@ -105,10 +105,10 @@ async function main() {
       const total = (code: string) => s.common!.grid.reduce((t, row) => t + row.reduce((m, c) => m + c.items.filter((i) => i.code === code).reduce((q, i) => q + i.minutes, 0), 0), 0);
       if (enDomingo("F-3") !== 0 || total("F-3") <= 0) throw new Error("F-3 (solo Cierre, L–S) no debía caer el domingo: " + enDomingo("F-3") + " / " + total("F-3"));
       if (enDomingo("F-2") <= 0) throw new Error("F-2 (Todos los turnos) debía caer también el domingo");
-      // D-109: la franja de atención sale de los turnos del cargo y quien hace F-3 (solo «Cierre») está ese día en «Cierre»
+      // D-110: la franja de atención sale de los turnos del cargo y quien hace F-3 (solo «Cierre», 13:00–20:30) tiene ese día una franja que empieza a las 13:00 o después
       if (!s.service || s.service.start !== "05:30" || s.service.end !== "20:30") throw new Error("franja de atención: " + JSON.stringify(s.service));
       const conF3 = s.common!.grid.flat().filter((c) => c.items.some((i) => i.code === "F-3"));
-      if (conF3.length === 0 || conF3.some((c) => c.shift !== "Cierre")) throw new Error("F-3 solo se hace en «Cierre»: " + JSON.stringify(conF3.map((c) => c.shift)));
+      if (conF3.length === 0 || conF3.some((c) => !c.shift || c.shift.slice(0, 5) < "13:00")) throw new Error("F-3 solo se hace en «Cierre»: " + JSON.stringify(conF3.map((c) => c.shift)));
       await setActivityShifts(app.db, owner, studyId, a3, { all: false, ids: [] }); // sin turnos marcados: sin restricción
       const s2 = (await loadSchedules(app.db, owner, studyId, "all")).schedules.find((x) => x.position === "Fiscal de piso")!;
       const dom2 = s2.days.indexOf(6);

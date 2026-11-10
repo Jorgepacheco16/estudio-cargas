@@ -37,9 +37,9 @@ export function DayCell({ person, day, position, week, cell, target, canSave }: 
   if (cell.rest) return <div className="day-cell rp-rest" role="group" aria-label={`Persona ${person}: descanso el ${day.toLowerCase()}`}><span>Descanso</span></div>;
   return (
     <>
-      <button type="button" className="day-cell rp-cell" onClick={open} aria-haspopup="dialog" aria-label={`Ver las tareas de la persona ${person} el ${day.toLowerCase()}${cell.shift ? `, turno ${cell.shift}` : ""}: ${formatMinutes(cell.totalMin)} de ${formatMinutes(cell.capacityMin)}${hasSaved ? ", con orden guardado" : ""}`}>
+      <button type="button" className="day-cell rp-cell" onClick={open} aria-haspopup="dialog" aria-label={`Ver las tareas de la persona ${person} el ${day.toLowerCase()}${cell.shift ? `, franja ${cell.shift}` : ""}: ${formatMinutes(cell.totalMin)} de ${formatMinutes(cell.capacityMin)}${hasSaved ? ", con orden guardado" : ""}`}>
         <span className="rp-head">
-          <span className={`rp-shift${cell.shift ? "" : " none"}`} title={cell.shift ? `Turno de la persona este día: ${cell.shift}` : "Solo tiene tareas que se hacen en cualquier turno (sin turno asignado)"}>{cell.shift ?? "Cualquiera"}</span>
+          <span className={`rp-shift${cell.shift ? "" : " none"}`} title={cell.shift ? `Franja en que cuadran las tareas de la persona este día: ${cell.shift}` : "Sus tareas no tienen horario: pueden ser a cualquier hora"}>{cell.shift ?? "Cualquiera"}</span>
           <b className="rp-total">{formatMinutes(cell.totalMin)}</b>
         </span>
         <span className="rp-bar" aria-hidden="true"><span className={over ? "over" : undefined} style={{ width: `${Math.min(100, cell.capacityMin > 0 ? (cell.totalMin / cell.capacityMin) * 100 : 0)}%` }} /></span>

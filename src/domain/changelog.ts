@@ -66,7 +66,7 @@ const FIELD_LABEL: Record<string, string> = {
   justification: "Justificación", expectedBenefits: "Beneficios esperados", risksAndConditions: "Riesgos y condiciones", approvalStatus: "Estado de aprobación", finding: "Hallazgo", action: "Acción",
   resources: "Recursos", estimatedCost: "Costo estimado", initiativeType: "Tipo de iniciativa", startDate: "Fecha de inicio", endDate: "Fecha de fin", risks: "Riesgos", resultIndicator: "Indicador de resultado",
   target: "Meta", status: "Estado", actualResult: "Resultado real", priority: "Prioridad", workDaysPerWeek: "Días laborales por semana", dailyWorkHours: "Horas laborales por día",
-  weeksPerMonth: "Semanas por mes", weeksPerYear: "Semanas por año", reservePct: "% de reserva", overloadThreshold: "Umbral de sobrecarga", lowLoadThreshold: "Umbral de baja carga", staffRoundFrom: "Fracción para sumar una persona",
+  weeksPerMonth: "Semanas por mes", weeksPerYear: "Semanas por año", reservePct: "% de reserva", overloadThreshold: "Umbral de sobrecarga", lowLoadThreshold: "Umbral de baja carga", staffRoundFrom: "Fracción para sumar una persona", minSharedHours: "Horas compartidas entre tareas de una persona",
   hourlyCostCop: "Costo por hora (COP)", scenario: "Escenario", assumptionsValidated: "Supuestos validados", personHours: "Horas-persona", label: "Nombre de la foto", shifts: "Turnos",
   rol: "Rol", areas: "Áreas", acceso: "Acceso", clave: "Clave", nombre: "Nombre", permisos: "Permisos", email: "Correo", creadas: "Creadas",
 };

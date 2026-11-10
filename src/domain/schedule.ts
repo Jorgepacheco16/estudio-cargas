@@ -18,9 +18,11 @@
  *   5) Una actividad solo se programa en los días de los turnos en que se ejecuta (p. ej. la de tesorería, de lunes a sábado, no cae el domingo). Sin turnos marcados, en todos los días del cargo.
  *   6) El número de personas usa la regla de redondeo de Parámetros (5,4 → 5; 5,5 → 6): si queda con la carga sobre su jornada útil, esa carga se acepta y se avisa.
  *
- * D-109 (titular, 10 nov 2026): turnos por persona y día. La franja de atención del cargo es de la primera a la última hora de sus turnos. Cada persona, cada día, está en UN turno
- *   (apertura, intermedio, cierre…) y solo recibe tareas que se hacen en ese turno: una misma persona no abre y cierra el mismo día. El turno del día se infiere (no se registra gente por turno);
- *   las actividades sin turnos marcados, con «Todos los turnos» o con turnos sin horario no tienen restricción.
+ * D-109/D-110 (titular, 10 nov 2026): compatibilidad por HORARIO. La franja de atención del cargo es de la primera a la última hora de sus turnos. Una persona puede tener el mismo día
+ *   tareas de distintos turnos si sus horarios se solapan (apertura y tesorería caen en la mañana), pero no tareas en extremos opuestos del día (apertura y cierre): las tareas de una persona
+ *   en un día deben compartir una franja de al menos «horas compartidas» (Parámetros, 3 h). Las actividades sin turnos, con «Todos los turnos» o con turnos sin horario no tienen restricción.
+ *   Lo primero es el EQUILIBRIO: se reparte parejo entre las personas de cada día y de la semana, sin importar el turno del que surgió la tarea. Nadie pasa su jornada: lo que no cabe queda
+ *   como «Sin asignar» (con su día y actividad), no cargado a alguien. Cada actividad debe quedar en todos los días que le corresponden (`check`).
  *
  * Reglas de reparto por TIPO de actividad (confirmadas por el titular, 6 nov 2026):
  *   Operativa, Servicio          → se parte libremente: las ejecuciones van a distintas personas y, si la actividad es por unidad, también se reparten las unidades.
@@ -49,6 +51,8 @@ export function ruleOf(type: ActivityTypeKey | null, planning: "planned" | "unpl
 }
 
 export interface ActivityExtra { name: string; type: ActivityTypeKey | null }
+/** Franja del día en minutos desde la medianoche: [inicio, fin]. */
+export type Win = [number, number];
 /** Un turno del cargo (D-67): los días en que aplica (0 = lunes) y, si se registraron, su horario («HH:MM»). */
 export interface ShiftRef { id: string; name: string; days: number[]; start: string | null; end: string | null }
 /** Franja en que el cargo es requerido: de la primera hora de inicio a la última hora de fin de sus turnos. */
@@ -81,7 +85,7 @@ export interface Cell {
   /** Jornada útil del día (sin tolerancia); 0 el día de descanso. */ capacityMin: number;
   /** Lo más que se asigna en un día: la jornada útil más la sobrecarga aceptada. */ toleranceMin: number;
   /** Día de descanso de la persona (D-108): no tiene tareas. */ rest: boolean;
-  /** Turno en que está la persona ese día (D-109); null si solo tiene tareas que se hacen en cualquier turno, o descansa. */ shift: string | null;
+  /** Franja del día en que cuadran las tareas de la persona (p. ej. «08:00–13:00»); null si solo tiene tareas sin horario, o descansa. */ shift: string | null;
   /** Tareas del día en el orden sugerido (primero lo diario, luego lo semanal y lo periódico, al final los imprevistos). */ tasks: DayTask[];
   /** Orden guardado para este día (null = el sugerido). Lo llena attachSavedOrders. */ saved: SavedOrder | null;
 }
@@ -105,6 +109,14 @@ export interface WeekPlan {
   /** Horas que no cupieron ni con la tolerancia (la carga pasa la capacidad). */ overflowHours: number;
   /** Personas más que harían falta para no pasar el umbral de sobrecarga (0 si no hace falta). */ extraPeople: number;
   /** Descansos que no se pudieron conceder porque ese día no quedaría nadie para lo que no puede esperar (0 = todas descansan lo que les toca). */ restMissing: number;
+  /** Por día del cargo: lo que no se pudo asignar a nadie sin pasar la jornada o juntar tareas de horarios opuestos (D-110). */ unassigned: { minutes: number; items: { code: string; minutes: number }[] }[];
+}
+/** Verificación de que una actividad queda en los días que le corresponden (D-110). */
+export interface ActivityCheck {
+  code: string; name: string; week: WeekKind; frequency: "daily" | "weekly" | "periodic";
+  /** Días (0 = lunes) en que le corresponde ejecutarse. */ expectedDays: number[];
+  /** Días en que quedó con tiempo asignado. */ scheduledDays: number[];
+  /** Días de los que le corresponden en que no quedó (diaria) o todos, si una semanal/periódica no quedó en ninguno. */ missingDays: number[];
 }
 export type ScheduleState = "ok" | "nodata" | "noshifts";
 export interface PositionSchedule {
@@ -113,6 +125,7 @@ export interface PositionSchedule {
   days: number[]; /** Personas necesarias que da «Dotación requerida» (y que usa el reparto). */ required: number | null;
   /** Franja de atención del cargo (de la primera a la última hora de sus turnos); null si sus turnos no tienen horario. */ service: ServiceWindow | null;
   common: WeekPlan | null; periodic: WeekPlan | null;
+  /** Una fila por actividad que se programa: en qué días debía quedar y en cuáles quedó. */ check: ActivityCheck[];
   notes: string[];
 }
 
@@ -188,8 +201,26 @@ export function serviceOf(shifts: readonly ShiftRef[] | undefined): ServiceWindo
   return { start: f(a), end: f(b), hours: (b - a) / 60 };
 }
 
+/** Franja de una actividad un día de la semana: de la primera hora de inicio a la última de fin de los turnos que aplican ese día; null si no tiene turnos o alguno no tiene horario (no se puede juzgar). */
+function windowOn(l: Pick<Line, "shifts">, weekday: number): Win | null {
+  const u = usableShifts(l, weekday);
+  if (!u || u.length === 0 || u.some((x) => !x.start || !x.end || minutesOfDay(x.end) <= minutesOfDay(x.start))) return null;
+  return [Math.min(...u.map((x) => minutesOfDay(x.start))), Math.max(...u.map((x) => minutesOfDay(x.end)))];
+}
+/**
+ * ¿Caben en el mismo día de una persona dos franjas? Deben compartir más que un borde y al menos `minShared` minutos (o toda la más corta, si es menor). Devuelve la franja común
+ * (lo que queda compartido) o false si no caben; con una de las dos sin horario no hay restricción.
+ */
+function meet(cur: Win | null, w: Win | null, minShared: number): Win | null | false {
+  if (!w) return cur;
+  if (!cur) return w;
+  const a = Math.max(cur[0], w[0]), b = Math.min(cur[1], w[1]), shared = b - a, need = Math.min(minShared, cur[1] - cur[0], w[1] - w[0]);
+  return shared > EPS && shared + EPS >= need ? [a, b] : false;
+}
+const hhmm = (m: number) => `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(Math.round(m % 60)).padStart(2, "0")}`;
+
 /** Ejecuciones enteras y, si sobra una fracción, una ejecución más corta: así no se pierde ni se inventa ningún minuto. */
-function pieces(executions: number): number[] {
+function pieces0(executions: number): number[] {
   const whole = Math.floor(executions + EPS), frac = executions - whole;
   return [...Array<number>(whole).fill(1), ...(frac > EPS ? [frac] : [])];
 }
@@ -211,20 +242,22 @@ export function workDaysOf(hoursPerPerson: number, daysOfPosition: number, prm: 
  * personas avanzan un puesto (la Persona 2 hace lo que hizo la 1), así los descansos rotan. null si no hay descanso (el cargo abre solo los días que trabaja cada persona).
  * Un descanso que dejaría un día sin NADIE que haga lo que no puede esperar no se concede (`missing` los cuenta): hacen falta más personas para cubrir todos los días.
  */
-function planRest(lines: Line[], kind: WeekKind, n: number, days: number[], W: number, cd: number, T: number): { rest: boolean[][]; missing: number } | null {
+function planRest(lines: Line[], kind: WeekKind, n: number, days: number[], W: number, cd: number, T: number, minShared: number): { rest: boolean[][]; missing: number } | null {
   const D = days.length, R = D - W;
   if (R <= 0 || n <= 0) return null;
   // Lo que obliga a haber gente un día es lo que NO se puede mover de día (las actividades diarias) y los imprevistos; lo semanal y lo periódico se acomoda en los días con espacio.
   // `demand` (también con lo que se puede mover) solo ordena los días: los de menos carga reciben primero los descansos.
-  const demand = Array<number>(D).fill(0), fixed = Array<number>(D).fill(0), maxK = Array<number>(D).fill(1), shiftsNeeded = Array.from({ length: D }, () => new Set<string>());
+  const demand = Array<number>(D).fill(0), fixed = Array<number>(D).fill(0), maxK = Array<number>(D).fill(1), dayWins = Array.from({ length: D }, () => [] as Win[]);
   let reserve = 0;
   for (const l of lines) {
     reserve += l.reserveHours;
     if (l.rule === "reserve" || (l.periodKind === "periodic" && kind !== "periodic")) continue;
     const A = allowedOf(l, days), hours = l.hoursPerExec * l.k * l.executions;
-    for (const d of A) { demand[d] += hours / A.length; if (l.periodKind === "daily") { fixed[d] += hours / A.length; if (l.k > maxK[d]) maxK[d] = l.k; const only = usableShifts(l, days[d]); if (only && only.length === 1) shiftsNeeded[d].add(only[0].id); } }
+    for (const d of A) { demand[d] += hours / A.length; if (l.periodKind === "daily") { fixed[d] += hours / A.length; if (l.k > maxK[d]) maxK[d] = l.k; const w = windowOn(l, days[d]); if (w) dayWins[d].push(w); } }
   }
-  for (let d = 0; d < D; d++) { demand[d] += reserve / D; fixed[d] += reserve / D; if (shiftsNeeded[d].size > maxK[d]) maxK[d] = shiftsNeeded[d].size; } // un día con tareas de un solo turno de apertura y otras de cierre pide al menos una persona por turno
+  for (let d = 0; d < D; d++) { demand[d] += reserve / D; fixed[d] += reserve / D; const groups: (Win | null)[] = []; // un día con tareas de franjas que no caben en una misma persona (apertura y cierre) pide al menos una persona por grupo de franjas compatibles
+    for (const w of [...dayWins[d]].sort((a, b) => a[0] - b[0])) { const i = groups.findIndex((g) => meet(g, w, minShared) !== false); if (i < 0) groups.push(w); else groups[i] = meet(groups[i], w, minShared) as Win | null; }
+    if (groups.length > maxK[d]) maxK[d] = groups.length; }
   // Cada descanso se pone donde menos horas deja sin cubrir: el faltante de un día es lo fijo del día menos lo que pueden hacer quienes ese día trabajan. Mientras un día tenga holgura el
   // descanso no le cuesta nada, y entre los días sin costo se prefiere el domingo (menos recargos) y luego los de menos carga; así los descansos llenan primero el domingo.
   const capDay = cd * T, deficit = (d: number, resting: number) => Math.max(0, fixed[d] - (n - resting) * capDay);
@@ -244,47 +277,40 @@ function planRest(lines: Line[], kind: WeekKind, n: number, days: number[], W: n
   return { rest, missing };
 }
 
-interface Sim { items: Map<string, number>[][]; reserveCell: number[][]; load: number[][]; overflow: number; assigned: number; reserve: number; who: Map<string, Set<number>>; execs: Map<string, number>; mins: Map<string, number>; shared: Set<string>; rest: boolean[][]; restMissing: number; shiftOf: (ShiftRef | null)[][] }
+interface Piece { code: string; h: number }
+interface Sim { items: Map<string, number>[][]; reserveCell: number[][]; load: number[][]; overflow: number; assigned: number; reserve: number; who: Map<string, Set<number>>; execs: Map<string, number>; mins: Map<string, number>; shared: Set<string>; rest: boolean[][]; restMissing: number; win: (Win | null)[][]; unassigned: { code: string; h: number }[][] }
 
 /**
- * Un reparto con `n` personas (las de Dotación requerida). Voraz y determinista: lo más grande primero, siempre a quien más margen tiene (así se nivela); empates, la persona y el
- * día más bajos. `T` = sobrecarga aceptada (1,05 = 105 %). Si una tarea no cabe entera con la regla de su tipo, se parte lo mínimo y queda marcada; si ni así cabe, queda en quien
- * más margen tiene y se cuenta como horas que no caben. `W` = días que trabaja cada persona (los demás días del cargo descansa, ver planRest).
+ * Un reparto con `n` personas (las de Dotación requerida). Voraz y determinista, y luego un ajuste de equilibrio por día. `T` = sobrecarga aceptada (1,05 = 105 %). `W` = días que trabaja cada
+ * persona (los demás días del cargo descansa, ver planRest). `minShared` = minutos que deben compartir los horarios de las tareas de una persona en un día.
+ * Prioridades: (1) nadie pasa su jornada del día ni de la semana (con `T`); (2) las tareas de una persona un día comparten una franja; (3) el equilibrio. Si una tarea no cabe entera con la regla de
+ * su tipo, se parte lo mínimo y queda marcada; si ni así cabe, queda «sin asignar» (no se carga a nadie).
  */
-function simulate(lines: Line[], kind: WeekKind, n: number, days: number[], cd: number, cw: number, T: number, W: number): Sim {
+function simulate(lines: Line[], kind: WeekKind, n: number, days: number[], cd: number, cw: number, T: number, W: number, minShared: number): Sim {
   const D = days.length, capD = cd * T, capW = cw * T;
-  const restPlan = planRest(lines, kind, n, days, W, cd, T), rest = restPlan?.rest ?? Array.from({ length: n }, () => Array<boolean>(D).fill(false));
+  const restPlan = planRest(lines, kind, n, days, W, cd, T, minShared), rest = restPlan?.rest ?? Array.from({ length: n }, () => Array<boolean>(D).fill(false));
   const load = Array.from({ length: n }, () => Array<number>(D).fill(0)), week = Array<number>(n).fill(0);
-  const items = Array.from({ length: n }, () => Array.from({ length: D }, () => new Map<string, number>()));
+  const pieces: Piece[][][] = Array.from({ length: n }, () => Array.from({ length: D }, () => [] as Piece[]));
   const reserveCell = Array.from({ length: n }, () => Array<number>(D).fill(0));
-  const who = new Map<string, Set<number>>(), execs = new Map<string, number>(), mins = new Map<string, number>(), shared = new Set<string>();
-  let overflow = 0, assigned = 0;
+  const execs = new Map<string, number>(), shared = new Set<string>();
+  const unassigned: { code: string; h: number }[][] = Array.from({ length: D }, () => []);
+  let overflow = 0;
   const rem = (p: number, d: number) => (rest[p][d] ? 0 : Math.min(capD - load[p][d], capW - week[p]));
-  const present = (d: number) => rest.reduce((s, row) => s + (row[d] ? 0 : 1), 0);
-  // Turno de cada persona cada día (D-109): se fija con la primera tarea que solo se hace en ciertos turnos; desde entonces solo recibe tareas de ese turno.
+  const present = (d: number) => rest.reduce((sum, row) => sum + (row[d] ? 0 : 1), 0);
+  // Franja común de las tareas de cada persona cada día (D-110): las tareas de una persona un día deben compartir una franja de al menos minShared.
   const lineByCode = new Map(lines.map((l) => [l.code, l]));
-  const shiftOf: (ShiftRef | null)[][] = Array.from({ length: n }, () => Array<ShiftRef | null>(D).fill(null)), inShift = Array.from({ length: D }, () => new Map<string, number>());
-  const usable = (code: string, d: number) => { const l = lineByCode.get(code); return l ? usableShifts(l, days[d]) : null; };
-  const canTake = (p: number, d: number, code: string) => {
-    const u = usable(code, d), cur = shiftOf[p][d];
-    return !u || u.length === 0 || cur === null || u.some((x) => x.id === cur.id); // sin turnos, o que ese día ningún turno de la actividad aplica (dato incoherente): no se bloquea
-  };
-  const claim = (p: number, d: number, code: string) => {
-    const u = usable(code, d);
-    if (shiftOf[p][d] !== null || !u || u.length === 0) return;
-    const best = [...u].sort((a, b) => (inShift[d].get(a.id) ?? 0) - (inShift[d].get(b.id) ?? 0) || minutesOfDay(a.start) - minutesOfDay(b.start) || a.name.localeCompare(b.name, "es"))[0]; // el turno con menos gente ese día
-    shiftOf[p][d] = best; inShift[d].set(best.id, (inShift[d].get(best.id) ?? 0) + 1);
-  };
+  const win: (Win | null)[][] = Array.from({ length: n }, () => Array<Win | null>(D).fill(null));
+  const winOf = (code: string, d: number): Win | null => { const l = lineByCode.get(code); return l ? windowOn(l, days[d]) : null; };
+  const canTake = (p: number, d: number, code: string) => meet(win[p][d], winOf(code, d), minShared) !== false;
+  const refresh = (p: number, d: number) => { let cur: Win | null = null; for (const pc of pieces[p][d]) { const r = meet(cur, winOf(pc.code, d), minShared); if (r !== false) cur = r; } win[p][d] = cur; };
   const put = (p: number, d: number, code: string, h: number) => {
-    claim(p, d, code);
-    load[p][d] += h; week[p] += h; assigned += h;
-    items[p][d].set(code, (items[p][d].get(code) ?? 0) + h * 60);
-    (who.get(code) ?? who.set(code, new Set()).get(code)!).add(p + 1);
-    mins.set(code, (mins.get(code) ?? 0) + h * 60);
+    pieces[p][d].push({ code, h });
+    load[p][d] += h; week[p] += h;
+    const r = meet(win[p][d], winOf(code, d), minShared); if (r !== false) win[p][d] = r;
   };
 
   // 1) reserva para imprevistos: igual para todas las personas y días en que trabajan
-  const reserve = lines.reduce((s, l) => s + l.reserveHours, 0), workCells = rest.reduce((s, row) => s + row.filter((r) => !r).length, 0);
+  const reserve = lines.reduce((sum, l) => sum + l.reserveHours, 0), workCells = rest.reduce((sum, row) => sum + row.filter((r) => !r).length, 0);
   if (reserve > EPS && workCells > 0) for (let p = 0; p < n; p++) for (let d = 0; d < D; d++) if (!rest[p][d]) { const h = reserve / workCells; reserveCell[p][d] = h * 60; load[p][d] += h; week[p] += h; }
 
   // 2) lo que hace el cargo: se reparte según la regla de su tipo
@@ -294,52 +320,55 @@ function simulate(lines: Line[], kind: WeekKind, n: number, days: number[], cd: 
   for (const l of active) {
     const allowed = allowedOf(l, days), base = { code: l.code, k: l.k, divisible: l.divisible, allowed };
     execs.set(l.code, l.executions);
-    if (l.periodKind === "daily") for (const d of allowed) for (const frac of pieces(l.executions / allowed.length)) occs.push({ ...base, hours: l.hoursPerExec * frac, day: d });
-    else for (const frac of pieces(l.executions)) occs.push({ ...base, hours: l.hoursPerExec * frac, day: null });
+    if (l.periodKind === "daily") for (const d of allowed) for (const frac of pieces0(l.executions / allowed.length)) occs.push({ ...base, hours: l.hoursPerExec * frac, day: d });
+    else for (const frac of pieces0(l.executions)) occs.push({ ...base, hours: l.hoursPerExec * frac, day: null });
   }
-  // primero lo que tiene día fijo (lo diario no se puede mover), luego lo que se puede acomodar en cualquier día; dentro de cada grupo, primero lo que solo se hace en menos turnos (así una tarea de «apertura o cierre»
-  // no fija el turno de una persona antes de que llegue una que solo puede ser de cierre) y luego lo más grande
-  const restr = (o: Occ) => { const l = lineByCode.get(o.code), u = l?.shifts && l.shifts.length > 0 ? (o.day !== null ? usableShifts(l, days[o.day]) : l.shifts) : null; return u && u.length > 0 ? u.length : 99; };
-  occs.sort((a, b) => (a.day === null ? 1 : 0) - (b.day === null ? 1 : 0) || restr(a) - restr(b) || b.hours * b.k - a.hours * a.k || a.code.localeCompare(b.code) || (a.day ?? -1) - (b.day ?? -1));
+  // primero lo que tiene día fijo (lo diario no se puede mover), luego lo que se puede acomodar en cualquier día; dentro de cada grupo, primero lo que tiene franja (lo restringido antes que lo libre) y luego lo más grande
+  const timed = (o: Occ) => { const l = lineByCode.get(o.code); return l && (o.day !== null ? windowOn(l, days[o.day]) : l.shifts && l.shifts.length > 0 ? windowOn(l, days[o.allowed[0]]) : null) ? 0 : 1; };
+  occs.sort((x, y) => (x.day === null ? 1 : 0) - (y.day === null ? 1 : 0) || timed(x) - timed(y) || y.hours * y.k - x.hours * x.k || x.code.localeCompare(y.code) || (x.day ?? -1) - (y.day ?? -1));
   const ruleOfCode = new Map(active.map((l) => [l.code, l.rule]));
-  const dayTotal = (d: number) => load.reduce((s, col) => s + col[d], 0);
+  const dayTotal = (d: number) => load.reduce((sum, col) => sum + col[d], 0);
   /** Qué tan lleno está un día frente a las personas que trabajan ese día (el día con menos gente se llena antes): así se nivela por día aunque cada día tenga distinto número de personas. */
   const fill = (d: number) => (present(d) === 0 ? 1e9 : dayTotal(d) / (present(d) * capD));
-  /** Quienes tienen al menos `room` horas de espacio ese día (y no descansan), empezando por la que lleva MENOS horas en la semana (así se nivela la semana, no solo el día); empates, menos carga ese día y luego la persona más baja. */
-  const byLeastWeek = (d: number, room: number, code: string) => [...Array(n).keys()].filter((q) => !rest[q][d] && rem(q, d) >= room && canTake(q, d, code))
-    .sort((a, b) => week[a] - week[b] || load[a][d] - load[b][d] || a - b);
+  /**
+   * Quienes tienen al menos `room` horas de espacio ese día (y no descansan) y cuyo horario del día es compatible, de menor a mayor carga. Lo diario (`byDay`) se nivela por día: primero quien lleva menos
+   * horas ese día (en tramos de 15 min, para que el empate lo decida la semana); lo que se puede acomodar en cualquier día se nivela por semana.
+   */
+  const candidates = (d: number, room: number, code: string, byDay: boolean) => [...Array(n).keys()].filter((q) => !rest[q][d] && rem(q, d) >= room && canTake(q, d, code))
+    .sort((x, y) => (byDay ? Math.floor((load[x][d] + EPS) / 0.25) - Math.floor((load[y][d] + EPS) / 0.25) || week[x] - week[y] : week[x] - week[y] || Math.floor((load[x][d] + EPS) / 0.25) - Math.floor((load[y][d] + EPS) / 0.25)) || load[x][d] - load[y][d] || x - y);
 
   const place = (o: Occ, d: number): number => { // devuelve las horas que quedan sin colocar en ese día (todas, si no cabe con la regla)
-    const rule = ruleOfCode.get(o.code)!;
-    if (o.k > 1) { // varias personas a la vez (también en una coordinación): las k que llevan menos horas y tienen espacio, todas deben poder
+    const rule = ruleOfCode.get(o.code)!, byDay = o.day !== null;
+    if (o.k > 1) { // varias personas a la vez (también en una coordinación): las k de menor carga con espacio, todas deben poder
       if (o.k > n) return o.hours;
-      const order = byLeastWeek(d, o.hours - FIT, o.code).slice(0, o.k);
+      const order = candidates(d, o.hours - FIT, o.code, byDay).slice(0, o.k);
       if (order.length < o.k) return o.hours;
-      for (const p of order) put(p, d, o.code, o.hours); return 0;
+      for (const p of order) put(p, d, o.code, o.hours);
+      return 0;
     }
     if (rule === "single") {
       let p = owner.get(o.code);
       if (p === undefined) { p = 0; for (let q = 1; q < n; q++) if (week[q] < week[p] - EPS) p = q; owner.set(o.code, p); }
-      if (rest[p][d] || !canTake(p, d, o.code)) { const cover = byLeastWeek(d, o.hours - FIT, o.code)[0]; if (cover === undefined) return o.hours; put(cover, d, o.code, o.hours); return 0; } // el día que descansa la responsable (o está en otro turno), la cubre otra
+      if (rest[p][d] || !canTake(p, d, o.code)) { const cover = candidates(d, o.hours - FIT, o.code, byDay)[0]; if (cover === undefined) return o.hours; put(cover, d, o.code, o.hours); return 0; } // el día que descansa la responsable (o su horario no cuadra), la cubre otra
       if (rem(p, d) < o.hours - FIT) return o.hours;
       put(p, d, o.code, o.hours); return 0;
     }
     if (o.divisible) { // por unidad y de tipo que se parte: se llena a quienes tienen margen
       let left = o.hours;
       while (left > FIT) {
-        const p = byLeastWeek(d, 2 * FIT, o.code)[0]; // con espacio de verdad (más que la tolerancia numérica): así cada vuelta avanza
+        const p = candidates(d, 2 * FIT, o.code, byDay)[0]; // con espacio de verdad (más que la tolerancia numérica): así cada vuelta avanza
         if (p === undefined) break;
         const h = Math.min(left, rem(p, d)); put(p, d, o.code, h); left -= h;
       }
       return left;
     }
-    const p = byLeastWeek(d, o.hours - FIT, o.code)[0];
+    const p = candidates(d, o.hours - FIT, o.code, byDay)[0];
     if (p === undefined) return o.hours;
     put(p, d, o.code, o.hours); return 0;
   };
 
   for (const o of occs) {
-    const order = o.day !== null ? [o.day] : [...o.allowed].sort((a, b) => fill(a) - fill(b) || a - b);
+    const order = o.day !== null ? [o.day] : [...o.allowed].sort((x, y) => fill(x) - fill(y) || x - y);
     let left = o.hours;
     for (const d of order) { left = place({ ...o, hours: left }, d); if (left <= FIT) break; }
     if (left <= FIT) continue;
@@ -347,21 +376,44 @@ function simulate(lines: Line[], kind: WeekKind, n: number, days: number[], cd: 
     let total = left * o.k;
     for (const d of order) {
       while (total > FIT) {
-        const p = byLeastWeek(d, 2 * FIT, o.code)[0]; // con espacio de verdad (más que la tolerancia numérica): así cada vuelta avanza
+        const p = candidates(d, 2 * FIT, o.code, o.day !== null)[0]; // con espacio de verdad (más que la tolerancia numérica): así cada vuelta avanza
         if (p === undefined) break;
         const h = Math.min(total, rem(p, d)); put(p, d, o.code, h); total -= h; shared.add(o.code);
       }
       if (total <= FIT) break;
     }
-    if (total > FIT) { // ni así cabe: se deja en quien más margen tiene y se cuenta como horas que no caben
-      const d = o.day ?? order[0];
-      const working = [...Array(n).keys()].filter((q) => !rest[q][d]), fits = working.filter((q) => canTake(q, d, o.code)), pool = fits.length > 0 ? fits : working.length > 0 ? working : [...Array(n).keys()];
-      const people = pool.sort((a, b) => rem(b, d) - rem(a, d) || a - b).slice(0, Math.min(o.k, pool.length));
-      for (const q of people) put(q, d, o.code, total / people.length);
-      overflow += total; shared.add(o.code);
+    if (total > FIT) { unassigned[o.day ?? order[0]].push({ code: o.code, h: total }); overflow += total; shared.add(o.code); } // ni así cabe: queda sin asignar, no se carga a nadie
+  }
+
+  // 3) equilibrio por día: se pasan tareas enteras de la persona más cargada del día a la menos cargada mientras eso las acerque, sin pasar su jornada ni juntar horarios opuestos
+  const movable = (code: string) => ruleOfCode.get(code) !== "single" && (lineByCode.get(code)?.k ?? 1) === 1;
+  for (let d = 0; d < D; d++) {
+    for (let guard = 0; guard < 500; guard++) {
+      const here = [...Array(n).keys()].filter((q) => !rest[q][d]);
+      if (here.length < 2) break;
+      const hi = here.reduce((x, y) => (load[y][d] > load[x][d] + EPS ? y : x)), lo = here.reduce((x, y) => (load[y][d] < load[x][d] - EPS ? y : x));
+      const gap = load[hi][d] - load[lo][d];
+      if (gap <= 0.1) break;
+      let best = -1, bestGap = gap - 1e-6;
+      pieces[hi][d].forEach((pc, i) => {
+        if (!movable(pc.code) || pc.h >= gap - 1e-6 || rem(lo, d) < pc.h - FIT || week[lo] + pc.h > week[hi] + 0.5 || !canTake(lo, d, pc.code)) return;
+        const after = Math.abs(gap - 2 * pc.h);
+        if (after < bestGap) { best = i; bestGap = after; }
+      });
+      if (best < 0) break;
+      const [pc] = pieces[hi][d].splice(best, 1);
+      pieces[lo][d].push(pc);
+      load[hi][d] -= pc.h; week[hi] -= pc.h; load[lo][d] += pc.h; week[lo] += pc.h;
+      refresh(hi, d); refresh(lo, d);
     }
   }
-  return { items, reserveCell, load, overflow, assigned, reserve, who, execs, mins, shared, rest, restMissing: restPlan?.missing ?? 0, shiftOf };
+
+  // lo repartido, por persona y día (en minutos), y quién hace cada actividad
+  const items = Array.from({ length: n }, (_, p) => Array.from({ length: D }, (_, d) => { const m = new Map<string, number>(); for (const pc of pieces[p][d]) m.set(pc.code, (m.get(pc.code) ?? 0) + pc.h * 60); return m; }));
+  const who = new Map<string, Set<number>>(), mins = new Map<string, number>();
+  let assigned = 0;
+  for (let p = 0; p < n; p++) for (let d = 0; d < D; d++) for (const pc of pieces[p][d]) { (who.get(pc.code) ?? who.set(pc.code, new Set()).get(pc.code)!).add(p + 1); mins.set(pc.code, (mins.get(pc.code) ?? 0) + pc.h * 60); assigned += pc.h; }
+  return { items, reserveCell, load, overflow, assigned, reserve, who, execs, mins, shared, rest, restMissing: restPlan?.missing ?? 0, win, unassigned };
 }
 
 /**
@@ -414,25 +466,36 @@ export function moveTask<T>(rows: readonly T[], index: number, direction: -1 | 1
   return out;
 }
 
-function plan(kind: WeekKind, lines: Line[], n: number, days: number[], cd: number, cw: number, T: number, W: number): WeekPlan {
-  const D = days.length, sim = simulate(lines, kind, n, days, cd, cw, T, W);
+function plan(kind: WeekKind, lines: Line[], n: number, days: number[], cd: number, cw: number, T: number, W: number, minShared: number): WeekPlan {
+  const D = days.length, sim = simulate(lines, kind, n, days, cd, cw, T, W, minShared);
   const rankByCode = new Map(lines.map((l) => [l.code, rankOf(l.periodKind)])), nameByCode = new Map(lines.map((l) => [l.code, l.name]));
   const grid: Cell[][] = Array.from({ length: n }, (_, p) => Array.from({ length: D }, (_, d) => {
     const its: CellItem[] = [...sim.items[p][d].entries()].map(([code, minutes]) => ({ code, minutes, rank: rankByCode.get(code) ?? 2 })).sort((a, b) => a.rank - b.rank || a.code.localeCompare(b.code));
     const tasks = orderedTasks(its.map((i) => ({ ...i, name: nameByCode.get(i.code) ?? i.code })), sim.reserveCell[p][d]);
     const off = sim.rest[p][d];
-    return { items: its, reserveMin: sim.reserveCell[p][d], totalMin: sim.load[p][d] * 60, capacityMin: off ? 0 : cd * 60, toleranceMin: off ? 0 : cd * T * 60, rest: off, shift: off ? null : sim.shiftOf[p][d]?.name ?? null, tasks, saved: null };
+    return { items: its, reserveMin: sim.reserveCell[p][d], totalMin: sim.load[p][d] * 60, capacityMin: off ? 0 : cd * 60, toleranceMin: off ? 0 : cd * T * 60, rest: off, shift: off || !sim.win[p][d] ? null : `${hhmm(sim.win[p][d]![0])}–${hhmm(sim.win[p][d]![1])}`, tasks, saved: null };
   }));
   const summaries: ActivitySummary[] = lines.filter((l) => l.rule !== "reserve" && (l.periodKind === "periodic" ? kind === "periodic" : true)).map((l) => ({
     code: l.code, name: l.name, type: l.type, rule: l.rule, persons: [...(sim.who.get(l.code) ?? [])].sort((a, b) => a - b), executions: sim.execs.get(l.code) ?? 0, minutesPerExecution: l.hoursPerExec * 60,
     weekMinutes: sim.mins.get(l.code) ?? 0, perEmployee: l.perEmployee, simultaneous: l.k, shared: sim.shared.has(l.code),
   }));
-  const total = sim.assigned + sim.reserve, capacity = n * cw;
+  const total = sim.assigned + sim.reserve + sim.overflow, capacity = n * cw;
+  const unassigned = sim.unassigned.map((list) => { const by = new Map<string, number>(); for (const u of list) by.set(u.code, (by.get(u.code) ?? 0) + u.h * 60); return { minutes: [...by.values()].reduce((x, y) => x + y, 0), items: [...by.entries()].map(([code, minutes]) => ({ code, minutes })).sort((x, y) => x.code.localeCompare(y.code)) }; });
   return {
     kind, people: n, grid, activities: summaries, reserveHours: sim.reserve, assignedHours: sim.assigned, capacityHours: capacity,
     utilization: capacity > 0 ? total / capacity : 0, freeHours: Math.max(0, capacity - total), overflowHours: sim.overflow,
-    extraPeople: Math.max(0, Math.ceil(total / (cw * T) - EPS) - n), restMissing: sim.restMissing,
+    extraPeople: Math.max(0, Math.ceil(total / (cw * T) - EPS) - n), restMissing: sim.restMissing, unassigned,
   };
+}
+
+/** Verificación de que cada actividad que se programa en la semana queda en los días que le corresponden: las diarias, en todos sus días; las semanales y periódicas, al menos en uno. */
+function checksOf(week: WeekPlan, lines: Line[], days: number[]): ActivityCheck[] {
+  return lines.filter((l) => l.rule !== "reserve" && (l.periodKind === "periodic" ? week.kind === "periodic" : true)).map((l) => {
+    const expected = allowedOf(l, days).map((i) => days[i]);
+    const scheduled = days.filter((_, d) => week.grid.some((row) => row[d].items.some((it) => it.code === l.code && it.minutes > 1e-6)));
+    const missing = l.periodKind === "daily" ? expected.filter((d) => !scheduled.includes(d)) : scheduled.length > 0 ? [] : expected;
+    return { code: l.code, name: l.name, week: week.kind, frequency: l.periodKind, expectedDays: expected, scheduledDays: scheduled, missingDays: missing };
+  }).sort((x, y) => x.code.localeCompare(y.code));
 }
 
 /** Texto sobre los descansos de una semana: cuántas personas trabajan el domingo, cuántos domingos libres da la rotación y cómo rotan. null si no hay descanso. */
@@ -449,11 +512,11 @@ function restNote(week: WeekPlan, days: number[], W: number): string | null {
 }
 
 export function buildSchedules(input: ScheduleInput): PositionSchedule[] {
-  const T = Math.max(1, input.overload ?? 1), roundFrom = input.params.staffRoundFrom ?? 0;
+  const T = Math.max(1, input.overload ?? 1), roundFrom = input.params.staffRoundFrom ?? 0, sharedHours = Math.max(0, input.params.minSharedHours ?? 3), minShared = sharedHours * 60;
   return input.positions.map((p): PositionSchedule => {
     const key = positionKey(p.dataKind, p.area, p.site, p.position);
     const days = [...(input.shiftDays.get(key) ?? [])].sort((a, b) => a - b);
-    const base = { key, dataKind: p.dataKind, area: p.area, site: p.site, position: p.position, days, service: serviceOf(input.positionShifts?.get(key)), common: null, periodic: null, notes: [] as string[] };
+    const base = { key, dataKind: p.dataKind, area: p.area, site: p.site, position: p.position, days, service: serviceOf(input.positionShifts?.get(key)), common: null, periodic: null, check: [] as ActivityCheck[], notes: [] as string[] };
     const need = needOf(p, T, roundFrom);
     const required = need.required;
     if (days.length === 0) return { ...base, state: "noshifts", reason: "El cargo no tiene turnos registrados: se reparte por los días de sus turnos. Regístrelos en Cargos y dotación.", required };
@@ -462,11 +525,12 @@ export function buildSchedules(input: ScheduleInput): PositionSchedule[] {
     const cw = p.hoursPerPerson, W = workDaysOf(cw, days.length, input.params), cd = dailyCapacity(cw, W, input.params);
     // Si el redondeo dejó la carga de cada persona sobre su jornada útil (5,4 → 5), esa carga es la que aceptó el titular: no se marca como sobrecarga ni se pide otra persona.
     const Te = need.exact !== null && required > 0 ? Math.max(T, need.exact / required) : T;
-    const common = plan("common", lines, required, days, cd, cw, Te, W);
-    const periodic = plan("periodic", lines, required, days, cd, cw, Te, W);
+    const common = plan("common", lines, required, days, cd, cw, Te, W, minShared);
+    const periodic = plan("periodic", lines, required, days, cd, cw, Te, W, minShared);
+    const check = [...checksOf(common, lines, days), ...checksOf(periodic, lines, days).filter((c) => c.frequency === "periodic")];
     const notes = base.notes;
     if (roundFrom > 0 && need.exact !== null && need.exact / required > T + 1e-9) notes.push(`Dotación requerida da ${need.exact.toFixed(2).replace(".", ",")} personas de trabajo; con la regla de Parámetros (desde ${Math.round(roundFrom * 100)} % de persona se suma una) quedan ${required}, y cada una trabaja el ${Math.round((need.exact / required) * 100)} % de su jornada útil.`);
-    if (lines.some((l) => l.shifts && l.shifts.length > 0)) notes.push("Cada persona, cada día, está en un turno y solo hace las tareas que se ejecutan en ese turno: una misma persona no abre y cierra el mismo día.");
+    if (lines.some((l) => l.shifts && l.shifts.length > 0)) notes.push(`Una persona solo recibe en un día tareas cuyos horarios comparten al menos ${String(sharedHours).replace(".", ",")} h (apertura con tesorería sí, apertura con cierre no): una misma persona no abre y cierra el mismo día. La celda muestra la franja en que cuadran sus tareas.`);
     const rn = restNote(common, days, W);
     if (rn) notes.push(rn);
     if (common.restMissing > 0) notes.push(`No se pudo dar ${common.restMissing === 1 ? "un descanso" : `${common.restMissing} descansos`} de la semana: con ${required} ${required === 1 ? "persona" : "personas"} habría días sin nadie que haga las actividades diarias. Hacen falta más personas para cubrir los ${days.length} días del cargo con descanso.`);
@@ -475,11 +539,13 @@ export function buildSchedules(input: ScheduleInput): PositionSchedule[] {
     const shared = [...new Set([...common.activities, ...periodic.activities].filter((a) => a.shared).map((a) => a.code))];
     if (shared.length > 0) notes.push(`Para mantener las ${required} ${required === 1 ? "persona" : "personas"} de Dotación requerida, no cupieron enteras con la regla de su tipo y se compartieron entre personas: ${shared.join(", ")}.`);
     if (periodic.extraPeople > 0 || periodic.overflowHours > FIT) notes.push(`En la semana con actividades periódicas la carga pasa la capacidad${periodic.overflowHours > FIT ? ` en ${periodic.overflowHours.toFixed(1)} h` : ""}: harían falta ${Math.max(1, periodic.extraPeople)} ${Math.max(1, periodic.extraPeople) === 1 ? "persona más" : "personas más"} esa semana (refuerzo) o horas extra.`);
-    if (common.overflowHours > FIT) notes.push(`En la semana común ${common.overflowHours.toFixed(1)} h no caben en los días en que trabaja cada persona ni con la sobrecarga aceptada.${lines.some((l) => l.shifts && l.shifts.length > 0) ? " Cada persona solo hace tareas de su turno ese día: si hay más tareas de un turno que personas disponibles para él, falta gente aunque en total sobren horas." : ""}${days.length > W ? " Pasa cuando lo que hay que hacer cada día (las actividades diarias) supera a las personas que ese día trabajan: con los descansos cada día cuenta con una persona menos. Revise tiempos, frecuencias y los días de los turnos de las actividades." : " Revise los tiempos y frecuencias."}`);
+    if (common.overflowHours > FIT) notes.push(`En la semana común ${common.overflowHours.toFixed(1)} h quedaron SIN ASIGNAR (fila «Sin asignar»): no caben en la jornada de las personas que trabajan esos días ni se pueden juntar con tareas de horarios opuestos. Nadie queda cargado de más.${days.length > W ? " Con los descansos cada día cuenta con una persona menos." : ""} Faltan personas en esa franja o los tiempos y frecuencias son altos.`);
     if (common.freeHours > 0.05 && lines.some((l) => l.periodKind === "periodic")) notes.push("En la semana común queda disponibilidad sin tareas porque las actividades periódicas ocurren solo en algunas semanas; en la semana con periódicas esa disponibilidad se usa.");
     if (input.params.dailyWorkHours && input.params.dailyWorkHours * (1 - input.params.reservePct) * W < cw - 1e-9) notes.push(`La jornada diaria de Parámetros (${input.params.dailyWorkHours} h) en los ${W} días de trabajo de cada persona no alcanza para su jornada semanal útil (${cw.toFixed(1)} h): se reparte la jornada semanal en esos días. Revise la jornada diaria, la semanal o los días de los turnos.`);
     if (days.length === W && days.length !== Math.round(input.params.workDaysPerWeek)) notes.push(`El cargo trabaja ${days.length} días por sus turnos y Parámetros indica ${input.params.workDaysPerWeek}: las horas son las mismas de Cálculo de tiempos y solo cambia en cuántos días se reparten.`);
-    return { ...base, state: "ok", reason: "", required, common, periodic, notes };
+    const gaps = check.filter((c) => c.missingDays.length > 0);
+    if (gaps.length > 0) notes.push(`${gaps.length} ${gaps.length === 1 ? "actividad no quedó" : "actividades no quedaron"} en todos sus días: ${gaps.map((g) => g.code).join(", ")}. Mire «Verificación de actividades» y la fila «Sin asignar».`);
+    return { ...base, state: "ok", reason: "", required, common, periodic, check, notes };
   });
 }
 

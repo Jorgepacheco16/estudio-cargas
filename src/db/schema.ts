@@ -141,6 +141,8 @@ export const studyParameters = pgTable("study_parameters", {
   lowLoadThreshold: numeric("low_load_threshold", { precision: 5, scale: 4 }).notNull().default("0.5000"),
   /** Fracción de persona desde la cual Dotación requerida (y el Reparto) suma una persona más (D-108): 0,5 = «desde 5,5 son 6». 0 = siempre hacia arriba. */
   staffRoundFrom: numeric("staff_round_from", { precision: 5, scale: 4 }).notNull().default("0.5000"),
+  /** Horas que deben compartir los horarios de las tareas de una misma persona en un día (D-110). */
+  minSharedHours: numeric("min_shared_hours", { precision: 4, scale: 2 }).notNull().default("3.00"),
   hourlyCostCop: numeric("hourly_cost_cop", { precision: 14, scale: 2 }),
   scenario: scenario("scenario").notNull().default("base"),
   assumptionsValidated: boolean("assumptions_validated").notNull().default(false),
@@ -157,6 +159,7 @@ export const studyParameters = pgTable("study_parameters", {
   ...stamps(),
 }, (t) => [
   check("study_parameters_round_from_ck", sql`${t.staffRoundFrom} between 0 and 1`),
+  check("study_parameters_shared_hours_ck", sql`${t.minSharedHours} between 0 and 12`),
   check("study_parameters_daily_hours_ck", sql`${t.dailyWorkHours} is null or ${t.dailyWorkHours} between 1 and 24`),
   check("study_parameters_ranges_ck", sql`${t.workDaysPerWeek} between 1 and 7 and ${t.reservePct} between 0 and 1 and ${t.lowLoadThreshold} <= ${t.overloadThreshold}`),
 ]);

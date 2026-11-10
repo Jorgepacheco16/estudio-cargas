@@ -139,7 +139,7 @@ export async function loadStudyDataTx(tx: Tx, studyId: string): Promise<StudyDat
         waitMin: num(a.waitMin), waitOccupies: a.waitOccupiesPerson, travelMin: num(a.travelMin), reworkPct: num(a.reworkPct), reworkMin: num(a.reworkMin),
       }];
     });
-    const params: Params = { workDaysPerWeek: Number(p.workDaysPerWeek), weeksPerMonth: Number(p.weeksPerMonth), weeksPerYear: p.weeksPerYear, reservePct: Number(p.reservePct), scenario: p.scenario, dailyWorkHours: p.dailyWorkHours === null ? null : Number(p.dailyWorkHours), staffRoundFrom: Number(p.staffRoundFrom) };
+    const params: Params = { workDaysPerWeek: Number(p.workDaysPerWeek), weeksPerMonth: Number(p.weeksPerMonth), weeksPerYear: p.weeksPerYear, reservePct: Number(p.reservePct), scenario: p.scenario, dailyWorkHours: p.dailyWorkHours === null ? null : Number(p.dailyWorkHours), staffRoundFrom: Number(p.staffRoundFrom), minSharedHours: Number(p.minSharedHours) };
     return { params, thresholds: { high: Number(p.overloadThreshold), low: Number(p.lowLoadThreshold) }, staff, acts };
   }
 }

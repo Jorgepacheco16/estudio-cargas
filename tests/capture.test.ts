@@ -87,6 +87,16 @@ async function main() {
       if (!/5,4/.test(campo.hint ?? "") || !/5,5/.test(campo.hint ?? "")) throw new Error("la ayuda debe dar el ejemplo 5,4 → 5 y 5,5 → 6");
     });
 
+    await check("Horas compartidas entre las tareas de una persona (D-110): admite de 0 a 12 h, rechaza lo demás y explica el ejemplo", () => {
+      for (const [txt, guardado] of [["3", "3"], ["0", "0"], ["12", "12"], ["2,5", "2.5"]] as const) {
+        const r = parseForm(def("param"), fd({ minSharedHours: txt }));
+        if (r.errors.some((e) => e.startsWith("Horas compartidas")) || r.values.minSharedHours !== guardado) throw new Error(`${txt}: ${JSON.stringify(r)}`);
+      }
+      for (const txt of ["13", "-1", "abc"]) if (!parseForm(def("param"), fd({ minSharedHours: txt })).errors.some((e) => e.startsWith("Horas compartidas"))) throw new Error(txt + " debía rechazarse");
+      const campo = def("param").fields.find((f) => f.key === "minSharedHours")!;
+      if (!/apertura/.test(campo.hint ?? "") || !/cierre/.test(campo.hint ?? "")) throw new Error("la ayuda debe dar el ejemplo de apertura, tesorería y cierre");
+    });
+
     studyId = await createStudy(app.db, owner, "Estudio de prueba captura");
     await admin.db.execute(sql`insert into public.memberships (study_id, user_id, role) values (${studyId}, ${viewer}, 'viewer')`);
     const recs: Record<string, string> = {};
@@ -230,6 +240,16 @@ async function main() {
       const [after] = await listRows(app.db, owner, studyId, d);
       if (Number(after.staffRoundFrom) !== 0.3) throw new Error(String(after.staffRoundFrom));
       await rejects(admin.db.execute(sql`update public.study_parameters set staff_round_from = 1.5 where study_id = ${studyId}`), "23514");
+    });
+
+    await check("Horas compartidas (D-110): un estudio nuevo trae 3 h, se actualiza como los demás parámetros y la base rechaza más de 12", async () => {
+      const d = def("param");
+      const [row] = await listRows(app.db, owner, studyId, d);
+      if (Number(row.minSharedHours) !== 3) throw new Error("por defecto debía ser 3: " + String(row.minSharedHours));
+      if ((await saveRow(app.db, owner, studyId, d, parseForm(d, fd({ minSharedHours: "4" })).values, row.version)) !== "updated") throw new Error("no actualizó");
+      const [after] = await listRows(app.db, owner, studyId, d);
+      if (Number(after.minSharedHours) !== 4) throw new Error(String(after.minSharedHours));
+      await rejects(admin.db.execute(sql`update public.study_parameters set min_shared_hours = 13 where study_id = ${studyId}`), "23514");
     });
 
     await check("Un viewer no puede crear ni borrar; el owner borra y quedan auditorías insert/update/delete con origen «app»", async () => {
