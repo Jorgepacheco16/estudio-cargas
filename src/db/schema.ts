@@ -1,7 +1,7 @@
 import { sql } from "drizzle-orm";
 import {
   pgTable, pgEnum, uuid, text, integer, smallint, numeric, boolean, date,
-  timestamp, jsonb, bigint, unique, uniqueIndex, index, foreignKey, check, time,
+  timestamp, jsonb, bigint, unique, uniqueIndex, index, foreignKey, check, time, type AnyPgColumn,
 } from "drizzle-orm/pg-core";
 
 /* Las columnas created_by / user_id apuntan a auth.users (tabla de Supabase). Drizzle intenta CREAR esa tabla si se
@@ -297,7 +297,7 @@ const perActivity = () => ({
   studyId: studyFk(),
   activityId: uuid("activity_id").notNull(),
 });
-const perActivityFk = (name: string, t: { activityId: any; studyId: any }) =>
+const perActivityFk = (name: string, t: { activityId: AnyPgColumn; studyId: AnyPgColumn }) =>
   foreignKey({ columns: [t.activityId, t.studyId], foreignColumns: [activities.id, activities.studyId], name }).onDelete("cascade");
 
 /* ───────── Turnos del cargo (D-67) y turnos en que se ejecuta cada actividad ───────── */

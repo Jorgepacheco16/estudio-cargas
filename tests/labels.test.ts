@@ -5,7 +5,7 @@ import * as schema from "../src/db/schema";
 import { check, summary } from "./helpers";
 const excel: Record<string, string[]> = JSON.parse(readFileSync("tests/fixtures/excel_lists.json", "utf8")).lists;
 const enums: Record<string, readonly string[]> = {};
-for (const v of Object.values(schema)) { const e = v as any; if (e && typeof e === "function" && Array.isArray(e.enumValues) && e.enumName) enums[e.enumName] = e.enumValues; }
+for (const v of Object.values(schema)) { const e = v as { enumValues?: unknown; enumName?: unknown } | null; if (typeof v === "function" && e && Array.isArray(e.enumValues) && typeof e.enumName === "string") enums[e.enumName] = e.enumValues as string[]; }
 (async () => {
   console.log("Fidelidad Excel ↔ enums de PostgreSQL:");
   for (const [list, def] of Object.entries(LABELS)) {

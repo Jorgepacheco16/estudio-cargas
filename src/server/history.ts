@@ -162,10 +162,10 @@ export async function draftExplanation(record: { rule: string; entity: string; b
 /* ───────── Línea de tiempo ───────── */
 export async function timelineEvents(db: Db, sub: string, studyId: string, days = 90) {
   return withRls(db, { sub }, async (tx) => {
-    const since = new Date(Date.now() - days * 86400000);
+    const now = Date.now(), since = new Date(now - days * 86400000);
     const rows = await tx.select({ origin: auditLog.origin, entity: auditLog.entity, at: auditLog.at }).from(auditLog).where(and(eq(auditLog.studyId, studyId), gte(auditLog.at, since))).orderBy(asc(auditLog.at)).limit(5000);
     const snaps = await tx.select({ label: studySnapshots.label, at: studySnapshots.takenAt }).from(studySnapshots).where(and(eq(studySnapshots.studyId, studyId), gte(studySnapshots.takenAt, since)));
     const plans = await tx.select({ code: actionItems.code, start: actionItems.startDate, end: actionItems.endDate, status: actionItems.status }).from(actionItems).where(eq(actionItems.studyId, studyId));
-    return { audit: rows, snaps, plans };
+    return { audit: rows, snaps, plans, now };
   });
 }

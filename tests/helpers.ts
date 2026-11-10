@@ -13,6 +13,6 @@ export async function check(name: string, fn: () => Promise<void> | void) {
 }
 export const summary = () => { console.log(`\nResultado: ${pass} pruebas OK, ${fail} fallidas`); if (fail) process.exit(1); };
 export async function rejects(p: Promise<unknown>, code: string) {
-  try { await p; } catch (e: any) { const c = e?.code ?? e?.cause?.code; if (c === code) return; throw new Error(`se esperaba SQLSTATE ${code} y llegó ${c}: ${e.message}`); }
+  try { await p; } catch (e) { const x = e as { code?: string; cause?: { code?: string }; message?: string }, c = x?.code ?? x?.cause?.code; if (c === code) return; throw new Error(`se esperaba SQLSTATE ${code} y llegó ${c}: ${x?.message}`); }
   throw new Error(`se esperaba error ${code} pero la operación tuvo éxito`);
 }

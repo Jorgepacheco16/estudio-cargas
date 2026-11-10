@@ -15,7 +15,7 @@ for (const f of readdirSync("tests/fixtures").filter((x) => /^v\d.*\.json$/.test
     acts.forEach((a, i) => { if (STATUS_ES[results[i].status] !== fx.expected[i].status) throw new Error(`${a.code}: '${STATUS_ES[results[i].status]}' ≠ '${fx.expected[i].status}'`); });
   });
   await check(`${acts.length} actividades × ${FIELDS.length} columnas calculadas coinciden con el Excel (tolerancia 1e-9)`, () => {
-    acts.forEach((a, i) => FIELDS.forEach((k) => { compared++; const got = (results[i] as any)[k] as number | undefined; const exp = fx.expected[i][k] as number | null;
+    acts.forEach((a, i) => FIELDS.forEach((k) => { compared++; const got = (results[i] as unknown as Record<string, number | undefined>)[k]; const exp = fx.expected[i][k] as number | null;
       if (!close(got, exp)) throw new Error(`${a.code}.${k}: motor=${got} Excel=${exp}`); }));
   });
   await check(`${fx.expectedPositions.length} cargos: ocupantes, capacidad, horas y % de capacidad coinciden con la hoja 4b`, () => {

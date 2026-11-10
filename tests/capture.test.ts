@@ -89,7 +89,7 @@ async function main() {
 
     studyId = await createStudy(app.db, owner, "Estudio de prueba captura");
     await admin.db.execute(sql`insert into public.memberships (study_id, user_id, role) values (${studyId}, ${viewer}, 'viewer')`);
-    let recs: Record<string, string> = {};
+    const recs: Record<string, string> = {};
 
     await check("Validación del formulario: obligatorios, lista fuera de catálogo, número ilegible y escala fuera de rango se rechazan con mensaje", async () => {
       const r1 = await saveEntry(app.db, owner, studyId, "2", cells("2", { area: "Cajas" }), {});

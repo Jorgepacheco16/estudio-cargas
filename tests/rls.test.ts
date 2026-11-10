@@ -54,12 +54,12 @@ async function seed() {
   await check("No se puede autoasignar como owner de un estudio ajeno (42501)", () => rejects(withRls(app.db, { sub: U4 }, (tx) => tx.insert(s.memberships).values({ studyId: d.A.id, userId: U4, role: "owner" })), "42501"));
   await check("Sin fuga: tras la transacción la misma conexión vuelve a app_user sin claims", async () => {
     await withRls(app.db, { sub: U1 }, (tx) => tx.select().from(s.studies));
-    const r: any = await app.db.execute(sql`select current_user as u, current_setting('request.jwt.claims', true) as c`);
+    const r = (await app.db.execute(sql`select current_user as u, current_setting('request.jwt.claims', true) as c`)) as unknown as { u: string; c: string | null }[];
     const row = r[0]; if (row.u !== "app_user" || (row.c ?? "") !== "") throw new Error(JSON.stringify(row));
   });
   await check("Si la consulta falla, la transacción se revierte y el rol también (sin fuga)", async () => {
     await rejects(withRls(app.db, { sub: U3 }, (tx) => tx.insert(s.activities).values({ studyId: d.A.id, code: "X-3", positionId: d.a.pos.id, name: "x" })), "42501");
-    const r: any = await app.db.execute(sql`select current_user as u`); if (r[0].u !== "app_user") throw new Error(r[0].u);
+    const r = (await app.db.execute(sql`select current_user as u`)) as unknown as { u: string }[]; if (r[0].u !== "app_user") throw new Error(r[0].u);
   });
   await check("Contraste: la conexión admin (postgres) SÍ salta RLS y ve todos los estudios", async () => {
     const r = await admin.db.select().from(s.studies); if (r.length < 3) throw new Error(`vio ${r.length}`);

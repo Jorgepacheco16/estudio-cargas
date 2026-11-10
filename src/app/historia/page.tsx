@@ -45,7 +45,7 @@ export default async function Historia({ searchParams }: { searchParams: Promise
   /* ───────── Línea de tiempo ───────── */
   if (vista === "linea") {
     const [snaps, tl] = await Promise.all([listSnapshots(db, user!.id, study.id), timelineEvents(db, user!.id, study.id, 90)]);
-    const end = Date.now(), start = end - 90 * DAY, x = (t: number) => Math.max(0, Math.min(100, ((t - start) / (end - start)) * 100));
+    const end = tl.now, start = end - 90 * DAY, x = (t: number) => Math.max(0, Math.min(100, ((t - start) / (end - start)) * 100));
     const byLane = new Map<string, Map<string, { t: number; n: number }>>();
     for (const e of tl.audit) { const day = e.at.toISOString().slice(0, 10); const m = byLane.get(e.origin) ?? new Map(); const c = m.get(day) ?? { t: Date.parse(`${day}T12:00:00Z`), n: 0 }; c.n++; m.set(day, c); byLane.set(e.origin, m); }
     const chosen = [sp.a, sp.b].filter((v): v is string => !!v);

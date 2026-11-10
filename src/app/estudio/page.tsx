@@ -1,4 +1,5 @@
 import { Purpose } from "@/components/Purpose";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getUser } from "@/lib/supabase/server";
 import { activeStudyId, listMyStudies } from "@/data/source";
@@ -78,7 +79,7 @@ export default async function Estudio({ searchParams }: { searchParams: Promise<
           <section className="card" aria-label="Captura de datos">
             <h2>Captura de datos</h2>
             <p className="note">La aplicación es la fuente de los datos: cada dato se ingresa en su sección (Parámetros, Cargos y dotación, Actividades y Diagnóstico y rediseño) y se escribe automáticamente en la hoja de Google. Las columnas con fórmula se muestran como valores calculados, sin edición.</p>
-            <div className="stack-form"><div><a className="btn solid" href="/cargos">Ir a Cargos y dotación</a></div></div>
+            <div className="stack-form"><div><Link className="btn solid" href="/cargos">Ir a Cargos y dotación</Link></div></div>
           </section>
         )}
       </div>    </main>
