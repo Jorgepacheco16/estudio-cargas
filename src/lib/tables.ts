@@ -54,14 +54,14 @@ export function repartoTables(schedules: PositionSchedule[]): Table[] {
   ];
   // tareas de cada persona y día, en el orden guardado (o el sugerido) y con su tiempo (sin horas del día)
   const cells = plans.flatMap(({ s, w }) => w.grid.flatMap((row, p) => row.flatMap((c, d) => (c.rest ? [{ code: "Descanso", name: "Día de descanso", minutes: 0 }] : applyOrder(c.tasks, c.saved?.codes)).map((r, order) => (
-    { ...base(s, WEEK_ES[w.kind]), person: `Persona ${p + 1}`, day: DAY_NAMES[s.days[d]], order: c.rest ? 0 : order + 1, code: r.code, name: names.get(r.code) ?? r.name, minutes: r2(r.minutes) })))));
+    { ...base(s, WEEK_ES[w.kind]), person: `Persona ${p + 1}`, day: DAY_NAMES[s.days[d]], shift: c.shift ?? "", order: c.rest ? 0 : order + 1, code: r.code, name: names.get(r.code) ?? r.name, minutes: r2(r.minutes) })))));
   const acts = plans.flatMap(({ s, w }) => w.activities.map((a) => ({
     ...base(s, WEEK_ES[w.kind]), code: a.code, name: a.name, type: a.type ? TYPE_ES[a.type] : "Sin tipo", rule: a.perEmployee ? "La hace cada persona" : RULE_ES[a.rule], who: a.persons.length === w.people ? "Todas" : a.persons.map((p) => `Persona ${p}`).join(", "),
     executions: r2(a.executions), perExec: r2(a.minutesPerExecution), total: r2(a.weekMinutes),
   })));
   const pending = schedules.filter((s) => s.state !== "ok").map((s) => ({ kind: KIND(s.dataKind), area: s.area, site: s.site, position: s.position, reason: s.reason }));
   return [
-    { name: "Reparto", columns: [...common, { key: "person", header: "Persona", width: 12 }, { key: "day", header: "Día", width: 12 }, { key: "order", header: "Orden", fmt: "0" }, { key: "code", header: "Actividad", width: 14 }, { key: "name", header: "Nombre de la actividad", width: 44 }, { key: "minutes", header: "Minutos", fmt: "#,##0.0" }], rows: cells },
+    { name: "Reparto", columns: [...common, { key: "person", header: "Persona", width: 12 }, { key: "day", header: "Día", width: 12 }, { key: "shift", header: "Turno del día", width: 16 }, { key: "order", header: "Orden", fmt: "0" }, { key: "code", header: "Actividad", width: 14 }, { key: "name", header: "Nombre de la actividad", width: 44 }, { key: "minutes", header: "Minutos", fmt: "#,##0.0" }], rows: cells },
     { name: "Actividades", columns: [...common, { key: "code", header: "Código", width: 14 }, { key: "name", header: "Nombre de la actividad", width: 44 }, { key: "type", header: "Tipo", width: 16 }, { key: "rule", header: "Cómo se reparte", width: 28 }, { key: "who", header: "Quién", width: 24 }, { key: "executions", header: "Ejecuciones", fmt: "#,##0.##" }, { key: "perExec", header: "Minutos de cada ejecución", fmt: "#,##0.0" }, { key: "total", header: "Minutos de la semana", fmt: "#,##0.0" }], rows: acts },
     ...(pending.length ? [{ name: "Sin reparto", columns: [{ key: "kind", header: "Tipo de dato", width: 12 }, { key: "area", header: "Área", width: 26 }, { key: "site", header: "Centro de operaciones", width: 18 }, { key: "position", header: "Cargo", width: 28 }, { key: "reason", header: "Motivo", width: 80 }], rows: pending }] : []),
   ];

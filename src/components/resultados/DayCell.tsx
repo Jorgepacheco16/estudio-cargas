@@ -9,6 +9,7 @@ import { saveDayOrderAction } from "@/app/resultados/reparto/actions";
  * estudio. El orden guardado es solo una preferencia de esta vista: no cambia tiempos, totales, actividades ni ninguna otra sección. Usa el elemento nativo <dialog>: se cierra con Esc,
  * con «Cerrar» o pulsando fuera, y el foco queda atrapado mientras está abierto.
  */
+const PREVIEW = 3; // tareas que se ven en la celda; el resto, al abrirla
 export interface DayTarget { positionKey: string; kind: WeekKind; weekday: number }
 export function DayCell({ person, day, position, week, cell, target, canSave }: { person: number; day: string; position: string; week: string; cell: Cell; target: DayTarget; canSave: boolean }) {
   const ref = useRef<HTMLDialogElement>(null), id = useId();
@@ -33,19 +34,25 @@ export function DayCell({ person, day, position, week, cell, target, canSave }: 
     if (r.ok) { setSaved(codes); setOrder(codes); setError(""); setNotice(r.removed ? "Se quitó el orden guardado: vuelve el orden sugerido." : "Orden guardado. Lo verá quien tenga Resultados."); }
     else setError(r.error);
   });
-  const lines = shown.filter((t) => t.kind === "task"), reserve = shown.find((t) => t.kind === "reserve");
-  if (cell.rest) return <div className="day-cell" role="group" aria-label={`Persona ${person}: descanso el ${day.toLowerCase()}`}><span className="dc-line"><b>Descanso</b></span><span className="dc-total muted">Sin tareas este día</span></div>;
+  if (cell.rest) return <div className="day-cell rp-rest" role="group" aria-label={`Persona ${person}: descanso el ${day.toLowerCase()}`}><span>Descanso</span></div>;
   return (
     <>
-      <button type="button" className="day-cell" onClick={open} aria-haspopup="dialog" aria-label={`Ver las tareas de la persona ${person} el ${day.toLowerCase()}: ${formatMinutes(cell.totalMin)} de ${formatMinutes(cell.capacityMin)}${hasSaved ? ", con orden guardado" : ""}`}>
-        {lines.map((t) => <span key={t.code} className="dc-line"><b>{t.code}</b> · {formatMinutes(t.minutes)}</span>)}
-        {reserve && <span className="dc-line muted">Imprevistos · {formatMinutes(reserve.minutes)}</span>}
-        {shown.length === 0 && <span className="dc-line muted">—</span>}
-        <span className="dc-total muted">{over ? <span className="pill overload">Pasa la jornada</span> : null} {formatMinutes(cell.totalMin)} de {formatMinutes(cell.capacityMin)}{hasSaved ? " · orden guardado" : ""}</span>
+      <button type="button" className="day-cell rp-cell" onClick={open} aria-haspopup="dialog" aria-label={`Ver las tareas de la persona ${person} el ${day.toLowerCase()}${cell.shift ? `, turno ${cell.shift}` : ""}: ${formatMinutes(cell.totalMin)} de ${formatMinutes(cell.capacityMin)}${hasSaved ? ", con orden guardado" : ""}`}>
+        <span className="rp-head">
+          <span className={`rp-shift${cell.shift ? "" : " none"}`} title={cell.shift ? `Turno de la persona este día: ${cell.shift}` : "Solo tiene tareas que se hacen en cualquier turno (sin turno asignado)"}>{cell.shift ?? "Cualquiera"}</span>
+          <b className="rp-total">{formatMinutes(cell.totalMin)}</b>
+        </span>
+        <span className="rp-bar" aria-hidden="true"><span className={over ? "over" : undefined} style={{ width: `${Math.min(100, cell.capacityMin > 0 ? (cell.totalMin / cell.capacityMin) * 100 : 0)}%` }} /></span>
+        <span className="rp-tasks">
+          {shown.slice(0, PREVIEW).map((t) => <span key={t.code} className={`rp-task${t.kind === "reserve" ? " soft" : ""}`}><span className="rp-code">{t.code}</span><span className="rp-min">{formatMinutes(t.minutes)}</span></span>)}
+          {shown.length > PREVIEW && <span className="rp-more">+{shown.length - PREVIEW} más</span>}
+          {shown.length === 0 && <span className="rp-more">Sin tareas</span>}
+        </span>
+        {(over || hasSaved) && <span className="rp-flags">{over ? <span className="pill overload">Pasa la jornada</span> : null}{hasSaved ? <span className="muted">orden guardado</span> : null}</span>}
       </button>
       <dialog ref={ref} className="day-dialog" aria-labelledby={id} onClick={(e) => { if (e.target === ref.current) close(); }}>
         <div className="dd-form">
-          <h3 id={id}>Persona {person} · {day}</h3>
+          <h3 id={id}>Persona {person} · {day}{cell.shift ? ` · ${cell.shift}` : ""}</h3>
           <p className="note" style={{ margin: "4px 0 0" }}>{position} · {week}</p>
           {shown.length === 0 ? <p className="empty" style={{ marginTop: 12 }}>Esta persona no tiene tareas este día.</p> : (
             <div className="tbl-wrap" tabIndex={0} role="region" aria-label={`Tareas de la persona ${person} el ${day.toLowerCase()}`}>

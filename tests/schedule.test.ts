@@ -1,6 +1,6 @@
 import { analyze } from "../src/domain/summary";
 import { needOf, roundUpPeople } from "../src/domain/staffing";
-import { applyOrder, attachSavedOrders, buildSchedules, formatMinutes, moveTask, orderKey, orderedTasks, positionKey, ruleOf, workDaysOf, RULE_BY_TYPE, ACTIVITY_TYPES, type ActivityExtra, type ActivityTypeKey, type PositionSchedule, type SavedOrder, type WeekPlan } from "../src/domain/schedule";
+import { applyOrder, attachSavedOrders, buildSchedules, formatMinutes, moveTask, orderKey, orderedTasks, positionKey, ruleOf, workDaysOf, RULE_BY_TYPE, ACTIVITY_TYPES, serviceOf, type ActivityExtra, type ActivityTypeKey, type PositionSchedule, type SavedOrder, type ShiftRef, type WeekPlan } from "../src/domain/schedule";
 import { computeActivity, occupantsOf, personDaysOf, type ActivityInput, type Params, type StaffingInput } from "../src/domain/engine";
 import { tablesFor, VIEWS } from "../src/lib/tables";
 import { MENU, menuHrefs } from "../src/lib/nav";
@@ -406,6 +406,53 @@ async function main() {
     const descansos = filas.filter((x) => x.code === "Descanso");
     const esperados = schedules[0].common!.grid.flat().filter((c) => c.rest).length + schedules[0].periodic!.grid.flat().filter((c) => c.rest).length;
     if (descansos.length !== esperados || esperados === 0 || descansos.some((x) => x.order !== 0 || x.minutes !== 0)) throw new Error("filas de descanso " + descansos.length + " / " + esperados);
+  });
+
+  await check("Turnos por persona y día (D-109): nadie abre y cierra el mismo día, el turno del día cabe con TODAS las tareas restringidas de la celda, un turno no se usa los días en que no aplica y la franja de atención sale de los turnos", () => {
+    const ALL = [0, 1, 2, 3, 4, 5, 6];
+    const AP: ShiftRef = { id: "ap", name: "Apertura", days: ALL, start: "05:30", end: "13:00" }, IN: ShiftRef = { id: "in", name: "Intermedio", days: ALL, start: "09:00", end: "16:30" }, CI: ShiftRef = { id: "ci", name: "Cierre", days: MON_SAT, start: "13:00", end: "20:30" };
+    const st = [staff("Fiscal", 6, 42)], ac = [
+      act("APER", "Fiscal", { hours: 1, executions: 1, period: "day" }), act("CIER", "Fiscal", { hours: 1, executions: 1, period: "day" }), act("CAJA", "Fiscal", { hours: 1, executions: 22, period: "day" }),
+      act("ARQ1", "Fiscal", { hours: 0.5, executions: 4, period: "day" }), act("SEM1", "Fiscal", { hours: 3, executions: 5, period: "week" }), act("INT1", "Fiscal", { hours: 1, executions: 2, period: "day" }),
+    ];
+    const types: Record<string, ActivityTypeKey | null> = { APER: "control", CIER: "control", CAJA: "operational", ARQ1: "operational", SEM1: "administrative", INT1: "operational" };
+    const p = prm({ workDaysPerWeek: 7, dailyWorkHours: 7, staffRoundFrom: 0.5 }), a = analyze(st, ac, p, TH, "all");
+    const extras = new Map<string, ActivityExtra>(ac.map((x) => [x.code.toLowerCase(), { name: "Actividad " + x.code, type: types[x.code] }]));
+    const key = positionKey("real", "Cajas", "CO1", "Fiscal");
+    const restricted = new Map<string, ShiftRef[] | null>([["aper", [AP]], ["cier", [CI]], ["int1", [IN]], ["arq1", [AP, IN]]]);
+    const [sch] = buildSchedules({ staff: st, acts: ac, params: p, positions: a.positions, extras, shiftDays: new Map([[key, ALL]]), activityShifts: restricted, positionShifts: new Map([[key, [AP, IN, CI]]]) });
+    const { common, periodic } = ok(sch);
+    if (!sch.service || sch.service.start !== "05:30" || sch.service.end !== "20:30" || sch.service.hours !== 15) throw new Error("franja de atención: " + JSON.stringify(sch.service));
+    const idOf = new Map([AP, IN, CI].map((x) => [x.name, x.id]));
+    for (const w of [common, periodic]) {
+      if (w.overflowHours > 1e-6) throw new Error("el escenario debía caber: no caben " + w.overflowHours + " h");
+      w.grid.forEach((row) => row.forEach((c, d) => {
+        if (c.rest) { if (c.shift !== null) throw new Error("el día de descanso no tiene turno"); return; }
+        const sets = c.items.map((i) => restricted.get(i.code.toLowerCase())).filter((x): x is ShiftRef[] => !!x);
+        if (sets.length > 0) {
+          const shared = sets.reduce((acc, x) => acc.filter((y) => x.some((z) => z.id === y.id)), sets[0]);
+          if (shared.length === 0) throw new Error("la celda mezcla turnos: " + c.items.map((i) => i.code).join(","));
+          if (!c.shift || !shared.some((y) => y.id === idOf.get(c.shift!))) throw new Error("el turno del día (" + c.shift + ") no sirve para todas sus tareas: " + c.items.map((i) => i.code).join(","));
+        }
+        if (c.shift === "Cierre" && sch.days[d] === 6) throw new Error("«Cierre» (L–S) no aplica el domingo");
+      }));
+    }
+    if (!sch.notes.some((n) => /no abre y cierra el mismo día/.test(n))) throw new Error("falta la nota de turnos: " + sch.notes.join(" | "));
+    // las horas de cada actividad no cambian por tener turnos
+    const sin = ok(buildSchedules({ staff: st, acts: ac, params: p, positions: a.positions, extras, shiftDays: new Map([[key, ALL]]) })[0]).common;
+    for (const code of ["APER", "CIER", "CAJA", "ARQ1", "INT1", "SEM1"]) if (!near(sum(minutesOf(common, code)), sum(minutesOf(sin, code)), 1e-6)) throw new Error("las horas de " + code + " no deben cambiar por los turnos");
+    // la exportación trae el turno del día
+    const { tables } = tablesFor("reparto", a, null as never, [], {}, "all", 0.1, undefined, [sch]);
+    const filas = tables[0].rows as { code: string; shift: string }[];
+    if (!tables[0].columns.some((c) => c.header === "Turno del día") || !filas.filter((f) => f.code === "CIER").every((f) => f.shift === "Cierre") || filas.filter((f) => f.code === "CIER").length === 0) throw new Error("la exportación debe traer el turno del día");
+  });
+
+  await check("Franja de atención: de la primera hora de inicio a la última de fin entre los turnos con horario; sin horarios no hay franja", () => {
+    const sh = (id: string, start: string | null, end: string | null): ShiftRef => ({ id, name: id, days: [0], start, end });
+    const f = serviceOf([sh("a", "05:30", "13:00"), sh("b", "13:00", "20:30"), sh("c", null, null)]);
+    if (!f || f.start !== "05:30" || f.end !== "20:30" || f.hours !== 15) throw new Error(JSON.stringify(f));
+    if (serviceOf([sh("c", null, null)]) !== null || serviceOf(undefined) !== null || serviceOf([]) !== null) throw new Error("sin horarios no hay franja");
+    if (serviceOf([sh("n", "22:00", "06:00")]) !== null) throw new Error("un turno que cruza la medianoche no se considera");
   });
 
   await check("Minutos legibles: 45 min, 2 h, 2 h 15 min; los minutos con decimales se redondean y 59,6 no queda en «60 min»", () => {

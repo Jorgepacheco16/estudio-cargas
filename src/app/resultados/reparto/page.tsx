@@ -21,19 +21,20 @@ const MAX_SHOWN = 6;
 function WeekTable({ plan, days, position, positionKey: pkey, canSave }: { plan: WeekPlan; days: number[]; position: string; positionKey: string; canSave: boolean }) {
   return (
     <>
+      <p className="note rp-legend">Cada celda muestra el turno de la persona ese día, el total de horas y sus primeras tareas; la barra es lo que usa de la jornada útil del día. Pulse una celda para ver todas las tareas y cambiar su orden.</p>
       <div className="tbl-wrap" tabIndex={0} role="region" aria-label={`${WEEK_ES[plan.kind]}: tareas por persona y día`}>
-        <table style={{ minWidth: 140 + days.length * 150 }}>
-          <thead><tr><th>Persona</th>{days.map((d) => <th key={d}>{DAY_NAMES[d]}</th>)}<th className="num">Semana</th></tr></thead>
+        <table className="rp-table" style={{ minWidth: 240 + days.length * 150 }}>
+          <thead><tr><th className="rp-person">Persona</th>{days.map((d) => <th key={d} className="rp-day">{DAY_NAMES[d]}</th>)}<th className="num rp-week">Semana</th></tr></thead>
           <tbody>
             {plan.grid.map((row, p) => (
               <tr key={p}>
-                <td><b>Persona {p + 1}</b></td>
+                <td className="rp-person"><b>Persona {p + 1}</b></td>
                 {row.map((c, i) => (
-                  <td key={i} style={{ verticalAlign: "top", minWidth: 150, padding: 0 }}>
+                  <td key={i} className="rp-td">
                     <DayCell person={p + 1} day={DAY_NAMES[days[i]]} position={position} week={WEEK_ES[plan.kind]} cell={c} target={{ positionKey: pkey, kind: plan.kind, weekday: days[i] }} canSave={canSave} />
                   </td>
                 ))}
-                <td className="num"><b>{formatMinutes(row.reduce((s, c) => s + c.totalMin, 0))}</b></td>
+                <td className="num rp-week"><b>{formatMinutes(row.reduce((s, c) => s + c.totalMin, 0))}</b></td>
               </tr>
             ))}
           </tbody>
@@ -68,7 +69,7 @@ function PositionCard({ s, canSave }: { s: PositionSchedule; canSave: boolean })
   return (
     <section className="card" aria-label={`Reparto de ${s.position}`}>
       <h2>{s.position}</h2>
-      <div className="sub">{s.area} · {s.site} · {s.dataKind === "real" ? "REAL" : "DEMO"}{s.state === "ok" ? ` · Dotación requerida: ${s.required}` : ""}</div>
+      <div className="sub">{s.area} · {s.site} · {s.dataKind === "real" ? "REAL" : "DEMO"}{s.state === "ok" ? ` · Dotación requerida: ${s.required}` : ""}{s.service ? ` · Atención del cargo: ${s.service.start} a ${s.service.end} (${fmt(s.service.hours, 1)} h)` : ""}</div>
       {s.state !== "ok" && <div className="banner" role="status" style={{ marginTop: 12 }}><span>{s.reason}</span></div>}
       {s.notes.map((n) => <div key={n} className="banner" role="status" style={{ marginTop: 12 }}><span>{n}</span></div>)}
       {s.state === "ok" && s.common && s.periodic && (
