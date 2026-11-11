@@ -121,6 +121,7 @@ export interface ActivityCheck {
 export type ScheduleState = "ok" | "nodata" | "noshifts";
 export interface PositionSchedule {
   key: string; dataKind: string; area: string; site: string; position: string;
+  /** Horas por semana de las actividades no planificadas u ocasionales del cargo (lo que el reparto llama «imprevistos»): trabajo medido en el estudio, ya incluido en las horas del cargo. */ reserveHours: number;
   state: ScheduleState; reason: string;
   days: number[]; /** Personas necesarias que da «Dotación requerida» (y que usa el reparto). */ required: number | null;
   /** Franja de atención del cargo (de la primera a la última hora de sus turnos); null si sus turnos no tienen horario. */ service: ServiceWindow | null;
@@ -132,6 +133,8 @@ export interface PositionSchedule {
 export const positionKey = (kind: string, area: string, site: string, position: string) => [kind, norm(area), norm(site), norm(position)].join("|");
 
 const EPS = 1e-9, FIT = 1e-6;
+/** Lo más que se acomoda de actividades no planificadas en la celda de una persona un día (D-112): que ninguna celda parezca tener una reserva desproporcionada. */
+export const RESERVE_CELL_MAX_H = 2;
 const SUNDAY = 6;
 const rankOf = (kind: "daily" | "weekly" | "periodic") => (kind === "daily" ? 0 : kind === "weekly" ? 1 : 2);
 
@@ -290,7 +293,8 @@ function planRest(lines: Line[], kind: WeekKind, n: number, days: number[], W: n
 }
 
 interface Piece { code: string; h: number; win: Win | null }
-interface Sim { items: Map<string, number>[][]; reserveCell: number[][]; load: number[][]; overflow: number; assigned: number; reserve: number; who: Map<string, Set<number>>; execs: Map<string, number>; mins: Map<string, number>; shared: Set<string>; rest: boolean[][]; restMissing: number; win: (Win | null)[][]; unassigned: { code: string; h: number }[][] }
+interface ReserveShare { code: string; name: string; share: number }
+interface Sim { reserveSplit: ReserveShare[]; items: Map<string, number>[][]; reserveCell: number[][]; load: number[][]; overflow: number; assigned: number; reserve: number; who: Map<string, Set<number>>; execs: Map<string, number>; mins: Map<string, number>; shared: Set<string>; rest: boolean[][]; restMissing: number; win: (Win | null)[][]; unassigned: { code: string; h: number }[][] }
 
 /**
  * Un reparto con `n` personas (las de Dotación requerida). Voraz y determinista, y luego un ajuste de equilibrio por día. `T` = sobrecarga aceptada (1,05 = 105 %). `W` = días que trabaja cada
@@ -423,10 +427,11 @@ function simulate(lines: Line[], kind: WeekKind, n: number, days: number[], cd: 
 
   // 4) imprevistos: se acomodan en lo que sobra, subiendo primero a quienes llevan menos horas ese día (nivelan la carga); si no cabe todo, lo que falta queda sin asignar
   let placedReserve = 0;
-  for (let iter = 0; iter < 10 && reserve - placedReserve > 1e-9; iter++) {
+  let capOn = true; // el tope por celda es una preferencia: si aún sobran imprevistos y hay espacio, se levanta
+  for (let iter = 0; iter < 12 && reserve - placedReserve > 1e-9; iter++) {
     const want = reserve - placedReserve, cells: { p: number; d: number; room: number; base: number }[] = [];
-    for (let p = 0; p < n; p++) for (let d = 0; d < D; d++) if (!rest[p][d]) { const room = rem(p, d); if (room > 1e-9) cells.push({ p, d, room, base: load[p][d] }); }
-    if (cells.length === 0) break;
+    for (let p = 0; p < n; p++) for (let d = 0; d < D; d++) if (!rest[p][d]) { const room = capOn ? Math.min(rem(p, d), RESERVE_CELL_MAX_H - reserveCell[p][d] / 60) : rem(p, d); if (room > 1e-9) cells.push({ p, d, room, base: load[p][d] }); }
+    if (cells.length === 0) { if (capOn) { capOn = false; continue; } break; }
     const take = (level: number) => cells.reduce((t, c) => t + Math.min(c.room, Math.max(0, level - c.base)), 0), roomTotal = cells.reduce((t, c) => t + c.room, 0);
     let level = Math.max(...cells.map((c) => c.base + c.room));
     if (roomTotal > want) { let lo = 0, hi = level; for (let i = 0; i < 80; i++) { const mid = (lo + hi) / 2; if (take(mid) < want) lo = mid; else hi = mid; } level = hi; }
@@ -438,16 +443,17 @@ function simulate(lines: Line[], kind: WeekKind, n: number, days: number[], cd: 
     let applied = 0;
     cells.forEach((c, i) => { const h = give[i]; if (h > 1e-12) { reserveCell[c.p][c.d] += h * 60; load[c.p][c.d] += h; week[c.p] += h; applied += h; } });
     placedReserve += applied;
-    if (applied < 1e-9) break;
+    if (applied < 1e-9) { if (capOn) { capOn = false; continue; } break; }
   }
-  if (reserve > EPS) { const left = reserve - placedReserve; if (left > 1e-6) { overflow += left; for (let d = 0; d < D; d++) unassigned[d].push({ code: "Imprevistos", h: left / D }); } }
+  const reserveSplit: ReserveShare[] = lines.filter((l) => l.reserveHours > EPS).map((l) => ({ code: l.code, name: l.name, share: l.reserveHours / reserve }));
+  if (reserve > EPS) { const left = reserve - placedReserve; if (left > 1e-6) { overflow += left; for (let d = 0; d < D; d++) for (const r of reserveSplit) unassigned[d].push({ code: r.code, h: (left / D) * r.share }); } }
 
   // lo repartido, por persona y día (en minutos), y quién hace cada actividad
   const items = Array.from({ length: n }, (_, p) => Array.from({ length: D }, (_, d) => { const m = new Map<string, number>(); for (const pc of pieces[p][d]) m.set(pc.code, (m.get(pc.code) ?? 0) + pc.h * 60); return m; }));
   const who = new Map<string, Set<number>>(), mins = new Map<string, number>();
   let assigned = 0;
   for (let p = 0; p < n; p++) for (let d = 0; d < D; d++) for (const pc of pieces[p][d]) { (who.get(pc.code) ?? who.set(pc.code, new Set()).get(pc.code)!).add(p + 1); mins.set(pc.code, (mins.get(pc.code) ?? 0) + pc.h * 60); assigned += pc.h; }
-  return { items, reserveCell, load, overflow, assigned, reserve: placedReserve, who, execs, mins, shared, rest, restMissing: restPlan?.missing ?? 0, win, unassigned };
+  return { reserveSplit, items, reserveCell, load, overflow, assigned, reserve: placedReserve, who, execs, mins, shared, rest, restMissing: restPlan?.missing ?? 0, win, unassigned };
 }
 
 /**
@@ -463,9 +469,11 @@ export const dailyCapacity = (hoursPerPerson: number, days: number, prm: Params)
  * Orden sugerido de las tareas de una persona en un día: primero lo diario, luego lo semanal, luego lo periódico y al final los imprevistos; dentro de cada grupo, por código.
  * Solo es un orden (y el tiempo de cada una): no hay horas del día porque no se sabe a qué hora ocurre cada tarea. La persona puede cambiarlo en la vista (moveTask).
  */
-export function orderedTasks(items: { code: string; name: string; minutes: number; rank: number }[], reserveMin: number): DayTask[] {
+export interface ReserveItem { code: string; name: string; minutes: number }
+export function orderedTasks(items: { code: string; name: string; minutes: number; rank: number }[], reserve: number | ReserveItem[]): DayTask[] {
   const tasks: DayTask[] = [...items].sort((a, b) => a.rank - b.rank || a.code.localeCompare(b.code)).map((t) => ({ kind: "task" as const, code: t.code, name: t.name, minutes: t.minutes }));
-  if (reserveMin > 0.5) tasks.push({ kind: "reserve", code: "Imprevistos", name: "Reserva para actividades ocasionales o no planificadas", minutes: reserveMin });
+  if (typeof reserve === "number") { if (reserve > 0.5) tasks.push({ kind: "reserve", code: "Imprevistos", name: "Reserva para actividades ocasionales o no planificadas", minutes: reserve }); }
+  else for (const r of [...reserve].sort((a, b) => a.code.localeCompare(b.code))) if (r.minutes > 0.5) tasks.push({ kind: "reserve", code: r.code, name: r.name, minutes: r.minutes });
   return tasks;
 }
 
@@ -504,10 +512,11 @@ function plan(kind: WeekKind, lines: Line[], n: number, days: number[], cd: numb
   const D = days.length;
   // Si un día queda con tareas sin asignar (por el empaque de las franjas: la mañana y la tarde no se mezclan), se vuelve a planear pidiendo una persona más ese día (un descanso menos ahí)
   // y se conserva el mejor intento: así el reparto no se rinde mientras haya espacio en otro día.
+  const reserveCodes = new Set(lines.filter((l) => l.reserveHours > EPS).map((l) => l.code));
   let sim = simulate(lines, kind, n, days, cd, cw, T, W, minShared), ask: number[] = Array<number>(D).fill(0);
   for (let attempt = 0; attempt < 10 && sim.overflow > EPS; attempt++) {
     const next = ask.slice(); let any = false;
-    for (let d = 0; d < D; d++) if (sim.unassigned[d].some((u) => u.code !== "Imprevistos" && u.h > 1e-6)) { const here = n - sim.rest.filter((row) => row[d]).length; if (here < n) { next[d] = Math.max(next[d], here + 1); any = true; } }
+    for (let d = 0; d < D; d++) if (sim.unassigned[d].some((u) => !reserveCodes.has(u.code) && u.h > 1e-6)) { const here = n - sim.rest.filter((row) => row[d]).length; if (here < n) { next[d] = Math.max(next[d], here + 1); any = true; } }
     if (!any) break;
     const tried = simulate(lines, kind, n, days, cd, cw, T, W, minShared, next);
     if (tried.overflow >= sim.overflow - 1e-9) break;
@@ -516,7 +525,7 @@ function plan(kind: WeekKind, lines: Line[], n: number, days: number[], cd: numb
   const rankByCode = new Map(lines.map((l) => [l.code, rankOf(l.periodKind)])), nameByCode = new Map(lines.map((l) => [l.code, l.name]));
   const grid: Cell[][] = Array.from({ length: n }, (_, p) => Array.from({ length: D }, (_, d) => {
     const its: CellItem[] = [...sim.items[p][d].entries()].map(([code, minutes]) => ({ code, minutes, rank: rankByCode.get(code) ?? 2 })).sort((a, b) => a.rank - b.rank || a.code.localeCompare(b.code));
-    const tasks = orderedTasks(its.map((i) => ({ ...i, name: nameByCode.get(i.code) ?? i.code })), sim.reserveCell[p][d]);
+    const tasks = orderedTasks(its.map((i) => ({ ...i, name: nameByCode.get(i.code) ?? i.code })), sim.reserveSplit.map((r) => ({ code: r.code, name: r.name, minutes: sim.reserveCell[p][d] * r.share })));
     const off = sim.rest[p][d];
     return { items: its, reserveMin: sim.reserveCell[p][d], totalMin: sim.load[p][d] * 60, capacityMin: off ? 0 : cd * 60, toleranceMin: off ? 0 : cd * T * 60, rest: off, shift: off || !sim.win[p][d] ? null : `${hhmm(sim.win[p][d]![0])}–${hhmm(sim.win[p][d]![1])}`, tasks, saved: null };
   }));
@@ -556,12 +565,21 @@ function restNote(week: WeekPlan, days: number[], W: number): string | null {
   return parts.join(" ");
 }
 
+/** Horas por semana de las actividades no planificadas u ocasionales de un cargo (sus «imprevistos»): salen de las mismas actividades que Cálculo de tiempos, sin repartir nada. */
+export function reserveHoursOf(input: ScheduleInput, key: string): number {
+  return linesOf(input, key).lines.reduce((t, l) => t + l.reserveHours, 0);
+}
+/** Lo mismo para todos los cargos, por clave de cargo. */
+export function reserveHoursByPosition(input: ScheduleInput): Map<string, number> {
+  return new Map(input.positions.map((p) => { const key = positionKey(p.dataKind, p.area, p.site, p.position); return [key, reserveHoursOf(input, key)] as const; }));
+}
+
 export function buildSchedules(input: ScheduleInput): PositionSchedule[] {
   const T = Math.max(1, input.overload ?? 1), roundFrom = input.params.staffRoundFrom ?? 0, sharedHours = Math.max(0, input.params.minSharedHours ?? 3), minShared = sharedHours * 60;
   return input.positions.map((p): PositionSchedule => {
     const key = positionKey(p.dataKind, p.area, p.site, p.position);
     const days = [...(input.shiftDays.get(key) ?? [])].sort((a, b) => a - b);
-    const base = { key, dataKind: p.dataKind, area: p.area, site: p.site, position: p.position, days, service: serviceOf(input.positionShifts?.get(key)), common: null, periodic: null, check: [] as ActivityCheck[], notes: [] as string[] };
+    const base = { key, dataKind: p.dataKind, area: p.area, site: p.site, position: p.position, reserveHours: reserveHoursOf(input, key), days, service: serviceOf(input.positionShifts?.get(key)), common: null, periodic: null, check: [] as ActivityCheck[], notes: [] as string[] };
     const need = needOf(p, T, roundFrom);
     const required = need.required;
     if (days.length === 0) return { ...base, state: "noshifts", reason: "El cargo no tiene turnos registrados: se reparte por los días de sus turnos. Regístrelos en Cargos y dotación.", required };

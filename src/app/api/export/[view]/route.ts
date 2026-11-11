@@ -11,7 +11,7 @@ import { rateLimit } from "@/lib/ratelimit";
 import { activityFilters, paramsToRecord, positionFilters } from "@/lib/page-filters";
 import { listActivityNames } from "@/server/studies";
 import { canRead } from "@/lib/access";
-import { loadSchedules } from "@/server/schedule";
+import { loadReserveHours, loadSchedules } from "@/server/schedule";
 import { positionKey, type PositionSchedule } from "@/domain/schedule";
 import { buildReportFacts, type ReportFacts } from "@/domain/report";
 
@@ -42,6 +42,8 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ view: strin
     actNames = names;
     analysis = { ...analysis, activities: activityFilters(analysis.activities, fp, view === "calculo" ? "calculo" : "captura", names).rows };
   }
+  let reserve: Map<string, number> | undefined;
+  if (view === "dotacion") { const user = await getUser(), study = user ? await activeStudyId(user.id) : null; if (user && study) reserve = await loadReserveHours(getDb(), user.id, study.id, loaded.mode); }
   let schedules: PositionSchedule[] = [];
   if (view === "reparto") {
     const user = await getUser(), study = user ? await activeStudyId(user.id) : null;
@@ -62,7 +64,7 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ view: strin
     const user = await getUser(); const study = user ? await activeStudyId(user.id) : null;
     if (user && study) proposals = (await listProposals(getDb(), user.id, study.id)).map((p) => ({ id: p.id, kind: p.kind, summary: p.summary, status: p.status, reviewedBy: p.reviewedBy ? "persona autorizada" : null, at: p.createdAt.toISOString().slice(0, 10) }));
   }
-  const { title, tables } = tablesFor(view, analysis, dashboard, proposals, q, loaded.mode, loaded.params.reservePct, actNames, schedules, loaded.thresholds.high, facts, loaded.params.staffRoundFrom ?? 0);
+  const { title, tables } = tablesFor(view, analysis, dashboard, proposals, q, loaded.mode, loaded.params.reservePct, actNames, schedules, loaded.thresholds.high, facts, loaded.params.staffRoundFrom ?? 0, reserve);
   const stamp = new Date().toISOString().slice(0, 10);
   const base = `estudio-cargas_${view}_${stamp}`;
 

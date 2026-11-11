@@ -44,7 +44,7 @@ export function DayCell({ person, day, position, week, cell, target, canSave }: 
         </span>
         <span className="rp-bar" aria-hidden="true"><span className={over ? "over" : undefined} style={{ width: `${Math.min(100, cell.capacityMin > 0 ? (cell.totalMin / cell.capacityMin) * 100 : 0)}%` }} /></span>
         <span className="rp-tasks">
-          {shown.slice(0, PREVIEW).map((t) => <span key={t.code} className={`rp-task${t.kind === "reserve" ? " soft" : ""}`}><span className="rp-code">{t.code}</span><span className="rp-min">{formatMinutes(t.minutes)}</span></span>)}
+          {shown.slice(0, PREVIEW).map((t) => <span key={t.code} className={`rp-task${t.kind === "reserve" ? " soft" : ""}`} title={t.kind === "reserve" ? `${t.name}: actividad no planificada; se atiende cuando ocurre` : t.name}><span className="rp-code">{t.code}</span><span className="rp-min">{formatMinutes(t.minutes)}</span></span>)}
           {shown.length > PREVIEW && <span className="rp-more">+{shown.length - PREVIEW} más</span>}
           {shown.length === 0 && <span className="rp-more">Sin tareas</span>}
         </span>

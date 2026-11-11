@@ -38,7 +38,7 @@ export function buildReportDoc(i: DocInput): ReportDoc {
   const w = facts.weeks;
   const kpis: DocKpi[] = [
     { label: "Personas que hay", value: nf(facts.totals.occupants), note: `En los ${facts.data.positionsWithFigure} cargos con cifra` },
-    { label: "Personas necesarias", value: nf(facts.totals.required), note: `Con el umbral de sobrecarga en ${nf(facts.overload * 100)} %` },
+    { label: "Personas necesarias", value: nf(facts.totals.required), note: `Con el umbral de sobrecarga en ${nf(facts.overload * 100)} %${facts.unplannedHours > 0 ? ` · incluye ${nf(facts.unplannedHours)} h por semana de actividades no planificadas (imprevistos)` : ""}` },
     { label: "Brecha", value: signed(facts.totals.gap), note: facts.totals.gap > 0 ? "Faltan personas" : facts.totals.gap < 0 ? "Hay personas de más según la carga registrada" : "Coinciden las que hay y las necesarias" },
     { label: "Uso con periódicas", value: w.periodic ? pct(w.periodic.utilization) : "—", note: w.periodic ? (w.periodic.extraPeople > 0 ? `Hace falta refuerzo de ${nf(w.periodic.extraPeople)} ${w.periodic.extraPeople === 1 ? "persona" : "personas"}` : "Sin refuerzo") : "Sin semana con periódicas" },
     { label: "Datos completos", value: pct(facts.data.completePct), note: `${nf(facts.data.complete)} de ${nf(facts.data.activities)} actividades` },

@@ -29,6 +29,7 @@ export interface DataQuality {
 export interface ReportFacts {
   overload: number; reservePct: number; scenario: string;
   totals: StaffingSummary;
+  /** Horas por semana de actividades no planificadas u ocasionales (imprevistos) de los cargos con cifra, ya incluidas en las horas de los cargos (D-112). */ unplannedHours: number;
   areas: StaffingArea[];
   positions: PositionFact[];
   weeks: { common: WeekFact | null; periodic: WeekFact | null };
@@ -65,7 +66,7 @@ export function buildReportFacts(i: ReportInput): ReportFacts {
   }).sort((a, b) => (b.usePct ?? -1) - (a.usePct ?? -1) || a.position.localeCompare(b.position, "es"));
   const totals = summaryOf(needs);
   return {
-    overload: i.overload, reservePct: i.reservePct, scenario: i.scenario, totals, areas: areasOf(needs), positions,
+    overload: i.overload, reservePct: i.reservePct, scenario: i.scenario, totals, unplannedHours: i.schedules.filter((s) => s.required !== null).reduce((t, s) => t + s.reserveHours, 0), areas: areasOf(needs), positions,
     weeks: { common: weekFact(i.schedules, (s) => s.common), periodic: weekFact(i.schedules, (s) => s.periodic) },
     data: {
       activities: i.kpis.activities, complete: i.kpis.complete, incomplete: i.kpis.activities - i.kpis.complete,

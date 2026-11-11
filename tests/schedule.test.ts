@@ -1,6 +1,6 @@
 import { analyze } from "../src/domain/summary";
 import { needOf, roundUpPeople } from "../src/domain/staffing";
-import { applyOrder, attachSavedOrders, buildSchedules, formatMinutes, moveTask, orderKey, orderedTasks, positionKey, ruleOf, workDaysOf, RULE_BY_TYPE, ACTIVITY_TYPES, serviceOf, type ActivityExtra, type ActivityTypeKey, type PositionSchedule, type SavedOrder, type ShiftRef, type WeekPlan } from "../src/domain/schedule";
+import { applyOrder, attachSavedOrders, buildSchedules, formatMinutes, moveTask, orderKey, orderedTasks, positionKey, ruleOf, workDaysOf, reserveHoursByPosition, RULE_BY_TYPE, ACTIVITY_TYPES, serviceOf, type ActivityExtra, type ActivityTypeKey, type PositionSchedule, type SavedOrder, type ShiftRef, type WeekPlan } from "../src/domain/schedule";
 import { computeActivity, occupantsOf, personDaysOf, type ActivityInput, type Params, type StaffingInput } from "../src/domain/engine";
 import { tablesFor, VIEWS } from "../src/lib/tables";
 import { MENU, menuHrefs } from "../src/lib/nav";
@@ -530,12 +530,35 @@ async function main() {
       const dia = common.grid.filter((row) => !row[d].rest).map((row) => row[d].totalMin / 60);
       if (Math.max(...dia) - Math.min(...dia) > 1.5) throw new Error("el día " + sch.days[d] + " debe quedar parejo (±1,5 h): " + dia.map((x) => x.toFixed(1)).join(" "));
     }
+    // los imprevistos salen con el nombre de su actividad (no como «Imprevistos»), con tope de 2 h por celda mientras haya espacio, y su total es el de las actividades no planificadas del estudio
+    const trabajo = common.grid.flat().filter((c) => !c.rest);
+    if (Math.abs(sch.reserveHours - (35 + 10 / 60 * 7 + 1)) > 0.01) throw new Error("horas no planificadas del cargo (SUP-006 35 h + SUP-017 + SUP-014): " + sch.reserveHours);
+    if (trabajo.some((c) => c.reserveMin > 120 + 1e-6)) throw new Error("ninguna celda debe pasar de 2 h de imprevistos: " + Math.max(...trabajo.map((c) => c.reserveMin)));
+    if (trabajo.some((c) => c.tasks.some((t) => t.code === "Imprevistos" || (t.kind === "reserve" && !/^SUP-(006|014|017)$/.test(t.code))))) throw new Error("los imprevistos deben salir con el código de su actividad");
+    if (trabajo.some((c) => Math.abs(c.tasks.filter((t) => t.kind === "reserve").reduce((x, t) => x + t.minutes, 0) - c.reserveMin) > 1)) throw new Error("las partes de la reserva deben sumar la reserva de la celda");
     // SUP-003 (apertura, intermedio y cierre, 5 veces al día) se hace en la mañana Y en la tarde cada día
     for (let d = 0; d < sch.days.length; d++) {
       const fr = common.grid.filter((row) => !row[d].rest && row[d].items.some((i) => i.code === "SUP-003")).map((row) => row[d].shift);
       const manana = fr.some((f) => f && f.slice(6) <= "13:00"), tarde = fr.some((f) => f && f.slice(0, 5) >= "13:00");
       if (!manana || !tarde) throw new Error("SUP-003 debe quedar en la mañana y en la tarde el día " + sch.days[d] + ": " + JSON.stringify(fr));
     }
+  });
+
+  await check("Dotación (D-112): cada cargo muestra cuántas de sus horas son actividades no planificadas u ocasionales, también en la exportación; sin reparto se calcula igual y no se pierde nada", () => {
+    const st = [staff("Cajero", 3, 40), staff("Auxiliar", 2, 40)], ac = [act("A1", "Cajero", { hours: 2, executions: 5 }), act("U1", "Cajero", { hours: 1, executions: 4, planning: "unplanned" }), act("O1", "Cajero", { hours: 3, executions: 1 }), act("X1", "Auxiliar", { hours: 4, executions: 2 })];
+    const types: Record<string, ActivityTypeKey | null> = { A1: "operational", U1: "operational", O1: "occasional", X1: "operational" };
+    const p = prm(), a = analyze(st, ac, p, TH, "all");
+    const extras = new Map<string, ActivityExtra>(ac.map((x) => [x.code.toLowerCase(), { name: x.code, type: types[x.code] }]));
+    const input = { staff: st, acts: ac, params: p, positions: a.positions, extras, shiftDays: new Map<string, number[]>() };
+    const r = reserveHoursByPosition(input);
+    const cajero = r.get(positionKey("real", "Cajas", "CO1", "Cajero")), aux = r.get(positionKey("real", "Cajas", "CO1", "Auxiliar"));
+    if (cajero === undefined || !near(cajero, 4 + 3) || aux !== 0) throw new Error("horas no planificadas: Cajero " + cajero + " (esperado 7), Auxiliar " + aux);
+    const sch = buildSchedules(input).find((x) => x.position === "Cajero")!; // sin turnos: no hay reparto, pero sí las horas no planificadas
+    if (sch.state !== "noshifts" || !near(sch.reserveHours, 7)) throw new Error("sin reparto también debe traer las horas no planificadas: " + sch.reserveHours);
+    const { tables } = tablesFor("dotacion", a, null as never, [], {}, "all", 0.1, undefined, [], 1, undefined, 0, r);
+    const col = tables[0].columns.find((c) => c.header === "De ellas, no planificadas (h)");
+    const fila = (tables[0].rows as { position: string; unplanned: number }[]).find((x) => x.position === "Cajero");
+    if (!col || !fila || !near(fila.unplanned, 7)) throw new Error("la exportación debe traer las horas no planificadas: " + JSON.stringify(fila));
   });
 
   await check("Minutos legibles: 45 min, 2 h, 2 h 15 min; los minutos con decimales se redondean y 59,6 no queda en «60 min»", () => {
@@ -558,7 +581,7 @@ async function main() {
     if (Math.abs(esperado - exportado) > 0.05 * filas.length) throw new Error(`pantalla ${esperado} ≠ Excel ${exportado}`);
     if (!filas.every((r) => /^Persona \d+$/.test(r.person))) throw new Error("solo «Persona N», nunca nombres");
     if (!filas.every((r) => Number.isInteger(r.order) && r.order >= 1) || "from" in filas[0] || tables[0].columns.some((c) => /Desde|Hasta/.test(c.header))) throw new Error("cada fila trae su orden sugerido y ninguna hora del día");
-    if (!filas.some((r) => r.code === "Imprevistos") || tables[1].rows.length !== w[0].activities.length + w[1].activities.length) throw new Error("imprevistos y actividades");
+    if (!filas.some((r) => r.code === "U1") || tables[1].rows.length !== w[0].activities.length + w[1].activities.length) throw new Error("imprevistos y actividades");
     const sin = tables[2].rows as { position: string; reason: string }[];
     if (sin.length !== 1 || sin[0].position !== "Auxiliar" || !/turnos/.test(sin[0].reason)) throw new Error(JSON.stringify(sin));
   });

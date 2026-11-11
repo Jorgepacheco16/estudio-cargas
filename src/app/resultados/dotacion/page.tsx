@@ -6,7 +6,10 @@ import Link from "next/link";
 import { PagedTable } from "@/components/PagedTable";
 import { FilterBar } from "@/components/FilterBar";
 import { ExportButtons, ModeForm, fmt } from "@/components/Tools";
-import { loadAnalysis, parseMode } from "@/data/source";
+import { activeStudyId, loadAnalysis, parseMode } from "@/data/source";
+import { getDb } from "@/db/server";
+import { positionKey } from "@/domain/schedule";
+import { loadReserveHours } from "@/server/schedule";
 import { filterQuery } from "@/domain/filters";
 import { positionFilters, type RawParams } from "@/lib/page-filters";
 import { areasOf, needsOf, STATE_ES, summaryOf, type NeedState } from "@/domain/staffing";
@@ -17,13 +20,17 @@ const PILL: Record<NeedState, string> = { short: "overload", surplus: "low", bal
 const signed = (n: number) => (n > 0 ? `+${n}` : String(n).replace("-", "−"));
 
 export default async function Dotacion({ searchParams }: { searchParams: Promise<RawParams> }) {
-  if (!(await getUser())) redirect("/login"); // «Resultados» no se muestra en la demostración (D-100)
+  const user = await getUser();
+  if (!user) redirect("/login"); // «Resultados» no se muestra en la demostración (D-100)
   await guardModules(["resultados", "cargos", "actividades"]);
   const raw = await searchParams;
   const modo = Array.isArray(raw.modo) ? raw.modo[0] : raw.modo;
   const { analysis: a, mode, label, params, thresholds } = await loadAnalysis(parseMode(modo));
   const pf = positionFilters(a.positions, raw);
   const needs = needsOf(pf.rows, thresholds.high, params.staffRoundFrom ?? 0), total = summaryOf(needs), areas = areasOf(needs);
+  const study = await activeStudyId(user.id), reserve = study ? await loadReserveHours(getDb(), user.id, study.id, mode) : new Map<string, number>();
+  const unplanned = (n: (typeof needs)[number]) => reserve.get(positionKey(n.dataKind, n.area, n.site, n.position)) ?? 0;
+  const unplannedTotal = needs.filter((n) => n.required !== null).reduce((t, n) => t + unplanned(n), 0), hoursTotal = needs.filter((n) => n.required !== null).reduce((t, n) => t + n.hours, 0);
   const partial = needs.filter((n) => n.partial && n.required !== null).length;
   const scenario = { base: "base", high_season: "temporada alta", low_season: "temporada baja", min_time: "tiempo mínimo", max_time: "tiempo máximo" }[params.scenario] ?? params.scenario;
 
@@ -62,16 +69,18 @@ export default async function Dotacion({ searchParams }: { searchParams: Promise
       <section className="card" aria-label="Dotación por cargo">
         <h2>Por cargo</h2>
         <p className="note" style={{ marginTop: 8 }}>Personas necesarias = horas de la semana ÷ horas útiles de una persona (jornada × (1 − reserva)), redondeado con la regla de Parámetros: la parte decimal suma una persona más solo si llega al {fmt((params.staffRoundFrom ?? 0) * 100, 0)} % (por ejemplo, con 50 %, 5,4 son 5 personas y 5,5 son 6); el umbral de sobrecarga ({fmt(thresholds.high * 100, 0)} %) se descuenta antes. «Brecha» positiva: faltan; negativa: hay de más.</p>
+        {unplannedTotal > 0 && <p className="note" style={{ marginTop: 8 }}>De las {fmt(hoursTotal, 1)} h por semana de los cargos con cifra, <b>{fmt(unplannedTotal, 1)} h ({fmt((unplannedTotal / hoursTotal) * 100, 0)} %) son actividades no planificadas u ocasionales</b> (la atención de imprevistos): están en la columna «De ellas, no planificadas». Son trabajo medido en el estudio, ya incluido en las horas del cargo; no es una reserva agregada.</p>}
         {needs.length === 0 ? <div className="empty">{a.positions.length === 0 ? "Aún no hay cargos en este modo." : "Ningún cargo cumple los filtros elegidos. Cambie o limpie los filtros."}</div> : (
           <PagedTable
             label="Dotación por cargo"
-            minWidth={980}
-            head={<tr><th>Cargo y centro de operaciones</th><th className="num">Personas que hay</th><th className="num">Horas por semana</th><th className="num">Horas útiles por persona</th><th className="num">Necesarias (exactas)</th><th className="num">Necesarias</th><th className="num">Brecha</th><th>Estado</th></tr>}
+            minWidth={1080}
+            head={<tr><th>Cargo y centro de operaciones</th><th className="num">Personas que hay</th><th className="num">Horas por semana</th><th className="num">De ellas, no planificadas</th><th className="num">Horas útiles por persona</th><th className="num">Necesarias (exactas)</th><th className="num">Necesarias</th><th className="num">Brecha</th><th>Estado</th></tr>}
             rows={needs.map((n) => (
               <tr key={`${n.dataKind}|${n.area}|${n.site}|${n.position}`}>
                 <td><b>{n.position}</b><div className="muted">{n.area} · {n.site} · {n.dataKind === "real" ? "REAL" : "DEMO"}</div></td>
                 <td className="num">{fmt(n.occupants, 0)}</td>
                 <td className="num">{n.hours > 0 ? fmt(n.hours, 2) : "—"}</td>
+                <td className="num">{unplanned(n) > 0 ? fmt(unplanned(n), 2) : "—"}</td>
                 <td className="num">{fmt(n.hoursPerPerson, 2)}</td>
                 <td className="num">{fmt(n.exact, 2)}</td>
                 <td className="num"><b>{n.required === null ? "—" : fmt(n.required, 0)}</b></td>

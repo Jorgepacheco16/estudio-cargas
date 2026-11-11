@@ -2,7 +2,7 @@
 import { eq } from "drizzle-orm";
 import { withRls, type Db } from "../db/client";
 import { activities, activityShifts, areas, positionShifts, positions, sites } from "../db/schema";
-import { attachSavedOrders, buildSchedules, isActivityType, positionKey, type ActivityExtra, type PositionSchedule, type ShiftRef } from "../domain/schedule";
+import { attachSavedOrders, buildSchedules, isActivityType, positionKey, reserveHoursByPosition, type ActivityExtra, type PositionSchedule, type ShiftRef } from "../domain/schedule";
 import type { Params } from "../domain/engine";
 import { daysOf } from "../domain/shifts";
 import { analyze, type Mode, type PositionRow } from "../domain/summary";
@@ -10,6 +10,17 @@ import { listOrdersTx } from "./schedule-order";
 import { loadStudyDataTx } from "./studies";
 
 export interface LoadedSchedules { schedules: PositionSchedule[]; positions: PositionRow[]; params: Params; overload: number; kpis: { activities: number; complete: number } }
+
+/** Horas por semana de actividades no planificadas u ocasionales de cada cargo (por clave de cargo), SIN calcular el reparto: lo usa Dotación requerida para mostrar su peso. Siempre con RLS. */
+export async function loadReserveHours(db: Db, sub: string, studyId: string, mode: Mode): Promise<Map<string, number>> {
+  return withRls(db, { sub }, async (tx) => {
+    const d = await loadStudyDataTx(tx, studyId);
+    const analysis = analyze(d.staff, d.acts, d.params, d.thresholds, mode);
+    const acts = await tx.select({ code: activities.code, name: activities.name, type: activities.activityType }).from(activities).where(eq(activities.studyId, studyId));
+    const extras = new Map<string, ActivityExtra>(acts.map((a) => [a.code.toLowerCase(), { name: a.name, type: isActivityType(a.type) ? a.type : null }]));
+    return reserveHoursByPosition({ staff: d.staff, acts: d.acts, params: d.params, positions: analysis.positions, extras, shiftDays: new Map() });
+  });
+}
 
 export async function loadSchedules(db: Db, sub: string, studyId: string, mode: Mode): Promise<LoadedSchedules> {
   return withRls(db, { sub }, async (tx) => {
