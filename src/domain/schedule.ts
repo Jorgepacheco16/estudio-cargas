@@ -136,7 +136,7 @@ const SUNDAY = 6;
 const rankOf = (kind: "daily" | "weekly" | "periodic") => (kind === "daily" ? 0 : kind === "weekly" ? 1 : 2);
 
 /** Una ejecución (o fracción de ejecución) por colocar. `hours` = horas de CADA una de las `k` personas que la hacen a la vez. `allowed` = posiciones (en los días del cargo) donde puede caer. */
-interface Occ { code: string; hours: number; k: number; divisible: boolean; day: number | null; allowed: number[] }
+interface Occ { code: string; hours: number; k: number; divisible: boolean; day: number | null; allowed: number[]; /** Franja propia de esta parte (el turno en que se hace), si la actividad se reparte entre varios turnos. */ win?: Win }
 interface Line {
   code: string; name: string; type: ActivityTypeKey | null; rule: SplitRule; perEmployee: boolean; k: number;
   hoursPerExec: number; periodKind: "daily" | "weekly" | "periodic";
@@ -219,6 +219,13 @@ function meet(cur: Win | null, w: Win | null, minShared: number): Win | null | f
 }
 const hhmm = (m: number) => `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(Math.round(m % 60)).padStart(2, "0")}`;
 
+/** Cómo se parte lo que una actividad diaria hace un día: si está marcada en varios turnos con horario, una parte por turno (según lo que dura cada uno); si no, una sola parte con la franja de toda la actividad (o sin franja). */
+function portionsOf(l: Pick<Line, "shifts">, weekday: number): { w: Win | null; share: number }[] {
+  const all = usableShifts(l, weekday) ?? [], us = all.filter((x) => x.start && x.end && minutesOfDay(x.end) > minutesOfDay(x.start));
+  if (us.length >= 2 && us.length === all.length) { const len = (x: ShiftRef) => minutesOfDay(x.end) - minutesOfDay(x.start), total = us.reduce((t, x) => t + len(x), 0); return us.map((x) => ({ w: [minutesOfDay(x.start), minutesOfDay(x.end)] as Win, share: len(x) / total })); }
+  return [{ w: windowOn(l, weekday), share: 1 }];
+}
+
 /** Ejecuciones enteras y, si sobra una fracción, una ejecución más corta: así no se pierde ni se inventa ningún minuto. */
 function pieces0(executions: number): number[] {
   const whole = Math.floor(executions + EPS), frac = executions - whole;
@@ -242,25 +249,29 @@ export function workDaysOf(hoursPerPerson: number, daysOfPosition: number, prm: 
  * personas avanzan un puesto (la Persona 2 hace lo que hizo la 1), así los descansos rotan. null si no hay descanso (el cargo abre solo los días que trabaja cada persona).
  * Un descanso que dejaría un día sin NADIE que haga lo que no puede esperar no se concede (`missing` los cuenta): hacen falta más personas para cubrir todos los días.
  */
-function planRest(lines: Line[], kind: WeekKind, n: number, days: number[], W: number, cd: number, T: number, minShared: number): { rest: boolean[][]; missing: number } | null {
-  const D = days.length, R = D - W;
+function planRest(lines: Line[], kind: WeekKind, n: number, days: number[], W: number, cd: number, T: number, minShared: number, minPresent?: number[]): { rest: boolean[][]; missing: number } | null {
+  const D = days.length, R = D - W, capDay = cd * T;
   if (R <= 0 || n <= 0) return null;
   // Lo que obliga a haber gente un día es lo que NO se puede mover de día (las actividades diarias) y los imprevistos; lo semanal y lo periódico se acomoda en los días con espacio.
   // `demand` (también con lo que se puede mover) solo ordena los días: los de menos carga reciben primero los descansos.
-  const demand = Array<number>(D).fill(0), fixed = Array<number>(D).fill(0), maxK = Array<number>(D).fill(1), dayWins = Array.from({ length: D }, () => [] as Win[]);
+  const demand = Array<number>(D).fill(0), fixed = Array<number>(D).fill(0), fixedT = Array<number>(D).fill(0), maxK = Array<number>(D).fill(1), dayWins = Array.from({ length: D }, () => [] as { w: Win | null; h: number }[]);
   let reserve = 0;
   for (const l of lines) {
     reserve += l.reserveHours;
     if (l.rule === "reserve" || (l.periodKind === "periodic" && kind !== "periodic")) continue;
     const A = allowedOf(l, days), hours = l.hoursPerExec * l.k * l.executions;
-    for (const d of A) { demand[d] += hours / A.length; if (l.periodKind === "daily") { fixed[d] += hours / A.length; if (l.k > maxK[d]) maxK[d] = l.k; const w = windowOn(l, days[d]); if (w) dayWins[d].push(w); } }
+    for (const d of A) { demand[d] += hours / A.length; if (l.periodKind === "daily") { fixed[d] += hours / A.length; fixedT[d] += hours / A.length; if (l.k > maxK[d]) maxK[d] = l.k; for (const po of portionsOf(l, days[d])) dayWins[d].push({ w: po.w, h: (hours / A.length) * po.share }); } }
   }
-  for (let d = 0; d < D; d++) { demand[d] += reserve / D; fixed[d] += reserve / D; const groups: (Win | null)[] = []; // un día con tareas de franjas que no caben en una misma persona (apertura y cierre) pide al menos una persona por grupo de franjas compatibles
-    for (const w of [...dayWins[d]].sort((a, b) => a[0] - b[0])) { const i = groups.findIndex((g) => meet(g, w, minShared) !== false); if (i < 0) groups.push(w); else groups[i] = meet(groups[i], w, minShared) as Win | null; }
-    if (groups.length > maxK[d]) maxK[d] = groups.length; }
-  // Cada descanso se pone donde menos horas deja sin cubrir: el faltante de un día es lo fijo del día menos lo que pueden hacer quienes ese día trabajan. Mientras un día tenga holgura el
-  // descanso no le cuesta nada, y entre los días sin costo se prefiere el domingo (menos recargos) y luego los de menos carga; así los descansos llenan primero el domingo.
-  const capDay = cd * T, deficit = (d: number, resting: number) => Math.max(0, fixed[d] - (n - resting) * capDay);
+  for (let d = 0; d < D; d++) { demand[d] += reserve / D; fixed[d] += reserve / D; // un día con tareas de franjas que no caben en una misma persona (mañana y tarde) pide, por cada grupo de franjas compatibles, las personas que sus horas requieren
+    const groups: { w: Win | null; h: number }[] = [];
+    for (const it of dayWins[d].filter((x) => x.w).sort((x, y) => x.w![0] - y.w![0])) { const i = groups.findIndex((g) => meet(g.w, it.w, minShared) !== false); if (i < 0) groups.push({ w: it.w, h: it.h }); else groups[i] = { w: meet(groups[i].w, it.w, minShared) as Win | null, h: groups[i].h + it.h }; }
+    const free = dayWins[d].filter((x) => !x.w).reduce((t, x) => t + x.h, 0), byGroup = groups.reduce((t, g) => t + Math.ceil(g.h / capDay - EPS), 0), byHours = Math.ceil((groups.reduce((t, g) => t + g.h, 0) + free) / capDay - EPS);
+    const need = Math.max(groups.length, byGroup, byHours);
+    if (need > maxK[d]) maxK[d] = need;
+    if (minPresent && minPresent[d] > maxK[d]) maxK[d] = minPresent[d]; } // lo que pidió un intento anterior que dejó tareas sin asignar ese día
+  // Cada descanso se pone donde menos aprieta: en el día cuya carga total (lo diario, lo que se puede mover y los imprevistos) quedaría más holgada para quienes lo trabajan, con preferencia
+  // por el domingo (menos recargos). Así los descansos no se acumulan en los días más cargados, que es donde luego faltaría espacio.
+  const util = (d: number, resting: number) => demand[d] / Math.max(1e-9, (n - resting) * capDay); // qué tan lleno quedaría el día para quienes lo trabajan
   const order = [...Array(D).keys()].sort((a, b) => (days[b] === SUNDAY ? 1 : 0) - (days[a] === SUNDAY ? 1 : 0) || demand[a] - demand[b] || days[b] - days[a]);
   const rest = Array.from({ length: n }, () => Array<boolean>(D).fill(false)), count = Array<number>(D).fill(0);
   let missing = 0;
@@ -268,7 +279,8 @@ function planRest(lines: Line[], kind: WeekKind, n: number, days: number[], W: n
     let best = -1, bestCost = Infinity;
     for (const d of order) {
       if (rest[p][d]) continue;
-      const cost = deficit(d, count[d] + 1) - deficit(d, count[d]) + (fixed[d] > EPS && n - count[d] - 1 < maxK[d] ? 1e6 : 0); // no dejar sin gente un día que exige varias personas a la vez
+      const short = Math.max(0, fixedT[d] - (n - count[d] - 1) * capDay) / capDay; // personas que faltarían ese día solo para lo diario que no se puede mover
+      const cost = util(d, count[d] + 1) * (days[d] === SUNDAY ? 0.8 : 1) + 50 * short + (fixed[d] > EPS && n - count[d] - 1 < maxK[d] ? 1e6 : 0); // el descanso va al día que queda menos lleno (el domingo con preferencia); no dejar sin gente un día que exige varias personas a la vez
       if (cost < bestCost - 1e-9) { best = d; bestCost = cost; }
     }
     if (best < 0 || bestCost >= 1e6) { missing++; continue; } // quedaría un día sin nadie: ese descanso no se concede
@@ -277,7 +289,7 @@ function planRest(lines: Line[], kind: WeekKind, n: number, days: number[], W: n
   return { rest, missing };
 }
 
-interface Piece { code: string; h: number }
+interface Piece { code: string; h: number; win: Win | null }
 interface Sim { items: Map<string, number>[][]; reserveCell: number[][]; load: number[][]; overflow: number; assigned: number; reserve: number; who: Map<string, Set<number>>; execs: Map<string, number>; mins: Map<string, number>; shared: Set<string>; rest: boolean[][]; restMissing: number; win: (Win | null)[][]; unassigned: { code: string; h: number }[][] }
 
 /**
@@ -286,9 +298,9 @@ interface Sim { items: Map<string, number>[][]; reserveCell: number[][]; load: n
  * Prioridades: (1) nadie pasa su jornada del día ni de la semana (con `T`); (2) las tareas de una persona un día comparten una franja; (3) el equilibrio. Si una tarea no cabe entera con la regla de
  * su tipo, se parte lo mínimo y queda marcada; si ni así cabe, queda «sin asignar» (no se carga a nadie).
  */
-function simulate(lines: Line[], kind: WeekKind, n: number, days: number[], cd: number, cw: number, T: number, W: number, minShared: number): Sim {
+function simulate(lines: Line[], kind: WeekKind, n: number, days: number[], cd: number, cw: number, T: number, W: number, minShared: number, minPresent?: number[]): Sim {
   const D = days.length, capD = cd * T, capW = cw * T;
-  const restPlan = planRest(lines, kind, n, days, W, cd, T, minShared), rest = restPlan?.rest ?? Array.from({ length: n }, () => Array<boolean>(D).fill(false));
+  const restPlan = planRest(lines, kind, n, days, W, cd, T, minShared, minPresent), rest = restPlan?.rest ?? Array.from({ length: n }, () => Array<boolean>(D).fill(false));
   const load = Array.from({ length: n }, () => Array<number>(D).fill(0)), week = Array<number>(n).fill(0);
   const pieces: Piece[][][] = Array.from({ length: n }, () => Array.from({ length: D }, () => [] as Piece[]));
   const reserveCell = Array.from({ length: n }, () => Array<number>(D).fill(0));
@@ -301,17 +313,18 @@ function simulate(lines: Line[], kind: WeekKind, n: number, days: number[], cd: 
   const lineByCode = new Map(lines.map((l) => [l.code, l]));
   const win: (Win | null)[][] = Array.from({ length: n }, () => Array<Win | null>(D).fill(null));
   const winOf = (code: string, d: number): Win | null => { const l = lineByCode.get(code); return l ? windowOn(l, days[d]) : null; };
-  const canTake = (p: number, d: number, code: string) => meet(win[p][d], winOf(code, d), minShared) !== false;
-  const refresh = (p: number, d: number) => { let cur: Win | null = null; for (const pc of pieces[p][d]) { const r = meet(cur, winOf(pc.code, d), minShared); if (r !== false) cur = r; } win[p][d] = cur; };
-  const put = (p: number, d: number, code: string, h: number) => {
-    pieces[p][d].push({ code, h });
+  const winFor = (code: string, d: number, w?: Win | null): Win | null => (w !== undefined ? w : winOf(code, d)); // la franja de la parte (su turno) o, si no la tiene, la de toda la actividad
+  const canTake = (p: number, d: number, code: string, w?: Win | null) => meet(win[p][d], winFor(code, d, w), minShared) !== false;
+  const refresh = (p: number, d: number) => { let cur: Win | null = null; for (const pc of pieces[p][d]) { const r = meet(cur, pc.win, minShared); if (r !== false) cur = r; } win[p][d] = cur; };
+  const put = (p: number, d: number, code: string, h: number, w?: Win | null) => {
+    const f = winFor(code, d, w);
+    pieces[p][d].push({ code, h, win: f });
     load[p][d] += h; week[p] += h;
-    const r = meet(win[p][d], winOf(code, d), minShared); if (r !== false) win[p][d] = r;
+    const r = meet(win[p][d], f, minShared); if (r !== false) win[p][d] = r;
   };
 
-  // 1) reserva para imprevistos: igual para todas las personas y días en que trabajan
-  const reserve = lines.reduce((sum, l) => sum + l.reserveHours, 0), workCells = rest.reduce((sum, row) => sum + row.filter((r) => !r).length, 0);
-  if (reserve > EPS && workCells > 0) for (let p = 0; p < n; p++) for (let d = 0; d < D; d++) if (!rest[p][d]) { const h = reserve / workCells; reserveCell[p][d] = h * 60; load[p][d] += h; week[p] += h; }
+  // 1) los imprevistos NO se reparten primero: las tareas tienen prioridad y los imprevistos se acomodan al final en lo que sobra (paso 4)
+  const reserve = lines.reduce((sum, l) => sum + l.reserveHours, 0);
 
   // 2) lo que hace el cargo: se reparte según la regla de su tipo
   const active = lines.filter((l) => l.rule !== "reserve" && (l.periodKind === "periodic" ? kind === "periodic" : true));
@@ -320,11 +333,11 @@ function simulate(lines: Line[], kind: WeekKind, n: number, days: number[], cd: 
   for (const l of active) {
     const allowed = allowedOf(l, days), base = { code: l.code, k: l.k, divisible: l.divisible, allowed };
     execs.set(l.code, l.executions);
-    if (l.periodKind === "daily") for (const d of allowed) for (const frac of pieces0(l.executions / allowed.length)) occs.push({ ...base, hours: l.hoursPerExec * frac, day: d });
+    if (l.periodKind === "daily") for (const d of allowed) for (const po of portionsOf(l, days[d])) for (const frac of pieces0((l.executions / allowed.length) * po.share)) occs.push({ ...base, hours: l.hoursPerExec * frac, day: d, ...(po.w ? { win: po.w } : {}) }); // una actividad marcada en varios turnos se hace en CADA uno: las ejecuciones del día se reparten entre ellos y cada parte va a quien esté en ese turno
     else for (const frac of pieces0(l.executions)) occs.push({ ...base, hours: l.hoursPerExec * frac, day: null });
   }
   // primero lo que tiene día fijo (lo diario no se puede mover), luego lo que se puede acomodar en cualquier día; dentro de cada grupo, primero lo que tiene franja (lo restringido antes que lo libre) y luego lo más grande
-  const timed = (o: Occ) => { const l = lineByCode.get(o.code); return l && (o.day !== null ? windowOn(l, days[o.day]) : l.shifts && l.shifts.length > 0 ? windowOn(l, days[o.allowed[0]]) : null) ? 0 : 1; };
+  const timed = (o: Occ) => { if (o.win) return 0; const l = lineByCode.get(o.code); return l && (o.day !== null ? windowOn(l, days[o.day]) : l.shifts && l.shifts.length > 0 ? windowOn(l, days[o.allowed[0]]) : null) ? 0 : 1; };
   occs.sort((x, y) => (x.day === null ? 1 : 0) - (y.day === null ? 1 : 0) || timed(x) - timed(y) || y.hours * y.k - x.hours * x.k || x.code.localeCompare(y.code) || (x.day ?? -1) - (y.day ?? -1));
   const ruleOfCode = new Map(active.map((l) => [l.code, l.rule]));
   const dayTotal = (d: number) => load.reduce((sum, col) => sum + col[d], 0);
@@ -334,37 +347,37 @@ function simulate(lines: Line[], kind: WeekKind, n: number, days: number[], cd: 
    * Quienes tienen al menos `room` horas de espacio ese día (y no descansan) y cuyo horario del día es compatible, de menor a mayor carga. Lo diario (`byDay`) se nivela por día: primero quien lleva menos
    * horas ese día (en tramos de 15 min, para que el empate lo decida la semana); lo que se puede acomodar en cualquier día se nivela por semana.
    */
-  const candidates = (d: number, room: number, code: string, byDay: boolean) => [...Array(n).keys()].filter((q) => !rest[q][d] && rem(q, d) >= room && canTake(q, d, code))
+  const candidates = (d: number, room: number, code: string, byDay: boolean, w?: Win | null) => [...Array(n).keys()].filter((q) => !rest[q][d] && rem(q, d) >= room && canTake(q, d, code, w))
     .sort((x, y) => (byDay ? Math.floor((load[x][d] + EPS) / 0.25) - Math.floor((load[y][d] + EPS) / 0.25) || week[x] - week[y] : week[x] - week[y] || Math.floor((load[x][d] + EPS) / 0.25) - Math.floor((load[y][d] + EPS) / 0.25)) || load[x][d] - load[y][d] || x - y);
 
   const place = (o: Occ, d: number): number => { // devuelve las horas que quedan sin colocar en ese día (todas, si no cabe con la regla)
     const rule = ruleOfCode.get(o.code)!, byDay = o.day !== null;
     if (o.k > 1) { // varias personas a la vez (también en una coordinación): las k de menor carga con espacio, todas deben poder
       if (o.k > n) return o.hours;
-      const order = candidates(d, o.hours - FIT, o.code, byDay).slice(0, o.k);
+      const order = candidates(d, o.hours - FIT, o.code, byDay, o.win).slice(0, o.k);
       if (order.length < o.k) return o.hours;
-      for (const p of order) put(p, d, o.code, o.hours);
+      for (const p of order) put(p, d, o.code, o.hours, o.win);
       return 0;
     }
     if (rule === "single") {
       let p = owner.get(o.code);
       if (p === undefined) { p = 0; for (let q = 1; q < n; q++) if (week[q] < week[p] - EPS) p = q; owner.set(o.code, p); }
-      if (rest[p][d] || !canTake(p, d, o.code)) { const cover = candidates(d, o.hours - FIT, o.code, byDay)[0]; if (cover === undefined) return o.hours; put(cover, d, o.code, o.hours); return 0; } // el día que descansa la responsable (o su horario no cuadra), la cubre otra
+      if (rest[p][d] || !canTake(p, d, o.code, o.win)) { const cover = candidates(d, o.hours - FIT, o.code, byDay, o.win)[0]; if (cover === undefined) return o.hours; put(cover, d, o.code, o.hours, o.win); return 0; } // el día que descansa la responsable (o su horario no cuadra), la cubre otra
       if (rem(p, d) < o.hours - FIT) return o.hours;
-      put(p, d, o.code, o.hours); return 0;
+      put(p, d, o.code, o.hours, o.win); return 0;
     }
     if (o.divisible) { // por unidad y de tipo que se parte: se llena a quienes tienen margen
       let left = o.hours;
       while (left > FIT) {
-        const p = candidates(d, 2 * FIT, o.code, byDay)[0]; // con espacio de verdad (más que la tolerancia numérica): así cada vuelta avanza
+        const p = candidates(d, 2 * FIT, o.code, byDay, o.win)[0]; // con espacio de verdad (más que la tolerancia numérica): así cada vuelta avanza
         if (p === undefined) break;
-        const h = Math.min(left, rem(p, d)); put(p, d, o.code, h); left -= h;
+        const h = Math.min(left, rem(p, d)); put(p, d, o.code, h, o.win); left -= h;
       }
       return left;
     }
-    const p = candidates(d, o.hours - FIT, o.code, byDay)[0];
+    const p = candidates(d, o.hours - FIT, o.code, byDay, o.win)[0];
     if (p === undefined) return o.hours;
-    put(p, d, o.code, o.hours); return 0;
+    put(p, d, o.code, o.hours, o.win); return 0;
   };
 
   for (const o of occs) {
@@ -376,9 +389,9 @@ function simulate(lines: Line[], kind: WeekKind, n: number, days: number[], cd: 
     let total = left * o.k;
     for (const d of order) {
       while (total > FIT) {
-        const p = candidates(d, 2 * FIT, o.code, o.day !== null)[0]; // con espacio de verdad (más que la tolerancia numérica): así cada vuelta avanza
+        const p = candidates(d, 2 * FIT, o.code, o.day !== null, o.win)[0]; // con espacio de verdad (más que la tolerancia numérica): así cada vuelta avanza
         if (p === undefined) break;
-        const h = Math.min(total, rem(p, d)); put(p, d, o.code, h); total -= h; shared.add(o.code);
+        const h = Math.min(total, rem(p, d)); put(p, d, o.code, h, o.win); total -= h; shared.add(o.code);
       }
       if (total <= FIT) break;
     }
@@ -396,7 +409,7 @@ function simulate(lines: Line[], kind: WeekKind, n: number, days: number[], cd: 
       if (gap <= 0.1) break;
       let best = -1, bestGap = gap - 1e-6;
       pieces[hi][d].forEach((pc, i) => {
-        if (!movable(pc.code) || pc.h >= gap - 1e-6 || rem(lo, d) < pc.h - FIT || week[lo] + pc.h > week[hi] + 0.5 || !canTake(lo, d, pc.code)) return;
+        if (!movable(pc.code) || pc.h >= gap - 1e-6 || rem(lo, d) < pc.h - FIT || week[lo] + pc.h > week[hi] + 0.5 || !canTake(lo, d, pc.code, pc.win)) return;
         const after = Math.abs(gap - 2 * pc.h);
         if (after < bestGap) { best = i; bestGap = after; }
       });
@@ -408,12 +421,33 @@ function simulate(lines: Line[], kind: WeekKind, n: number, days: number[], cd: 
     }
   }
 
+  // 4) imprevistos: se acomodan en lo que sobra, subiendo primero a quienes llevan menos horas ese día (nivelan la carga); si no cabe todo, lo que falta queda sin asignar
+  let placedReserve = 0;
+  for (let iter = 0; iter < 10 && reserve - placedReserve > 1e-9; iter++) {
+    const want = reserve - placedReserve, cells: { p: number; d: number; room: number; base: number }[] = [];
+    for (let p = 0; p < n; p++) for (let d = 0; d < D; d++) if (!rest[p][d]) { const room = rem(p, d); if (room > 1e-9) cells.push({ p, d, room, base: load[p][d] }); }
+    if (cells.length === 0) break;
+    const take = (level: number) => cells.reduce((t, c) => t + Math.min(c.room, Math.max(0, level - c.base)), 0), roomTotal = cells.reduce((t, c) => t + c.room, 0);
+    let level = Math.max(...cells.map((c) => c.base + c.room));
+    if (roomTotal > want) { let lo = 0, hi = level; for (let i = 0; i < 80; i++) { const mid = (lo + hi) / 2; if (take(mid) < want) lo = mid; else hi = mid; } level = hi; }
+    const give = cells.map((c) => Math.min(c.room, Math.max(0, level - c.base)));
+    for (let p = 0; p < n; p++) { // lo que cabe en la semana de cada persona es compartido por sus días: si se pasa, se reduce en proporción
+      const idx = cells.map((c, i) => (c.p === p ? i : -1)).filter((i) => i >= 0), sum = idx.reduce((t, i) => t + give[i], 0), room = capW - week[p];
+      if (sum > room + 1e-12 && sum > 0) for (const i of idx) give[i] *= Math.max(0, room) / sum;
+    }
+    let applied = 0;
+    cells.forEach((c, i) => { const h = give[i]; if (h > 1e-12) { reserveCell[c.p][c.d] += h * 60; load[c.p][c.d] += h; week[c.p] += h; applied += h; } });
+    placedReserve += applied;
+    if (applied < 1e-9) break;
+  }
+  if (reserve > EPS) { const left = reserve - placedReserve; if (left > 1e-6) { overflow += left; for (let d = 0; d < D; d++) unassigned[d].push({ code: "Imprevistos", h: left / D }); } }
+
   // lo repartido, por persona y día (en minutos), y quién hace cada actividad
   const items = Array.from({ length: n }, (_, p) => Array.from({ length: D }, (_, d) => { const m = new Map<string, number>(); for (const pc of pieces[p][d]) m.set(pc.code, (m.get(pc.code) ?? 0) + pc.h * 60); return m; }));
   const who = new Map<string, Set<number>>(), mins = new Map<string, number>();
   let assigned = 0;
   for (let p = 0; p < n; p++) for (let d = 0; d < D; d++) for (const pc of pieces[p][d]) { (who.get(pc.code) ?? who.set(pc.code, new Set()).get(pc.code)!).add(p + 1); mins.set(pc.code, (mins.get(pc.code) ?? 0) + pc.h * 60); assigned += pc.h; }
-  return { items, reserveCell, load, overflow, assigned, reserve, who, execs, mins, shared, rest, restMissing: restPlan?.missing ?? 0, win, unassigned };
+  return { items, reserveCell, load, overflow, assigned, reserve: placedReserve, who, execs, mins, shared, rest, restMissing: restPlan?.missing ?? 0, win, unassigned };
 }
 
 /**
@@ -467,7 +501,18 @@ export function moveTask<T>(rows: readonly T[], index: number, direction: -1 | 1
 }
 
 function plan(kind: WeekKind, lines: Line[], n: number, days: number[], cd: number, cw: number, T: number, W: number, minShared: number): WeekPlan {
-  const D = days.length, sim = simulate(lines, kind, n, days, cd, cw, T, W, minShared);
+  const D = days.length;
+  // Si un día queda con tareas sin asignar (por el empaque de las franjas: la mañana y la tarde no se mezclan), se vuelve a planear pidiendo una persona más ese día (un descanso menos ahí)
+  // y se conserva el mejor intento: así el reparto no se rinde mientras haya espacio en otro día.
+  let sim = simulate(lines, kind, n, days, cd, cw, T, W, minShared), ask: number[] = Array<number>(D).fill(0);
+  for (let attempt = 0; attempt < 10 && sim.overflow > EPS; attempt++) {
+    const next = ask.slice(); let any = false;
+    for (let d = 0; d < D; d++) if (sim.unassigned[d].some((u) => u.code !== "Imprevistos" && u.h > 1e-6)) { const here = n - sim.rest.filter((row) => row[d]).length; if (here < n) { next[d] = Math.max(next[d], here + 1); any = true; } }
+    if (!any) break;
+    const tried = simulate(lines, kind, n, days, cd, cw, T, W, minShared, next);
+    if (tried.overflow >= sim.overflow - 1e-9) break;
+    sim = tried; ask = next;
+  }
   const rankByCode = new Map(lines.map((l) => [l.code, rankOf(l.periodKind)])), nameByCode = new Map(lines.map((l) => [l.code, l.name]));
   const grid: Cell[][] = Array.from({ length: n }, (_, p) => Array.from({ length: D }, (_, d) => {
     const its: CellItem[] = [...sim.items[p][d].entries()].map(([code, minutes]) => ({ code, minutes, rank: rankByCode.get(code) ?? 2 })).sort((a, b) => a.rank - b.rank || a.code.localeCompare(b.code));

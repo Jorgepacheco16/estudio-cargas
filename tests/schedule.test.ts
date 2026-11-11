@@ -160,12 +160,14 @@ async function main() {
     if (u.people !== una.required() || !u.activities[0].shared || !near(sum(minutesOf(u, "S2")), 3 * 60)) throw new Error(JSON.stringify({ p: u.people, a: u.activities[0] }));
   });
 
-  await check("Reserva: lo ocasional o no planificado no se programa; se reparte por igual entre personas y días y no aparece como actividad", () => {
+  await check("Reserva: lo ocasional o no planificado no se programa como actividad; se acomoda al final en lo que sobra, nivelando las horas de quienes la reciben, y no se pierde ningún minuto", () => {
     const r = run([staff("Cajero", 2, 40)], [act("R1", "Cajero", { hours: 3, executions: 2, period: "week", planning: "unplanned" }), act("R2", "Cajero", { hours: 1, executions: 2 }), act("O1", "Cajero", { hours: 1, executions: 1 })], { R1: "operational", R2: "operational", O1: "occasional" });
     const { common } = ok(one(r)); const celdas = common.grid.flat();
     if (common.activities.some((x) => x.code === "R1" || x.code === "O1")) throw new Error("la reserva no es una actividad programada");
-    const iguales = celdas.every((c) => near(c.reserveMin, celdas[0].reserveMin));
-    if (!iguales || !near(celdas.reduce((s, c) => s + c.reserveMin, 0), (6 + 1) * 60)) throw new Error("reserva: " + celdas.map((c) => c.reserveMin).join(","));
+    const conReserva = celdas.filter((c) => c.reserveMin > 1e-6);
+    if (!near(celdas.reduce((s, c) => s + c.reserveMin, 0), (6 + 1) * 60)) throw new Error("reserva: " + celdas.map((c) => c.reserveMin).join(","));
+    if (conReserva.length === 0 || !conReserva.every((c) => near(c.totalMin, conReserva[0].totalMin, 1e-6))) throw new Error("la reserva debe nivelar: " + conReserva.map((c) => c.totalMin).join(","));
+    if (celdas.some((c) => c.reserveMin <= 1e-6 && c.totalMin < conReserva[0].totalMin - 1e-6)) throw new Error("quien no recibe reserva no debe quedar más bajo que quien la recibe");
   });
 
   await check("Semana con periódicas: lo mensual, trimestral y anual NO está en la semana común y SÍ en la otra; las personas son las mismas y, si la carga no cabe, se pide refuerzo", () => {
@@ -333,7 +335,7 @@ async function main() {
   await check("Descanso rotativo (D-108): con el cargo abierto 7 días y 42 h en 6 días, cada persona descansa exactamente 1 día, los descansos van primero al domingo, el día de descanso no tiene tareas y se reparten las mismas horas de Cálculo", () => {
     const st = [staff("Fiscal", 6, 42)], ac = [
       act("TES1", "Fiscal", { hours: 1, executions: 3, period: "day" }), act("CAJ1", "Fiscal", { hours: 0.75, executions: 5, period: "day" }),
-      act("CAJ2", "Fiscal", { hours: 3, executions: 4, period: "week" }), act("COO1", "Fiscal", { hours: 0.5, executions: 1, period: "day" }),
+      act("CAJ2", "Fiscal", { hours: 3, executions: 30, period: "week" }), act("COO1", "Fiscal", { hours: 0.5, executions: 1, period: "day" }),
     ];
     const types: Record<string, ActivityTypeKey | null> = { TES1: "control", CAJ1: "operational", CAJ2: "administrative", COO1: "coordination" };
     const r = run(st, ac, types, ALL_DAYS, { workDaysPerWeek: 7, dailyWorkHours: 7, staffRoundFrom: 0.5 }, 1, new Map([["tes1", MON_SAT]]));
@@ -397,9 +399,9 @@ async function main() {
   });
 
   await check("Exportación del reparto: el día de descanso sale como una fila «Descanso» (orden 0, 0 minutos) y la suma de minutos sigue siendo la de la pantalla", () => {
-    const st = [staff("Fiscal", 3, 42)], ac = [act("CAJ1", "Fiscal", { hours: 1, executions: 16, period: "day" })];
+    const st = [staff("Fiscal", 3, 42)], ac = [act("CAJ1", "Fiscal", { hours: 1, executions: 6, period: "day" }), act("CAJ2", "Fiscal", { hours: 2, executions: 40, period: "week" })];
     const p = prm({ workDaysPerWeek: 7, dailyWorkHours: 7 }), a = analyze(st, ac, p, TH, "all");
-    const extras = new Map<string, ActivityExtra>([["caj1", { name: "Actividad CAJ1", type: "operational" }]]);
+    const extras = new Map<string, ActivityExtra>([["caj1", { name: "Actividad CAJ1", type: "operational" }], ["caj2", { name: "Actividad CAJ2", type: "operational" }]]);
     const schedules = buildSchedules({ staff: st, acts: ac, params: p, positions: a.positions, extras, shiftDays: new Map([[positionKey("real", "Cajas", "CO1", "Fiscal"), ALL_DAYS]]) });
     const { tables } = tablesFor("reparto", a, null as never, [], {}, "all", 0.1, undefined, schedules);
     const filas = tables[0].rows as { code: string; order: number; minutes: number; person: string }[];
@@ -492,6 +494,48 @@ async function main() {
     if (!f || f.start !== "05:30" || f.end !== "20:30" || f.hours !== 15) throw new Error(JSON.stringify(f));
     if (serviceOf([sh("c", null, null)]) !== null || serviceOf(undefined) !== null || serviceOf([]) !== null) throw new Error("sin horarios no hay franja");
     if (serviceOf([sh("n", "22:00", "06:00")]) !== null) throw new Error("un turno que cruza la medianoche no se considera");
+  });
+
+  await check("Cargo real de fiscales de caja y tesorería (30 actividades, 4 turnos): se reparte entre las 6 personas recomendadas sin dejar nada sin asignar, parejo por día y por semana, con todas las actividades en sus días y las de varios turnos repartidas entre la mañana y la tarde", () => {
+    const ALL = [0, 1, 2, 3, 4, 5, 6];
+    const AP: ShiftRef = { id: "ap", name: "Apertura", days: ALL, start: "05:30", end: "13:00" }, IN: ShiftRef = { id: "in", name: "Intermedio", days: ALL, start: "09:00", end: "16:30" };
+    const CI: ShiftRef = { id: "ci", name: "Cierre", days: ALL, start: "13:00", end: "20:30" }, TI: ShiftRef = { id: "ti", name: "Tesorería integral", days: MON_SAT, start: "08:00", end: "15:30" };
+    const ALL3 = [AP, IN, CI];
+    // [código, tipo, veces por período, período, minutos, simultáneas, planeación, turnos] (tomado del estudio; sin datos de personas)
+    const D: [string, ActivityTypeKey, number, "day" | "week" | "month", number, number, "planned" | "unplanned" | null, ShiftRef[] | null][] = [
+      ["SUP-001", "operational", 2, "day", 15, 1, "planned", [AP]], ["SUP-002", "operational", 1, "day", 20, 1, "planned", [AP]], ["SUP-003", "operational", 5, "day", 10, 1, "planned", ALL3],
+      ["SUP-004", "coordination", 2, "day", 30, 1, "planned", [AP, CI]], ["SUP-005", "service", 6, "day", 20, 1, "planned", [AP]], ["SUP-006", "service", 20, "day", 15, 1, "unplanned", ALL3],
+      ["SUP-007", "service", 10, "day", 15, 1, "planned", ALL3], ["SUP-008", "operational", 5, "day", 10, 1, "planned", ALL3], ["SUP-009", "operational", 1, "day", 20, 1, "planned", null],
+      ["SUP-010", "control", 4, "day", 5, 1, "planned", [AP, CI]], ["SUP-011", "control", 1, "day", 10, 1, "planned", ALL3], ["SUP-012", "coordination", 6, "day", 5, 1, "planned", ALL3],
+      ["SUP-013", "administrative", 1, "day", 30, 1, "planned", [AP]], ["SUP-014", "occasional", 1, "week", 60, 1, "planned", [CI]], ["SUP-015", "operational", 5, "day", 60, 1, "planned", ALL3],
+      ["SUP-016", "administrative", 2, "day", 45, 1, "planned", [CI]], ["SUP-017", "occasional", 1, "day", 10, 1, "unplanned", [CI]], ["SUP-018", "control", 2, "day", 10, 2, null, [TI]],
+      ["SUP-019", "control", 1, "day", 15, 1, "planned", [TI]], ["SUP-020", "operational", 1, "day", 180, 1, "planned", [TI]], ["SUP-021", "operational", 1, "day", 15, 1, "planned", [TI]],
+      ["SUP-022", "operational", 1, "day", 60, 1, "planned", [TI]], ["SUP-023", "control", 2, "day", 30, 1, "planned", [TI]], ["SUP-024", "administrative", 1, "day", 20, 1, "planned", [TI]],
+      ["SUP-025", "administrative", 1, "day", 40, 1, "planned", [TI]], ["SUP-026", "operational", 2, "month", 40, 1, "planned", [TI]], ["SUP-027", "administrative", 1, "day", 15, 1, "planned", [TI]],
+      ["SUP-028", "control", 6, "day", 10, 1, "planned", ALL3], ["SUP-029", "control", 1, "day", 10, 1, "planned", ALL3], ["SUP-030", "operational", 1, "month", 10, 1, "planned", [AP]],
+    ];
+    const st = [staff("Fiscal", 4, 42)], ac = D.map(([code, , n, period, min, sim, plan]) => act(code, "Fiscal", { hours: min / 60, executions: n, period, simultaneous: sim === 1 ? null : sim, planning: plan }));
+    const p = prm({ workDaysPerWeek: 7, dailyWorkHours: 7, staffRoundFrom: 0.5, minSharedHours: 3 }), a = analyze(st, ac, p, TH, "all");
+    const extras = new Map<string, ActivityExtra>(D.map(([code, tipo]) => [code.toLowerCase(), { name: code, type: tipo }]));
+    const key = positionKey("real", "Cajas", "CO1", "Fiscal");
+    const [sch] = buildSchedules({ staff: st, acts: ac, params: p, positions: a.positions, extras, shiftDays: new Map([[key, ALL]]), activityShifts: new Map(D.map(([code, , , , , , , sh]) => [code.toLowerCase(), sh] as const)), positionShifts: new Map([[key, [AP, IN, CI, TI]]]), overload: 1 });
+    const { common } = ok(sch);
+    if (sch.required !== 6) throw new Error("el estudio recomienda 6 fiscales: " + sch.required);
+    if (common.overflowHours > 1e-6) throw new Error("no debía quedar nada sin asignar (sobra capacidad en la semana): " + common.overflowHours.toFixed(2) + " h " + JSON.stringify(common.unassigned.filter((u) => u.minutes > 0).map((u) => u.items.map((i) => i.code))));
+    const faltan = sch.check.filter((c) => c.missingDays.length > 0);
+    if (faltan.length > 0) throw new Error("actividades que no quedaron en sus días: " + faltan.map((c) => c.code + ":" + c.missingDays).join(" "));
+    const semana = common.grid.map((row) => row.reduce((t, c) => t + c.totalMin, 0) / 60);
+    if (Math.max(...semana) - Math.min(...semana) > 1) throw new Error("las semanas de las personas deben quedar parejas (±1 h): " + semana.map((x) => x.toFixed(1)).join(" "));
+    for (let d = 0; d < sch.days.length; d++) {
+      const dia = common.grid.filter((row) => !row[d].rest).map((row) => row[d].totalMin / 60);
+      if (Math.max(...dia) - Math.min(...dia) > 1.5) throw new Error("el día " + sch.days[d] + " debe quedar parejo (±1,5 h): " + dia.map((x) => x.toFixed(1)).join(" "));
+    }
+    // SUP-003 (apertura, intermedio y cierre, 5 veces al día) se hace en la mañana Y en la tarde cada día
+    for (let d = 0; d < sch.days.length; d++) {
+      const fr = common.grid.filter((row) => !row[d].rest && row[d].items.some((i) => i.code === "SUP-003")).map((row) => row[d].shift);
+      const manana = fr.some((f) => f && f.slice(6) <= "13:00"), tarde = fr.some((f) => f && f.slice(0, 5) >= "13:00");
+      if (!manana || !tarde) throw new Error("SUP-003 debe quedar en la mañana y en la tarde el día " + sch.days[d] + ": " + JSON.stringify(fr));
+    }
   });
 
   await check("Minutos legibles: 45 min, 2 h, 2 h 15 min; los minutos con decimales se redondean y 59,6 no queda en «60 min»", () => {
