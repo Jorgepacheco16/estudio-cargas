@@ -62,7 +62,7 @@ export function moduleOfPath(pathname: string): AppModule | AppModule[] | null {
   const hit = (base: string) => p === base || p.startsWith(base + "/");
   if (hit("/estudio")) return "estudio";
   if (hit("/parametros")) return "parametros";
-  if (hit("/cargos")) return "cargos";
+  if (hit("/cargos") || hit("/estructura")) return "cargos"; // «Estructura de la tienda» se gobierna con Cargos y dotación (D-113)
   if (hit("/actividades")) return "actividades";
   if (hit("/diagnostico/medibilidad")) return "medibilidad";
   if (hit("/diagnostico/pertinencia")) return "pertinencia";

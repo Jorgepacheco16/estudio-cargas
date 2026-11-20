@@ -10,6 +10,7 @@ const ICON: Record<string, string> = {
   "/parametros": "M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0M14 4v4M8 10v4M16 16v4",
   "/estudio": "M4 5a2 2 0 012-2h12a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V5zM8 8h8M8 12h8M8 16h5",
   "/cargos": "M16 11a4 4 0 10-8 0 4 4 0 008 0zM4 21a8 8 0 0116 0",
+  "/estructura": "M3 21h18M5 21V8l7-5 7 5v13M9 21v-6h6v6",
   "/actividades": "M9 6h11M9 12h11M9 18h11M4 6h.01M4 12h.01M4 18h.01",
   "/calculo": "M12 6v6l4 2M21 12a9 9 0 11-18 0 9 9 0 0118 0z",
   "/dotacion": "M9 11a3 3 0 100-6 3 3 0 000 6zM3 20a6 6 0 0112 0M17 8v6M14 11h6M17 20h4",

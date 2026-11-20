@@ -10,6 +10,7 @@ export const MENU: NavEntry[] = [
   { href: "/parametros", label: "Parámetros" },
   { href: "/estudio", label: "Estudio" },
   { href: "/cargos", label: "Cargos y dotación" },
+  { href: "/estructura", label: "Estructura de la tienda" },
   { href: "/actividades", label: "Actividades" },
   { href: "/calculo", label: "Cálculo de tiempos" },
   { href: "/drill", label: "Drill-down: Carga por áreas" },
